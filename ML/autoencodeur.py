@@ -33,7 +33,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # ===========================================================================
 ES_HOST       = "https://localhost:9200"
 ES_USER       = "elastic"
-ES_PASS       = "pfe2026"
+
 ES_INDEX_READ = "filebeat-logs-*,auditbeat-*"
 ES_INDEX_WRITE= "ml-autoencoder-scores"
 
