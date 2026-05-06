@@ -1,0 +1,24 @@
+title: User Account Modified
+id: 550e8400-e29b-41d4-a716-446655440013
+status: stable
+description: Modification d'un compte utilisateur existant
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains:
+      - "usermod"
+      - "chpasswd"
+  filter_normal:
+    message|contains: "pam_unix"
+  condition: selection and not filter_normal
+fields:
+  - user.name
+  - message
+level: medium
+tags:
+  - attack.persistence
+  - attack.T1098

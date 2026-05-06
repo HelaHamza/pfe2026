@@ -1,0 +1,22 @@
+title: New User Account Created
+id: 550e8400-e29b-41d4-a716-446655440012
+status: stable
+description: Création d'un nouveau compte utilisateur - possible persistence
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains:
+      - "new user:"
+      - "useradd"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: high
+tags:
+  - attack.persistence
+  - attack.T1136.001

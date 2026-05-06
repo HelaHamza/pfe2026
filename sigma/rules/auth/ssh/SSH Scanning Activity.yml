@@ -1,0 +1,23 @@
+title: SSH Scanning Activity
+id: 550e8400-e29b-41d4-a716-446655440024
+status: stable
+description: >
+  Nombreuses connexions fermées immédiatement depuis différentes IPs - scan SSH.
+  NOTE: Le comptage count(source.ip) > 10 est appliqué dans le script Python.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Connection closed"
+  condition: selection
+fields:
+  - source.ip
+  - message
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.T1046

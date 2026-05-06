@@ -1,0 +1,25 @@
+title: Zombie Process Detected
+id: 550e8400-e29b-41d4-a716-557655460004
+status: stable
+description: >
+  Détecte des processus zombies en grand nombre.
+  Peut indiquer une anomalie système ou une tentative d'évasion.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "zombie"
+      - "defunct"
+      - "<defunct>"
+  condition: selection
+level: medium
+tags:
+  - attack.impact
+  - attack.T1499
+falsepositives:
+  - Processus légitimes non collectés

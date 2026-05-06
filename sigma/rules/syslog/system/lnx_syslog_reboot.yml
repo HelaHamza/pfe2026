@@ -1,0 +1,29 @@
+title: Unexpected System Reboot or Shutdown
+id: 550e8400-e29b-41d4-a716-557655462004
+status: stable
+description: Détecte un redémarrage ou arrêt inattendu du système
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "System is going down"
+      - "shutdown -h"
+      - "shutdown -r"
+  filter_normal:
+    message|contains:
+      - "Deactivated successfully"
+      - "secureboot"
+      - "ua-reboot-cmds"
+      - "skipped"
+  condition: selection and not filter_normal
+level: high
+tags:
+  - attack.impact
+  - attack.T1529
+falsepositives:
+  - Redémarrage planifié

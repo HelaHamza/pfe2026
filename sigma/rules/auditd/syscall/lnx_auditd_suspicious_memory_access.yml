@@ -1,0 +1,27 @@
+title: Suspicious Memory Access via mmap
+id: 550e8400-e29b-41d4-a716-556655453005
+status: stable
+description: >
+  Détecte des accès mémoire suspects via mmap avec permissions exécutables.
+  Technique utilisée pour l'injection de shellcode.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "mmap"
+      - "PROT_EXEC"
+      - "PROT_WRITE"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1055
+falsepositives:
+  - Applications légitimes utilisant mmap

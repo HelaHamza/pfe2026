@@ -1,0 +1,30 @@
+title: Network Scanning Tools Execution
+id: 550e8400-e29b-41d4-a716-556655450003
+status: stable
+description: >
+  Détecte l'utilisation d'outils de scan réseau.
+  Indique une phase de reconnaissance après compromission.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " nmap "
+      - " masscan "
+      - " zmap "
+      - " unicornscan "
+      - " rustscan "
+      - " arp-scan "
+  condition: selection and keywords
+level: high
+tags:
+  - attack.reconnaissance
+  - attack.T1046
+falsepositives:
+  - Scans réseau autorisés

@@ -1,0 +1,27 @@
+title: Hosts File Modified
+id: 550e8400-e29b-41d4-a716-556655451001
+status: stable
+description: >
+  Détecte la modification du fichier /etc/hosts.
+  Utilisé pour rediriger le trafic DNS vers des serveurs malveillants.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/hosts"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1565.001
+  - attack.impact
+  - attack.T1491
+falsepositives:
+  - Administration réseau légitime

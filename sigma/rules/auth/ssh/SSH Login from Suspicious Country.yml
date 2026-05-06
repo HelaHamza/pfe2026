@@ -1,0 +1,27 @@
+title: SSH Login from Suspicious Country
+id: 550e8400-e29b-41d4-a716-446655440008
+status: stable
+description: Connexion SSH réussie depuis un pays inhabituel
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "success"
+  filter_known:
+    source.geo.country_name:
+      - "Tunisia"
+      - "France"
+  condition: selection and not filter_known
+fields:
+  - user.name
+  - source.ip
+  - source.geo.country_name
+  - message
+level: high
+tags:
+  - attack.initial_access
+  - attack.T1078

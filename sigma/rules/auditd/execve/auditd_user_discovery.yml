@@ -1,0 +1,32 @@
+title: User Discovery Commands
+id: 550e8400-e29b-41d4-a716-446655441004
+status: stable
+description: >
+  Détecte les commandes de découverte d'utilisateurs :
+  whoami, id, who, w, users, last, uname, hostname
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " whoami"
+      - " id "
+      - " who "
+      - " w "
+      - " users"
+      - " last "
+      - " uname"
+      - " hostname"
+  condition: selection and keywords
+level: low
+tags:
+  - attack.discovery
+  - attack.T1033
+falsepositives:
+  - Administration système normale

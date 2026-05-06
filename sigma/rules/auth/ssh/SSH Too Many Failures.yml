@@ -1,0 +1,22 @@
+title: SSH Too Many Authentication Failures
+id: 550e8400-e29b-41d4-a716-446655440005
+status: stable
+description: Trop de tentatives d'authentification SSH - compte potentiellement ciblé
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "maximum authentication attempts exceeded"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1110

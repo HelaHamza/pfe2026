@@ -1,0 +1,27 @@
+title: Security Tools Stopped
+id: 550e8400-e29b-41d4-a716-556655445003
+status: stable
+description: Arrêt d'outils de sécurité - fail2ban, apparmor, selinux
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SERVICE_STOP"
+  keywords:
+    message|contains:
+      - "fail2ban"
+      - "apparmor"
+      - "selinux"
+      - "clamd"
+      - "ossec"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562.001
+falsepositives:
+  - Mise à jour des outils de sécurité

@@ -1,0 +1,24 @@
+title: Root Local Login
+id: 550e8400-e29b-41d4-a716-446655444003
+status: stable
+description: Connexion directe en root via console locale
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    user.name: "root"
+    message|contains: "session opened"
+  tty:
+    message|contains:
+      - "tty"
+      - "console"
+  condition: selection and tty
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.T1078.003
+falsepositives:
+  - Administration système locale

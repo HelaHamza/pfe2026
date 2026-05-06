@@ -1,0 +1,28 @@
+title: Binary Padding via dd or truncate
+id: 550e8400-e29b-41d4-a716-446655441005
+status: stable
+description: Détecte l'utilisation de dd/truncate pour ajouter des données parasites
+author: Igor Fits, oscd.community
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  truncate:
+    message|contains|all:
+      - "truncate"
+      - "-s"
+  dd_cmd:
+    message|contains|all:
+      - " dd "
+      - "if="
+  condition: selection and (truncate or dd_cmd)
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1027.001
+falsepositives:
+  - Utilisation légitime de dd pour copie disque

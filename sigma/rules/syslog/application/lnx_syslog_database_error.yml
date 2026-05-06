@@ -1,0 +1,32 @@
+title: Database Authentication Error
+id: 550e8400-e29b-41d4-a716-557655464004
+status: stable
+description: >
+  Détecte des erreurs d'authentification de base de données dans syslog.
+  Peut indiquer une tentative d'injection SQL ou de brute force.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+  keywords:
+    message|contains:
+      - "Access denied for user"
+      - "authentication failed"
+      - "password check failed"
+      - "SQLSTATE"
+  db_processes:
+    process.name:
+      - "mysqld"
+      - "postgres"
+      - "mongod"
+  condition: selection and keywords and db_processes
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1110
+falsepositives:
+  - Erreurs de configuration DB

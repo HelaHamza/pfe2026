@@ -1,0 +1,29 @@
+title: Web Server Service Stopped
+id: 550e8400-e29b-41d4-a716-556655463003
+status: stable
+description: >
+  Détecte l'arrêt de serveurs web.
+  Peut indiquer un sabotage ou précéder une modification malveillante.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SERVICE_STOP"
+  keywords:
+    message|contains:
+      - "apache"
+      - "apache2"
+      - "nginx"
+      - "httpd"
+      - "lighttpd"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.impact
+  - attack.T1489
+falsepositives:
+  - Maintenance web planifiée

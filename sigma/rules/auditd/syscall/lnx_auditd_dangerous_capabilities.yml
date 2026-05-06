@@ -1,0 +1,29 @@
+title: Dangerous Linux Capabilities Used
+id: 550e8400-e29b-41d4-a716-556655462006
+status: stable
+description: >
+  Détecte l'utilisation de capabilities Linux dangereuses.
+  CAP_SYS_ADMIN, CAP_SYS_PTRACE, CAP_NET_RAW peuvent être exploitées.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "CAP_SYS_ADMIN"
+      - "CAP_SYS_PTRACE"
+      - "CAP_NET_RAW"
+      - "CAP_SYS_MODULE"
+      - "CAP_DAC_OVERRIDE"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.T1548
+falsepositives:
+  - Applications nécessitant des capabilities

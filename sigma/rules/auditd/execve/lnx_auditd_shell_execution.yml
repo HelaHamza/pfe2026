@@ -1,0 +1,28 @@
+title: Interactive Shell Spawned
+id: 550e8400-e29b-41d4-a716-556655443001
+status: stable
+description: Détecte l'ouverture d'un shell interactif suspect
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "bash -i"
+      - "sh -i"
+      - "python -c"
+      - "python3 -c"
+      - "perl -e"
+      - "ruby -e"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.execution
+  - attack.T1059.004
+falsepositives:
+  - Scripts shell légitimes

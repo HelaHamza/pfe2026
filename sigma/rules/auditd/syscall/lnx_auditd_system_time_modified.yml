@@ -1,0 +1,27 @@
+title: System Time Modified
+id: 550e8400-e29b-41d4-a716-556655453003
+status: stable
+description: >
+  Détecte la modification de l'heure système.
+  Utilisé pour fausser les timestamps des logs.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "settimeofday"
+      - "clock_settime"
+      - "adjtimex"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1070.006
+falsepositives:
+  - Synchronisation NTP légitime

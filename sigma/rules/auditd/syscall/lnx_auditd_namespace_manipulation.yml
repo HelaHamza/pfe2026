@@ -1,0 +1,29 @@
+title: Linux Namespace Manipulation
+id: 550e8400-e29b-41d4-a716-556655462003
+status: stable
+description: >
+  Détecte la manipulation des namespaces Linux.
+  Technique d'évasion de conteneurs ou de sandboxes.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "unshare"
+      - "nsenter"
+      - "clone(CLONE_NEWNS"
+      - "clone(CLONE_NEWPID"
+      - "clone(CLONE_NEWNET"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1610
+falsepositives:
+  - Conteneurisation légitime

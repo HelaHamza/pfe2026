@@ -1,0 +1,26 @@
+title: DNS Resolver Configuration Modified
+id: 550e8400-e29b-41d4-a716-556655451002
+status: stable
+description: >
+  Détecte la modification de /etc/resolv.conf.
+  Un attaquant peut rediriger les requêtes DNS vers un serveur malveillant.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/resolv.conf"
+      - "/etc/nsswitch.conf"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1565.001
+falsepositives:
+  - Configuration réseau légitime

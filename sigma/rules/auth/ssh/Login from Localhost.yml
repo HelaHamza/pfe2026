@@ -1,0 +1,23 @@
+title: SSH Login from Localhost
+id: 550e8400-e29b-41d4-a716-446655440016
+status: stable
+description: Connexion SSH depuis localhost - mouvement latéral potentiel
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    source.ip: "127.0.0.1"
+    event.outcome: "success"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: medium
+tags:
+  - attack.lateral_movement
+  - attack.T1021.004

@@ -1,0 +1,35 @@
+title: Suspicious Script Execution
+id: 550e8400-e29b-41d4-a716-556655460006
+status: stable
+description: >
+  Détecte l'exécution de scripts depuis des emplacements suspects.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  script_interpreters:
+    message|contains:
+      - " bash "
+      - " python "
+      - " python3 "
+      - " perl "
+      - " ruby "
+      - " php "
+  suspicious_locations:
+    message|contains:
+      - "/tmp/"
+      - "/dev/shm/"
+      - "/var/tmp/"
+      - "/run/user/"
+  condition: selection and script_interpreters and suspicious_locations
+level: high
+tags:
+  - attack.execution
+  - attack.T1059
+falsepositives:
+  - Scripts légitimes dans /tmp

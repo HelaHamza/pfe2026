@@ -1,0 +1,24 @@
+
+title: SSH Invalid User Login Attempt
+id: 550e8400-e29b-41d4-a716-446655440001
+status: stable
+description: Tentative de connexion SSH avec un utilisateur inexistant - reconnaissance
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Invalid user"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.T1078
+  - attack.T1110

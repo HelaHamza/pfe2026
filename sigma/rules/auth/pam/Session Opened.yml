@@ -1,0 +1,25 @@
+title: New SSH Session Opened
+id: 550e8400-e29b-41d4-a716-446655440018
+status: stable
+description: Ouverture d'une nouvelle session - surveiller les sessions inattendues
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains: "session opened"
+  filter_normal:
+    process.name:
+      - "CRON"
+      - "systemd"
+  condition: selection and not filter_normal
+fields:
+  - user.name
+  - process.name
+  - message
+level: low
+tags:
+  - attack.initial_access
+  - attack.T1078

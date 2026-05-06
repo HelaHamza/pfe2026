@@ -1,0 +1,28 @@
+title: SSH Multiple Users from Same IP
+id: 550e8400-e29b-41d4-a716-446655440022
+status: stable
+description: >
+  Plusieurs utilisateurs différents tentent de se connecter depuis la même IP.
+  Indique une activité de credential stuffing ou énumération d'utilisateurs.
+  NOTE: L'agrégation count(user.name) > 3 est appliquée dans le script Python.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "failure"
+  condition: selection
+fields:
+  - source.ip
+  - user.name
+  - message
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1110.004
+
+  #Les règles avec count() et timeframe ne sont pas supportées par le backend lucene. Elles sont converties en requête simple + agrégation Python.
+

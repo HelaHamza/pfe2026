@@ -1,0 +1,27 @@
+title: Linux Capabilities Discovery
+id: 550e8400-e29b-41d4-a716-446655441007
+status: stable
+description: Détecte la découverte des capabilities Linux pour escalade de privilèges
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "getcap"
+      - "setcap"
+      - "capsh"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.privilege_escalation
+  - attack.T1548
+  - attack.discovery
+  - attack.T1057
+falsepositives:
+  - Administration système

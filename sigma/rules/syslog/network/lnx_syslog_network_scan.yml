@@ -1,0 +1,28 @@
+title: Network Scan Detected via Syslog
+id: 550e8400-e29b-41d4-a716-557655461001
+status: stable
+description: Détecte des indicateurs de scan réseau
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "REJECT"
+      - "DPT="
+  filter_normal:
+    message|contains:
+      - "chrome"
+      - "google"
+      - "mojo"
+      - "ERROR:"
+  condition: selection and not filter_normal
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.T1046
+falsepositives:
+  - Scans réseau autorisés

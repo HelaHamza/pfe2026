@@ -1,0 +1,22 @@
+title: SSH Public Key Login
+id: 550e8400-e29b-41d4-a716-446655440007
+status: stable
+description: Connexion SSH par clé publique - surveiller les clés inconnues
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Accepted publickey"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: low
+tags:
+  - attack.initial_access
+  - attack.T1078

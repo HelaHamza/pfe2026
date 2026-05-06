@@ -1,0 +1,23 @@
+title: Keylogging via PAM
+id: 550e8400-e29b-41d4-a716-556655449003
+status: stable
+description: Détecte la modification de PAM pour keylogging
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+  keywords:
+    message|contains:
+      - "/etc/pam.d/"
+      - "pam_tty_audit"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.collection
+  - attack.T1056.001
+falsepositives:
+  - Configuration PAM légitime

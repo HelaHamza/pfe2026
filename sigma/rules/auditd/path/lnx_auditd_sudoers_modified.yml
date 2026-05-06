@@ -1,0 +1,26 @@
+title: Sudoers File Modified
+id: 550e8400-e29b-41d4-a716-556655461003
+status: stable
+description: >
+  Détecte la modification du fichier sudoers.
+  Permet d'accorder des privilèges supplémentaires.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/sudoers"
+      - "/etc/sudoers.d/"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.privilege_escalation
+  - attack.T1548.003
+falsepositives:
+  - Administration système légitime

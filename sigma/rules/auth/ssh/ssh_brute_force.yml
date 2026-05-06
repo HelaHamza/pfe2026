@@ -1,0 +1,32 @@
+# 3. lnx_ssh_brute_force.yml — Les deux combinés
+title: SSH Brute Force Attack
+id: 550e8400-e29b-41d4-a716-446655440001
+status: stable
+description: >
+  Détecte toute tentative SSH échouée qu'il s'agisse d'un utilisateur
+  inexistant détecté immédiatement ou d'une tentative de mot de passe
+  sur un utilisateur invalide. Couvre les deux patterns de brute force.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains:
+      - "Failed password"
+      - "Invalid user"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+falsepositives:
+  - Erreurs de frappe légitimes
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1110
+  - attack.T1110.001
+  - attack.T1078

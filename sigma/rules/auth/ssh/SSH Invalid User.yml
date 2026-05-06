@@ -1,0 +1,32 @@
+# 1. lnx_ssh_invalid_user.yml — Scan/Énumération rapide
+title: SSH Invalid User Scan
+id: 550e8400-e29b-41d4-a716-446655440010
+status: stable
+description: >
+  Détecte la détection immédiate d'un utilisateur inexistant par SSH.
+  Indique un scan rapide ou une énumération d'utilisateurs.
+  Le username est rejeté AVANT toute tentative de mot de passe.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Invalid user"
+  filter_failed_password:
+    message|contains: "Failed password"
+  condition: selection and not filter_failed_password
+fields:
+  - user.name
+  - source.ip
+  - message
+falsepositives:
+  - Erreur de frappe du nom utilisateur
+  - Mauvaise configuration client SSH
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.T1078
+  - attack.T1046

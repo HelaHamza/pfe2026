@@ -1,0 +1,26 @@
+title: Reverse Shell Indicators
+id: 550e8400-e29b-41d4-a716-556655446002
+status: stable
+description: Indicateurs de reverse shell via syscall
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "/dev/tcp/"
+      - "/dev/udp/"
+      - "mkfifo"
+      - "0>&1"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.command_and_control
+  - attack.T1059.004
+falsepositives:
+  - Aucun

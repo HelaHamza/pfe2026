@@ -1,0 +1,24 @@
+title: Keylogging via PAM Modification
+id: 550e8400-e29b-41d4-a716-556655446005
+status: stable
+description: Modification de PAM pour keylogging via syscall
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "pam_tty_audit"
+      - "/etc/pam.d/"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.collection
+  - attack.T1056.001
+falsepositives:
+  - Configuration PAM légitime

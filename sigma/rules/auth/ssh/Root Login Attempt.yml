@@ -1,0 +1,31 @@
+# 2. lnx_ssh_invalid_user_attempt.yml — Brute force sur users inconnus
+title: SSH Failed Password for Invalid User
+id: 550e8400-e29b-41d4-a716-446655440011
+status: stable
+description: >
+  Détecte une tentative de mot de passe SSH sur un utilisateur inexistant.
+  L'attaquant a attendu le prompt mot de passe malgré un username invalide.
+  Indique un brute force ciblé ou une attaque par dictionnaire.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains|all:
+      - "Failed password"
+      - "invalid user"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+falsepositives:
+  - Aucun
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1110.001
+  - attack.T1110.003

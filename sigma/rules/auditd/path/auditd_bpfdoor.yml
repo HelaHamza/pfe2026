@@ -1,0 +1,25 @@
+title: BPFDoor Backdoor Indicator
+id: 550e8400-e29b-41d4-a716-446655441009
+status: stable
+description: Détecte des indicateurs du backdoor BPFDoor
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+  keywords:
+    message|contains:
+      - "haldrund.pid"
+      - "xinetd.lock"
+      - "kdevrund.pid"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1543
+  - attack.command_and_control
+falsepositives:
+  - Aucun

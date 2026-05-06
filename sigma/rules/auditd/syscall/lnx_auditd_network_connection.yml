@@ -1,0 +1,20 @@
+title: Suspicious Network Connection via SOCKADDR
+id: 550e8400-e29b-41d4-a716-556655446001
+status: stable
+description: Connexions réseau suspectes via SYSCALL SOCKADDR
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SOCKADDR"
+  condition: selection
+level: medium
+tags:
+  - attack.command_and_control
+  - attack.T1071
+falsepositives:
+  - Connexions réseau normales

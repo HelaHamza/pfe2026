@@ -1,0 +1,23 @@
+title: Auditing Configuration Changes on Linux Host
+id: 977ef627-4539-4875-adf4-ed8f780c4922
+status: stable
+description: Détecte les modifications des fichiers de configuration auditd
+author: Mikhail Larin, oscd.community
+date: 2019/10/25
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains:
+      - "/etc/audit/"
+      - "/etc/libaudit.conf"
+      - "/etc/audisp/"
+  condition: selection
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562.006
+falsepositives:
+  - Activité administrative légitime

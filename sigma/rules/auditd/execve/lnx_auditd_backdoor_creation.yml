@@ -1,0 +1,30 @@
+title: Backdoor Creation Indicators
+id: 550e8400-e29b-41d4-a716-556655460011
+status: stable
+description: >
+  Détecte des indicateurs de création de backdoor.
+  Un attaquant crée un accès persistant au système.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "useradd -o -u 0"
+      - "useradd -u 0"
+      - "usermod -u 0"
+      - "usermod -g 0"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1136
+  - attack.privilege_escalation
+  - attack.T1078.003
+falsepositives:
+  - Aucun

@@ -1,0 +1,33 @@
+title: Tunneling Tools Execution
+id: 550e8400-e29b-41d4-a716-556655450002
+status: stable
+description: >
+  Détecte l'utilisation d'outils de tunneling réseau.
+  Utilisés pour contourner les firewalls et créer des canaux C2 cachés.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "chisel"
+      - "frp"
+      - "ligolo"
+      - "ngrok"
+      - "iodine"
+      - "dns2tcp"
+      - "ptunnel"
+      - "httptunnel"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.command_and_control
+  - attack.T1572
+  - attack.T1071.004
+falsepositives:
+  - Tests réseau légitimes

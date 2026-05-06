@@ -1,0 +1,28 @@
+title: File System Discovery
+id: 550e8400-e29b-41d4-a716-556655443006
+status: stable
+description: Recherche de fichiers sensibles via find, locate
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "find / "
+      - "find /etc"
+      - "find /home"
+      - "find /root"
+      - "locate passwd"
+      - "locate shadow"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.discovery
+  - attack.T1083
+falsepositives:
+  - Recherche de fichiers légitime

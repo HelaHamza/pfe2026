@@ -1,0 +1,27 @@
+title: System Time Changed Suspiciously
+id: 550e8400-e29b-41d4-a716-557655462003
+status: stable
+description: Détecte un changement d'heure système suspect
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    message|contains:
+      - "time change"
+      - "Clock: inserting"
+  filter_ntp:
+    message|contains:
+      - "systemd-timesyncd"
+      - "ntpd"
+      - "chronyd"
+      - "Network Time Synchronization"
+  condition: selection and not filter_ntp
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1070.006
+falsepositives:
+  - Synchronisation NTP légitime

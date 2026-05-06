@@ -1,0 +1,21 @@
+title: GDM Login Failure
+id: 550e8400-e29b-41d4-a716-446655444002
+status: stable
+description: Échec de connexion via GDM (interface graphique)
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains|all:
+      - "gdm"
+      - "authentication failure"
+  condition: selection
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1110
+falsepositives:
+  - Erreur de mot de passe locale

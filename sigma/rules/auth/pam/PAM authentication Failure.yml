@@ -1,0 +1,22 @@
+title: PAM Authentication Failure
+id: 550e8400-e29b-41d4-a716-446655440015
+status: stable
+description: Échec d'authentification PAM - credential stuffing potentiel
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains|all:
+      - "authentication failure"
+      - "pam_unix"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1110

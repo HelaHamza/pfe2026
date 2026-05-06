@@ -1,0 +1,26 @@
+title: USB Device Connected
+id: 550e8400-e29b-41d4-a716-557655462006
+status: stable
+description: >
+  Détecte la connexion d'un périphérique USB dans syslog.
+  Un attaquant peut utiliser un USB pour exfiltrer des données.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "USB Mass Storage"
+      - "usb-storage"
+      - "new USB device"
+      - "USB disconnect"
+  condition: selection
+level: medium
+tags:
+  - attack.exfiltration
+  - attack.T1052.001
+falsepositives:
+  - Utilisation légitime de USB

@@ -1,0 +1,27 @@
+title: DNS Anomaly in Syslog
+id: 550e8400-e29b-41d4-a716-557655461003
+status: stable
+description: >
+  Détecte des anomalies DNS dans syslog.
+  Peut indiquer du DNS tunneling ou une redirection DNS.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+  keywords:
+    message|contains:
+      - "SERVFAIL"
+      - "NXDOMAIN"
+      - "dns tunneling"
+      - "dnscat"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.command_and_control
+  - attack.T1071.004
+falsepositives:
+  - Problèmes DNS légitimes

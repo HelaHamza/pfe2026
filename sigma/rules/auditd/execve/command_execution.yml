@@ -1,0 +1,29 @@
+title: Suspicious Command Execution via Auditd
+id: a1b2c3d4-0007-0007-0007-000000000007
+status: experimental
+description: Détecte l'exécution de commandes dangereuses loggées par auditd
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains:
+      - "EXECVE"
+      - "SYSCALL"
+  keywords:
+    message|contains:
+      - "wget"
+      - "curl"
+      - "chmod 777"
+      - "chmod +s"
+  condition: selection and keywords
+fields:
+  - user.name
+  - message
+level: high
+tags:
+  - attack.execution
+  - attack.T1059

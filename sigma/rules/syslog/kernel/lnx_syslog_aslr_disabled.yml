@@ -1,0 +1,24 @@
+title: ASLR Disabled in Kernel Logs
+id: 550e8400-e29b-41d4-a716-557655463004
+status: stable
+description: >
+  Détecte la désactivation de l'ASLR dans les logs kernel.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "randomize_va_space"
+      - "ASLR disabled"
+      - "kernel.randomize_va_space = 0"
+  condition: selection
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562
+falsepositives:
+  - Tests de développement

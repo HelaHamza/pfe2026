@@ -1,0 +1,26 @@
+title: OOM Killer Activated
+id: 550e8400-e29b-41d4-a716-557655460003
+status: stable
+description: >
+  Détecte l'activation du OOM Killer (Out Of Memory).
+  Peut indiquer une attaque de type fork bomb ou resource exhaustion.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "Out of memory"
+      - "oom_kill_process"
+      - "oom-kill"
+      - "Killed process"
+  condition: selection
+level: high
+tags:
+  - attack.impact
+  - attack.T1499.004
+falsepositives:
+  - Charge système élevée légitime

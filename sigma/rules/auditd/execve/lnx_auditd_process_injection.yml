@@ -1,0 +1,27 @@
+title: Process Injection Indicators
+id: 550e8400-e29b-41d4-a716-556655450007
+status: stable
+description: >
+  Détecte des indicateurs d'injection de processus via /proc.
+  Technique utilisée pour masquer du code malveillant dans des processus légitimes.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "/proc/*/mem"
+      - "/proc/*/maps"
+      - "dd if=/proc"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1055
+falsepositives:
+  - Débogage légitime

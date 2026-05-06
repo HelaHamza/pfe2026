@@ -1,0 +1,21 @@
+title: Failed Sudo Attempt
+id: 550e8400-e29b-41d4-a716-446655440009
+status: stable
+description: Tentative sudo échouée - possible mouvement latéral ou test de privilèges
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sudo"
+    message|contains: "authentication failure"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: medium
+tags:
+  - attack.privilege_escalation
+  - attack.T1548

@@ -1,0 +1,26 @@
+title: Kernel Panic Detected
+id: 550e8400-e29b-41d4-a716-557655463002
+status: stable
+description: >
+  Détecte un kernel panic dans syslog.
+  Peut indiquer une exploitation du kernel ou une attaque.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "Kernel panic"
+      - "kernel panic"
+      - "BUG: unable to handle"
+      - "Oops:"
+  condition: selection
+level: critical
+tags:
+  - attack.impact
+  - attack.T1499
+falsepositives:
+  - Bugs kernel légitimes

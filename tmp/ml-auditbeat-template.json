@@ -1,0 +1,82 @@
+
+{
+  "index_patterns": ["auditbeat-*"],
+  "priority": 300,
+  "template": {
+    "mappings": {
+      "properties": {
+        "ml": {
+          "properties": {
+            "log_source_encoded":      { "type": "integer" },
+            "log_source":              { "type": "keyword" },
+            "hour_of_day":             { "type": "integer" },
+            "day_of_week":             { "type": "integer" },
+            "is_off_hours":            { "type": "integer" },
+            "is_night":                { "type": "integer" },
+            "is_weekend":              { "type": "integer" },
+            "is_business":             { "type": "integer" },
+            "hour_sin":                { "type": "float"   },
+            "hour_cos":                { "type": "float"   },
+            "msg_length_log":          { "type": "float"   },
+            "msg_word_count":          { "type": "integer" },
+            "msg_has_ip":              { "type": "integer" },
+            "msg_has_base64":          { "type": "integer" },
+            "msg_has_url":             { "type": "integer" },
+            "msg_has_pipe":            { "type": "integer" },
+            "user_sensitivity":        { "type": "integer" },
+            "is_root":                 { "type": "integer" },
+            "priority_label":          { "type": "keyword" },
+            "composite_score":         { "type": "integer" },
+            "composite_score_norm":    { "type": "float"   },
+            "is_anomaly_candidate":    { "type": "integer" },
+            "delta_time":              { "type": "float"   },
+            "delta_time_log":          { "type": "float"   },
+            "event_count_ip":          { "type": "integer" },
+            "event_count_1m_ip":       { "type": "integer" },
+            "freq_spike_ratio":        { "type": "float"   },
+            "auth_type":               { "type": "keyword" },
+            "auth_source_country":     { "type": "keyword" },
+            "auth_is_root":            { "type": "integer" },
+            "auth_ip_is_external":     { "type": "integer" },
+            "auth_severity":           { "type": "integer" },
+            "auth_sev_norm":           { "type": "float"   },
+            "auth_user_sensitivity":   { "type": "integer" },
+            "auth_user_created":       { "type": "integer" },
+            "auth_user_deleted":       { "type": "integer" },
+            "auth_sudo_to_root":       { "type": "integer" },
+            "auth_passwd_changed":     { "type": "integer" },
+            "auth_pam_open":           { "type": "integer" },
+            "auth_pam_close":          { "type": "integer" },
+            "auth_known_country":      { "type": "integer" },
+            "auth_fail_count_5m":      { "type": "integer" },
+            "auth_ok_count_5m":        { "type": "integer" },
+            "auth_fail_ratio":         { "type": "float"   },
+            "auth_users_tried":        { "type": "integer" },
+            "auth_is_brute_force":     { "type": "integer" },
+            "auth_is_user_enum":       { "type": "integer" },
+            "sys_prog_category":       { "type": "keyword" },
+            "sys_oom_kill":            { "type": "integer" },
+            "sys_module_load":         { "type": "integer" },
+            "sys_cron_new_job":        { "type": "integer" },
+            "sys_firewall_change":     { "type": "integer" },
+            "sys_service_crash_loop":  { "type": "integer" },
+            "sys_msg_length_log":      { "type": "float"   },
+            "aud_syscall_category":    { "type": "keyword" },
+            "aud_severity":            { "type": "integer" },
+            "aud_sev_norm":            { "type": "float"   },
+            "aud_ptrace":              { "type": "integer" },
+            "aud_process_injection":   { "type": "integer" },
+            "aud_log_tamper":          { "type": "integer" },
+            "aud_cmd_entropy":         { "type": "float"   },
+            "aud_cmd_length_log":      { "type": "float"   },
+            "aud_cmd_is_obfuscated":   { "type": "integer" },
+            "cross_ssh_then_sudo":     { "type": "integer" },
+            "cross_bruteforce_success":{ "type": "integer" },
+            "cross_multi_source":      { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}
+

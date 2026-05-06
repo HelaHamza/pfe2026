@@ -1,0 +1,34 @@
+title: File Download via Command Line
+id: 550e8400-e29b-41d4-a716-556655450005
+status: stable
+description: >
+  Détecte le téléchargement de fichiers via wget, curl, ftp.
+  Peut indiquer le téléchargement de malware ou d'outils d'attaque.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  download_tools:
+    message|contains:
+      - " wget "
+      - " curl "
+      - " ftp "
+      - " sftp "
+      - " scp "
+  suspicious_args:
+    message|contains:
+      - "-O "
+      - "--output"
+      - "-o "
+  condition: selection and download_tools and suspicious_args
+level: medium
+tags:
+  - attack.command_and_control
+  - attack.T1105
+falsepositives:
+  - Téléchargements légitimes

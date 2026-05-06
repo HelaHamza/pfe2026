@@ -1,0 +1,27 @@
+title: Kernel Module Files Modified
+id: 550e8400-e29b-41d4-a716-556655451003
+status: stable
+description: >
+  Détecte la modification des fichiers de modules kernel.
+  Un rootkit peut modifier les modules pour se cacher.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/lib/modules/"
+      - "/etc/modprobe.d/"
+      - "/etc/modules"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1547.006
+falsepositives:
+  - Mise à jour système légitime

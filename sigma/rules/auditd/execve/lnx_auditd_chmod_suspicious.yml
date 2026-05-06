@@ -1,0 +1,28 @@
+title: Suspicious chmod Usage
+id: 550e8400-e29b-41d4-a716-556655443003
+status: stable
+description: chmod pour rendre des fichiers exécutables ou SUID/SGID
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "chmod 777"
+      - "chmod +x"
+      - "chmod +s"
+      - "chmod 4755"
+      - "chmod 2755"
+      - "chmod u+s"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1222.002
+falsepositives:
+  - Scripts d'installation légitimes

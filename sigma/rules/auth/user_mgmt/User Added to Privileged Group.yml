@@ -1,0 +1,23 @@
+title: User Added to Privileged Group
+id: 550e8400-e29b-41d4-a716-446655440014
+status: stable
+description: Utilisateur ajouté au groupe sudo ou admin - escalade de privilèges
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains:
+      - "to group 'sudo'"
+      - "to group 'admin'"
+      - "to group 'wheel'"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: critical
+tags:
+  - attack.privilege_escalation
+  - attack.T1098

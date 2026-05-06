@@ -1,0 +1,29 @@
+title: PAM Configuration Modified
+id: 550e8400-e29b-41d4-a716-556655461002
+status: stable
+description: >
+  Détecte la modification de la configuration PAM.
+  Peut être utilisé pour bypasser l'authentification.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/pam.d/"
+      - "/etc/pam.conf"
+      - "/lib/security/"
+      - "/lib64/security/"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1556.003
+  - attack.persistence
+falsepositives:
+  - Configuration PAM légitime

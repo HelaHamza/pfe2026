@@ -1,0 +1,33 @@
+title: New or Unexpected User SSH Login
+id: 550e8400-e29b-41d4-a716-446655440026
+status: stable
+description: >
+  Connexion SSH réussie d'un utilisateur - à corréler avec la liste des
+  utilisateurs autorisés. Surveiller les connexions de comptes inhabituels
+  ou nouvellement créés.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "success"
+    event.action: "ssh_login"
+  filter_known:
+    user.name:
+      - "hala-hamza"
+      - "root"
+  condition: selection and not filter_known
+fields:
+  - user.name
+  - source.ip
+  - ml.hour_of_day
+  - message
+level: high
+tags:
+  - attack.initial_access
+  - attack.T1078
+  - attack.persistence
+  - attack.T1136

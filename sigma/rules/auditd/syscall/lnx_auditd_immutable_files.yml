@@ -1,0 +1,27 @@
+title: Immutable File Attribute Set
+id: 550e8400-e29b-41d4-a716-556655462002
+status: stable
+description: >
+  Détecte la mise d'attributs immutables sur des fichiers.
+  Un attaquant peut rendre ses fichiers malveillants impossibles à supprimer.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "chattr +i"
+      - "chattr -i"
+      - "FS_IMMUTABLE_FL"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1222.002
+falsepositives:
+  - Protection de fichiers de configuration

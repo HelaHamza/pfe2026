@@ -1,0 +1,34 @@
+title: Suspicious Parent Process
+id: 550e8400-e29b-41d4-a716-557655460005
+status: stable
+description: >
+  Détecte des processus lancés depuis des parents inattendus.
+  Ex: un shell lancé depuis un serveur web.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+  web_parents:
+    message|contains:
+      - "apache"
+      - "nginx"
+      - "httpd"
+      - "php-fpm"
+  shell_children:
+    message|contains:
+      - "/bin/bash"
+      - "/bin/sh"
+      - "/bin/dash"
+  condition: selection and web_parents and shell_children
+level: critical
+tags:
+  - attack.execution
+  - attack.T1059.004
+  - attack.initial_access
+  - attack.T1190
+falsepositives:
+  - Scripts web légitimes

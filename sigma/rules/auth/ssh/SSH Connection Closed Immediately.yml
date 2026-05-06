@@ -1,0 +1,21 @@
+title: SSH Connection Closed Immediately
+id: 550e8400-e29b-41d4-a716-446655440020
+status: stable
+description: Connexion SSH fermée immédiatement après ouverture - scan ou probe
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Connection closed by"
+  condition: selection
+fields:
+  - source.ip
+  - message
+level: low
+tags:
+  - attack.reconnaissance
+  - attack.T1046

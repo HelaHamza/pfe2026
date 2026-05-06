@@ -1,0 +1,25 @@
+title: System Service Manipulation
+id: 550e8400-e29b-41d4-a716-557655462001
+status: stable
+description: >
+  Détecte la manipulation de services système via syslog.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "systemctl stop"
+      - "systemctl disable"
+      - "systemctl mask"
+      - "service stop"
+  condition: selection
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1562.001
+falsepositives:
+  - Administration système légitime

@@ -1,0 +1,30 @@
+title: Security Framework Disabled
+id: 550e8400-e29b-41d4-a716-556655460005
+status: stable
+description: >
+  Détecte la désactivation de SELinux ou AppArmor.
+  Un attaquant désactive ces protections pour faciliter son activité.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "setenforce 0"
+      - "setenforce Permissive"
+      - "aa-disable"
+      - "apparmor_parser -R"
+      - "systemctl disable apparmor"
+      - "systemctl disable selinux"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1562.001
+falsepositives:
+  - Administration système légitime

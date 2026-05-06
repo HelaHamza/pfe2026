@@ -1,0 +1,35 @@
+title: Memory Hardware Error
+id: 550e8400-e29b-41d4-a716-557655463005
+status: stable
+description: Détecte des erreurs mémoire hardware réelles
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "EDAC"
+      - "MCE"
+      - "Machine Check Exception"
+  filter_init:
+    message|contains:
+      - "Ver: "
+      - "Giving out device"
+      - "EDAC MC:"
+      - "EDAC DEBUG"
+  real_errors:
+    message|contains:
+      - "CE error"
+      - "UE error"
+      - "CE memory read error"
+      - "hardware error"
+  condition: selection and real_errors and not filter_init
+level: high
+tags:
+  - attack.impact
+  - attack.T1499
+falsepositives:
+  - Problèmes hardware légitimes

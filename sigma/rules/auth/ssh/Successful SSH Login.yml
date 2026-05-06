@@ -1,0 +1,23 @@
+title: Successful SSH Login
+id: 550e8400-e29b-41d4-a716-446655440003
+status: stable
+description: Connexion SSH réussie - surveiller les connexions inattendues
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "success"
+    event.action: "ssh_login"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: low
+tags:
+  - attack.initial_access
+  - attack.T1078

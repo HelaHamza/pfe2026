@@ -1,0 +1,24 @@
+title: SSH User Enumeration
+id: 550e8400-e29b-41d4-a716-446655440025
+status: stable
+description: >
+  Tentatives de connexion avec de nombreux utilisateurs différents - énumération.
+  NOTE: Le comptage count(user.name) > 5 est appliqué dans le script Python.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "failure"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: high
+tags:
+  - attack.reconnaissance
+  - attack.T1078

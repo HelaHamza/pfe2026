@@ -1,0 +1,21 @@
+title: SSH Success After Multiple Failures
+id: 550e8400-e29b-41d4-a716-446655440004
+status: stable
+description: Connexion SSH réussie après des échecs - brute force réussi potentiel
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection_success:
+    process.name: "sshd"
+    event.outcome: "success"
+    event.action: "ssh_login"
+  condition: selection_success
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1110
+  - attack.initial_access
+  - attack.T1078

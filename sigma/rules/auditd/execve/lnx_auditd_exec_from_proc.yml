@@ -1,0 +1,27 @@
+title: Execution from /proc Filesystem
+id: 550e8400-e29b-41d4-a716-556655460004
+status: stable
+description: >
+  Détecte l'exécution depuis le système de fichiers /proc.
+  Technique avancée d'évasion de la détection.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "/proc/self/exe"
+      - "/proc/self/fd"
+      - "/proc/self/mem"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1055
+falsepositives:
+  - Aucun

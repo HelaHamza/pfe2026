@@ -1,0 +1,27 @@
+title: Network Interface Configuration Modified
+id: 550e8400-e29b-41d4-a716-556655461006
+status: stable
+description: >
+  Détecte la modification des fichiers de configuration réseau.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/network/interfaces"
+      - "/etc/netplan/"
+      - "/etc/sysconfig/network"
+      - "/etc/NetworkManager/"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1562
+falsepositives:
+  - Configuration réseau légitime

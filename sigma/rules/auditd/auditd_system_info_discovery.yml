@@ -1,0 +1,27 @@
+title: System Information Discovery
+id: 550e8400-e29b-41d4-a716-556655449005
+status: stable
+description: Découverte d'informations système - uname, lscpu, dmidecode
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "uname -a"
+      - "lscpu"
+      - "dmidecode"
+      - "lshw"
+      - "cat /proc/version"
+  condition: selection and keywords
+level: low
+tags:
+  - attack.discovery
+  - attack.T1082
+falsepositives:
+  - Administration système normale

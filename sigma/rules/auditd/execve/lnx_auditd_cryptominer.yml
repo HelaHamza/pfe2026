@@ -1,0 +1,30 @@
+title: Cryptominer Execution
+id: 550e8400-e29b-41d4-a716-556655450008
+status: stable
+description: >
+  Détecte l'exécution de cryptomineurs.
+  Les attaquants utilisent les ressources du système pour miner des cryptomonnaies.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "xmrig"
+      - "minerd"
+      - "cpuminer"
+      - "ethminer"
+      - "stratum+tcp"
+      - "monero"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.impact
+  - attack.T1496
+falsepositives:
+  - Minage légitime autorisé

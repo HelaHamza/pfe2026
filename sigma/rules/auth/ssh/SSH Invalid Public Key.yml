@@ -1,0 +1,22 @@
+title: SSH Invalid Public Key
+id: 550e8400-e29b-41d4-a716-446655440006
+status: stable
+description: Tentative de connexion SSH avec une clé publique invalide
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains: "Failed publickey"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1110

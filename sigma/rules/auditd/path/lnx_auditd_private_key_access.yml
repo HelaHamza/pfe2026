@@ -1,0 +1,30 @@
+title: Private Key File Access
+id: 550e8400-e29b-41d4-a716-556655451005
+status: stable
+description: >
+  Détecte l'accès aux fichiers de clés privées.
+  Un attaquant peut voler les clés privées pour se connecter à d'autres systèmes.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "id_rsa"
+      - "id_ecdsa"
+      - "id_ed25519"
+      - ".pem"
+      - ".key"
+      - "private_key"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1552.004
+falsepositives:
+  - Gestion de certificats légitime

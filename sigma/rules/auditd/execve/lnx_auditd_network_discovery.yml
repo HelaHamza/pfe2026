@@ -1,0 +1,29 @@
+title: Network Discovery Commands
+id: 550e8400-e29b-41d4-a716-556655443005
+status: stable
+description: Détecte les commandes de découverte réseau
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " ifconfig"
+      - " netstat"
+      - " ss "
+      - " ip addr"
+      - " ip route"
+      - " arp "
+      - " route "
+  condition: selection and keywords
+level: low
+tags:
+  - attack.discovery
+  - attack.T1016
+falsepositives:
+  - Administration réseau normale

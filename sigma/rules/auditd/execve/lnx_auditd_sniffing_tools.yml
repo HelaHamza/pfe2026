@@ -1,0 +1,34 @@
+title: Network Sniffing Tools Execution
+id: 550e8400-e29b-41d4-a716-556655460001
+status: stable
+description: >
+  Détecte l'utilisation d'outils de capture réseau.
+  Un attaquant peut capturer des credentials en transit.
+author: hala-hamza
+date: 2026/04/27
+references:
+  - https://attack.mitre.org/techniques/T1040/
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " tcpdump "
+      - " wireshark "
+      - " tshark "
+      - " ettercap "
+      - " dsniff "
+      - " bettercap "
+      - " scapy "
+  condition: selection and keywords
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1040
+  - attack.discovery
+falsepositives:
+  - Analyse réseau légitime par admin

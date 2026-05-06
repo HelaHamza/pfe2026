@@ -1,0 +1,23 @@
+title: VPN Connection Established
+id: 550e8400-e29b-41d4-a716-557655461004
+status: stable
+description: Détecte des connexions VPN inattendues
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "WireGuard"
+      - "tun0"
+      - "tun1"
+  condition: selection
+level: medium
+tags:
+  - attack.command_and_control
+  - attack.T1572
+falsepositives:
+  - Connexions VPN légitimes

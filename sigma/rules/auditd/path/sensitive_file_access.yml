@@ -1,0 +1,25 @@
+title: Sensitive File Access
+id: a1b2c3d4-0006-0006-0006-000000000006
+status: experimental
+description: Détecte l'accès à des fichiers système sensibles
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains:
+      - "/etc/passwd"
+      - "/etc/shadow"
+      - "/etc/sudoers"
+      - "/root/.ssh"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1003

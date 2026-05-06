@@ -1,0 +1,35 @@
+title: Suspicious C2 Commands via Auditd
+id: 550e8400-e29b-41d4-a716-446655441001
+status: stable
+description: >
+  Détecte des commandes suspectes liées aux C2 :
+  wget, curl, nc, netcat, ncat, socat, nmap, base64
+author: Florian Roth, SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains:
+      - "EXECVE"
+  keywords:
+    message|contains:
+      - " wget "
+      - " curl "
+      - " nc "
+      - " netcat "
+      - " ncat "
+      - " socat "
+      - " nmap "
+      - " base64 "
+  condition: selection and keywords
+level: high
+tags:
+  - attack.command_and_control
+  - attack.T1071
+  - attack.exfiltration
+  - attack.T1048
+falsepositives:
+  - Administration système légitime

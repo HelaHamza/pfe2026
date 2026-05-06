@@ -1,0 +1,26 @@
+title: Firewall Service Stopped
+id: 550e8400-e29b-41d4-a716-556655445002
+status: stable
+description: Arrêt du service firewall - exposition réseau potentielle
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SERVICE_STOP"
+  keywords:
+    message|contains:
+      - "ufw"
+      - "iptables"
+      - "firewalld"
+      - "nftables"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562.004
+falsepositives:
+  - Maintenance réseau planifiée

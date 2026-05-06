@@ -1,0 +1,29 @@
+title: Cloud Configuration Files Access
+id: 550e8400-e29b-41d4-a716-556655461005
+status: stable
+description: >
+  Détecte l'accès aux fichiers de configuration cloud (AWS, GCP, Azure).
+  Un attaquant peut voler des credentials cloud pour pivoter.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/.aws/"
+      - "/.azure/"
+      - "/.gcloud/"
+      - "/metadata/instance"
+      - "169.254.169.254"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1552.005
+falsepositives:
+  - Applications cloud légitimes

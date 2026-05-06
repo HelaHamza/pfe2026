@@ -1,0 +1,27 @@
+title: Core Dump Disabled
+id: 550e8400-e29b-41d4-a716-556655462005
+status: stable
+description: >
+  Détecte la désactivation des core dumps.
+  Un attaquant peut désactiver les core dumps pour éviter l'analyse forensique.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "ulimit -c 0"
+      - "kernel.core_pattern"
+      - "fs.suid_dumpable=0"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1562
+falsepositives:
+  - Configuration système légitime

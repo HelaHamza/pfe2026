@@ -1,0 +1,24 @@
+title: Failed SSH Login as Root
+id: 550e8400-e29b-41d4-a716-446655440002
+status: stable
+description: Tentative de connexion SSH échouée avec le compte root
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    user.name: "root"
+    event.outcome: "failure"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1110
+  - attack.T1078.003

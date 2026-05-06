@@ -1,0 +1,27 @@
+title: Mail Relay Abuse
+id: 550e8400-e29b-41d4-a716-557655464003
+status: stable
+description: >
+  Détecte l'abus du relais mail dans syslog.
+  Un attaquant peut utiliser le serveur comme relais spam.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+  keywords:
+    message|contains:
+      - "relay denied"
+      - "relay rejected"
+      - "too many connections"
+      - "NOQUEUE: reject"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.impact
+  - attack.T1566
+falsepositives:
+  - Problèmes de configuration mail

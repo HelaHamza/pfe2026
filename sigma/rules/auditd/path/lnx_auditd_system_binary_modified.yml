@@ -1,0 +1,32 @@
+title: System Binary Modified
+id: 550e8400-e29b-41d4-a716-556655451004
+status: stable
+description: >
+  Détecte la modification de binaires système critiques.
+  Un attaquant peut remplacer des binaires légitimes par des versions malveillantes.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/bin/bash"
+      - "/bin/sh"
+      - "/usr/bin/sudo"
+      - "/usr/bin/ssh"
+      - "/usr/sbin/sshd"
+      - "/bin/login"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1574.006
+  - attack.defense_evasion
+  - attack.T1036
+falsepositives:
+  - Mise à jour système légitime

@@ -1,0 +1,33 @@
+title: Ransomware Activity Indicators
+id: 550e8400-e29b-41d4-a716-556655462004
+status: stable
+description: >
+  Détecte des indicateurs d'activité ransomware.
+  Renommage massif de fichiers et chiffrement.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "openssl enc"
+      - "gpg --encrypt"
+      - "gpg -e "
+      - "ccrypt"
+  suspicious_locations:
+    message|contains:
+      - "/home/"
+      - "/var/www/"
+      - "/srv/"
+  condition: selection and keywords and suspicious_locations
+level: critical
+tags:
+  - attack.impact
+  - attack.T1486
+falsepositives:
+  - Chiffrement de données légitime

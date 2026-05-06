@@ -1,0 +1,27 @@
+title: SetUID or SetGID Bit Set
+id: 550e8400-e29b-41d4-a716-556655443007
+status: stable
+description: Mise du bit SUID/SGID sur un fichier pour escalade de privilèges
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "chmod +s"
+      - "chmod 4755"
+      - "chmod 2755"
+      - "chmod u+s"
+      - "chmod g+s"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.T1548.001
+falsepositives:
+  - Installation de logiciels légitimes

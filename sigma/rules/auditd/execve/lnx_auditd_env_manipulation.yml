@@ -1,0 +1,28 @@
+title: Environment Variable Manipulation
+id: 550e8400-e29b-41d4-a716-556655450009
+status: stable
+description: >
+  Détecte la manipulation de variables d'environnement sensibles.
+  Utilisée pour détourner l'exécution de binaires légitimes.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "LD_PRELOAD"
+      - "LD_LIBRARY_PATH"
+      - "PYTHONPATH"
+      - "DYLD_INSERT_LIBRARIES"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1574.006
+falsepositives:
+  - Configuration d'environnement légitime

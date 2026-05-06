@@ -1,0 +1,28 @@
+title: Docker Container Escape Indicators
+id: 550e8400-e29b-41d4-a716-557655464001
+status: stable
+description: Détecte des indicateurs d'évasion de conteneur Docker
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "/var/run/docker.sock"
+      - "privileged container"
+      - "container escape"
+  filter_normal:
+    message|contains:
+      - "Starting docker.socket"
+      - "Listening on docker.socket"
+      - "Docker Socket for the API"
+  condition: selection and not filter_normal
+level: critical
+tags:
+  - attack.privilege_escalation
+  - attack.T1611
+falsepositives:
+  - Administration Docker légitime

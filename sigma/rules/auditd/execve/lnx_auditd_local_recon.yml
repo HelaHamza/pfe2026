@@ -1,0 +1,33 @@
+title: Local System Reconnaissance
+id: 550e8400-e29b-41d4-a716-556655460009
+status: stable
+description: >
+  Détecte des commandes de reconnaissance du système local.
+  Indique un attaquant qui explore la machine compromise.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " ps aux"
+      - " ps -ef"
+      - " netstat -an"
+      - " ss -an"
+      - " lsof "
+      - " df -h"
+      - " free -m"
+      - " cat /proc/cpuinfo"
+  condition: selection and keywords
+level: low
+tags:
+  - attack.discovery
+  - attack.T1057
+  - attack.T1082
+falsepositives:
+  - Administration système normale

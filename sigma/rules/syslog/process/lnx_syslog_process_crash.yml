@@ -1,0 +1,33 @@
+title: Critical Process Crash
+id: 550e8400-e29b-41d4-a716-557655460002
+status: stable
+description: >
+  Détecte le crash de processus critiques dans syslog.
+  Peut indiquer une tentative d'exploitation ou une attaque DoS.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "segfault"
+      - "segmentation fault"
+      - "core dumped"
+      - "killed by signal"
+  critical_processes:
+    message|contains:
+      - "sshd"
+      - "nginx"
+      - "apache"
+      - "mysql"
+      - "postgres"
+  condition: selection and critical_processes
+level: high
+tags:
+  - attack.impact
+  - attack.T1499
+falsepositives:
+  - Bugs logiciels légitimes

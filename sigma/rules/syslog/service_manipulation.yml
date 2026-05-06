@@ -1,0 +1,23 @@
+title: System Service Manipulation
+id: a1b2c3d4-0005-0005-0005-000000000005
+status: experimental
+description: Détecte la manipulation de services système
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    message|contains:
+      - "systemctl stop"
+      - "systemctl disable"
+      - "service stop"
+  condition: selection
+fields:
+  - process.name
+  - message
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1562

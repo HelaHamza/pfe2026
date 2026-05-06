@@ -1,0 +1,27 @@
+title: Raw Socket Creation
+id: 550e8400-e29b-41d4-a716-556655453001
+status: stable
+description: >
+  Détecte la création de sockets bruts.
+  Utilisés pour le sniffing réseau ou les attaques de bas niveau.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "SOCK_RAW"
+      - "socket(AF_PACKET"
+      - "socket(PF_PACKET"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.discovery
+  - attack.T1040
+falsepositives:
+  - Outils réseau légitimes

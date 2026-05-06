@@ -1,0 +1,33 @@
+title: System Log Files Deletion
+id: 550e8400-e29b-41d4-a716-556655450006
+status: stable
+description: >
+  Détecte la suppression de fichiers de logs système.
+  Un attaquant efface ses traces après une intrusion.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  delete_cmd:
+    message|contains:
+      - " rm "
+      - " shred "
+      - " wipe "
+  log_paths:
+    message|contains:
+      - "/var/log/"
+      - "/var/log/auth"
+      - "/var/log/syslog"
+      - "/var/log/audit"
+  condition: selection and delete_cmd and log_paths
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1070.002
+falsepositives:
+  - Rotation de logs planifiée

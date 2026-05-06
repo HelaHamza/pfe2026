@@ -1,0 +1,32 @@
+title: Kernel Module Loaded via Syslog
+id: 550e8400-e29b-41d4-a716-557655463001
+status: stable
+description: >
+  Détecte le chargement de modules kernel suspects via insmod.
+  Exclut les chargements normaux via systemd/modprobe au démarrage.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "insmod"
+  filter_systemd:
+    message|contains:
+      - "modprobe@"
+      - "system-modprobe"
+      - "Starting modprobe"
+      - "Finished modprobe"
+      - "Load Kernel Module"
+      - "containerd"
+      - "systemd[1]"
+  condition: selection and not filter_systemd
+level: high
+tags:
+  - attack.persistence
+  - attack.T1547.006
+falsepositives:
+  - Chargement de drivers légitimes

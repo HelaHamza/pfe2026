@@ -1,0 +1,31 @@
+title: Monitoring Service Stopped
+id: 550e8400-e29b-41d4-a716-556655452001
+status: stable
+description: >
+  Détecte l'arrêt de services de monitoring.
+  Un attaquant peut désactiver le monitoring pour éviter la détection.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SERVICE_STOP"
+  keywords:
+    message|contains:
+      - "nagios"
+      - "zabbix"
+      - "prometheus"
+      - "grafana"
+      - "elastic"
+      - "filebeat"
+      - "auditbeat"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562.001
+falsepositives:
+  - Maintenance de monitoring

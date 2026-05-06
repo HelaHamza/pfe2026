@@ -1,0 +1,28 @@
+title: Kernel Module Load via Syscall
+id: 550e8400-e29b-41d4-a716-556655453002
+status: stable
+description: >
+  Détecte le chargement de modules kernel via syscall.
+  Un rootkit peut se charger comme module kernel.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "init_module"
+      - "finit_module"
+      - "insmod"
+      - "modprobe"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1547.006
+falsepositives:
+  - Chargement de drivers légitimes

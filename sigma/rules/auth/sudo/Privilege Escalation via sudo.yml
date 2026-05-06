@@ -1,0 +1,24 @@
+title: Privilege Escalation via Sudo
+id: 550e8400-e29b-41d4-a716-446655440010
+status: stable
+description: Utilisateur non-root exécute une commande via sudo
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sudo"
+    message|contains: "COMMAND="
+  filter:
+    user.name: "root"
+  condition: selection and not filter
+fields:
+  - user.name
+  - user.effective.name
+  - message
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.T1548.003

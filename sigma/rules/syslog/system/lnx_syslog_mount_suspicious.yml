@@ -1,0 +1,26 @@
+title: Suspicious Mount Activity
+id: 550e8400-e29b-41d4-a716-557655462007
+status: stable
+description: Détecte le montage de systèmes de fichiers suspects
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "/dev/shm"
+  filter_docker:
+    message|contains:
+      - "docker"
+      - "overlay2"
+      - "containerd"
+  condition: selection and not filter_docker
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1564
+falsepositives:
+  - Montage légitime

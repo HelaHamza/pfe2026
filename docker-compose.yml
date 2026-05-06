@@ -1,0 +1,99 @@
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    environment:
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PWD} # mot de passe pour l'utilisateur "elastic" (super-utilisateur)
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.crt
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.key
+      - xpack.security.http.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/full-chain.crt
+      - xpack.security.transport.ssl.enabled=true
+      - xpack.security.transport.ssl.verification_mode=certificate
+      - xpack.security.transport.ssl.certificate=/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.crt
+      - xpack.security.transport.ssl.key=/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.key
+      - xpack.security.transport.ssl.certificate_authorities=/usr/share/elasticsearch/config/certs/full-chain.crt
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+      - ./pki/full-chain.crt:/usr/share/elasticsearch/config/certs/full-chain.crt:ro
+      - ./pki/elk/elasticsearch/elasticsearch.crt:/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.crt:ro
+      - ./pki/elk/elasticsearch/elasticsearch.key:/usr/share/elasticsearch/config/certs/elk/elasticsearch/elasticsearch.key:ro
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+    ports:
+      - "9200:9200"
+    healthcheck:
+        test: ["CMD-SHELL", "curl -s --cacert /usr/share/elasticsearch/config/certs/full-chain.crt https://localhost:9200 -u elastic:${ELASTIC_PWD} | grep -q '\"cluster_name'"]
+        interval: 10s
+        timeout: 10s
+        retries: 10
+
+  es-setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: es-setup
+    depends_on:
+        elasticsearch:
+         condition: service_healthy          # ← décommenté et corrigé
+    volumes:
+      #- ./pki/ca-elk/ca-elk.crt:/certs/ca-elk.crt:ro    # ← décommenté, requis par le script
+      - ./pki/full-chain.crt:/usr/share/elasticsearch/config/certs/full-chain.crt:ro  # ← ajouter
+      - ./scripts/es-setup.sh:/usr/share/elasticsearch/es-setup.sh
+    environment:
+      - ELASTIC_PWD=${ELASTIC_PWD}
+      - KIBANA_PWD=${KIBANA_PWD}
+      - LOGSTASH_SYSTEM_PWD=${LOGSTASH_SYSTEM_PWD}
+      - LOGSTASH_WRITER_PWD=${LOGSTASH_WRITER_PWD}
+    entrypoint: ["bash", "/usr/share/elasticsearch/es-setup.sh"]
+    restart: "no"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:${STACK_VERSION}
+    depends_on:
+       es-setup:
+         condition: service_completed_successfully
+    environment:
+      - LOGSTASH_SYSTEM_PWD=${LOGSTASH_SYSTEM_PWD} # mot de passe pour l'utilisateur "logstash_system" (surveillance)
+      - LOGSTASH_WRITER_PWD=${LOGSTASH_WRITER_PWD} # mot de passe pour l'utilisateur "logstash_writer" (écriture dans Elasticsearch)
+    volumes:
+      - ./pki/elk/logstash/logstash.crt:/usr/share/logstash/config/certs/elk/logstash/logstash.crt:ro
+      - ./pki/elk/logstash/logstash.key:/usr/share/logstash/config/certs/elk/logstash/logstash.key:ro
+      - ./pki/elk/logstash-client/logstash-client.crt:/usr/share/logstash/config/certs/elk/logstash-client/logstash-client.crt:ro
+      - ./pki/elk/logstash-client/logstash-client.key:/usr/share/logstash/config/certs/elk/logstash-client/logstash-client.key:ro
+      - ./pki/ca-beats/ca-beats.crt:/usr/share/logstash/config/certs/ca-beats/ca-beats.crt:ro
+     # - ./pki/ca-elk/ca-elk.crt:/usr/share/logstash/config/certs/ca-elk/ca-elk.crt:ro
+      - ./pki/root-ca/root-ca.crt:/usr/share/logstash/config/certs/root-ca.crt:ro
+      - ./pki/full-chain.crt:/usr/share/logstash/config/certs/full-chain.crt # combinaison de ca root et ca-elk pour la validation mutuelle entre Logstash et Elasticsearch
+      - ./pki/ca-beats/ca-beats-full-chain.crt:/usr/share/logstash/config/certs/ca-beats/ca-beats-full-chain.crt:ro # ca-beats-full-chain combine ca-beats et root-ca 
+      - ./logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml
+      #- ./logstash/pipeline/test.conf:/usr/share/logstash/test.conf
+    ports:
+      - "5044:5044"
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    depends_on:
+       es-setup:
+         condition: service_completed_successfully
+    environment:
+      - ELASTICSEARCH_HOSTS=https://elasticsearch:9200 # URL de connexion à Elasticsearch
+      - ELASTICSEARCH_USERNAME=kibana_system # utilisateur dédié à Kibana (lecture seule)
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PWD} # mot de passe pour l'utilisateur "kibana_system"
+      # CA pour vérifier Elasticsearch — chemin cohérent avec le volume
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=/usr/share/kibana/config/certs/full-chain.crt
+      - SERVER_SSL_ENABLED=true
+      # ← corrigé : pointe vers kibana.crt et non ca-elk.crt
+      - SERVER_SSL_CERTIFICATE=/usr/share/kibana/config/certs/elk/kibana/kibana.crt
+      - SERVER_SSL_KEY=/usr/share/kibana/config/certs/elk/kibana/kibana.key
+    volumes:
+      - ./pki/elk/kibana/kibana.crt:/usr/share/kibana/config/certs/elk/kibana/kibana.crt:ro
+      - ./pki/elk/kibana/kibana.key:/usr/share/kibana/config/certs/elk/kibana/kibana.key:ro
+      - ./pki/full-chain.crt:/usr/share/kibana/config/certs/full-chain.crt:ro
+     # - ./pki/root-ca/root-ca.crt:/usr/share/kibana/config/certs/root-ca.crt:ro
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - "5601:5601"
+
+volumes:
+  es_data:

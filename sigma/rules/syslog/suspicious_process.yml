@@ -1,0 +1,25 @@
+title: Suspicious Process Execution
+id: a1b2c3d4-0004-0004-0004-000000000004
+status: experimental
+description: Détecte l'exécution de processus suspects dans syslog
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    message|contains:
+      - "nc -e"
+      - "bash -i"
+      - "/dev/tcp"
+      - "python -c"
+      - "perl -e"
+  condition: selection
+fields:
+  - process.name
+  - message
+level: critical
+tags:
+  - attack.execution
+  - attack.T1059

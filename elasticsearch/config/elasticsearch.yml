@@ -1,0 +1,19 @@
+cluster.name: pfe-2026
+node.name: node-1
+network.host: 0.0.0.0
+# http.port: 9200
+# discovery.type: single-node
+#xpack.security.enabled: true #pour l'autehntification
+
+# # HTTPS (HTTP layer)
+# xpack.security.http.ssl.enabled: true
+# xpack.security.http.ssl.keystore.path: certs/elastic-certificates.p12
+# xpack.security.http.ssl.keystore.password: pfe2026
+# xpack.security.http.ssl.certificate_authorities: certs/ca.crt
+
+# # Transport SSL
+# xpack.security.transport.ssl.enabled: true
+# xpack.security.transport.ssl.keystore.path: certs/elastic-certificates.p12
+# xpack.security.transport.ssl.keystore.password: pfe2026
+# xpack.security.transport.ssl.certificate_authorities: certs/ca.crt
+# xpack.security.transport.ssl.verification_mode: certificate

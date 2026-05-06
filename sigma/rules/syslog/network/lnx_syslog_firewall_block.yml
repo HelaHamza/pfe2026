@@ -1,0 +1,33 @@
+title: Firewall Blocking Suspicious Traffic
+id: 550e8400-e29b-41d4-a716-557655461005
+status: stable
+description: >
+  Détecte le blocage de trafic suspect par le firewall dans syslog.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+  keywords:
+    message|contains:
+      - "UFW BLOCK"
+      - "iptables DROP"
+      - "REJECT"
+      - "firewall block"
+  suspicious_ports:
+    message|contains:
+      - "DPT=22"
+      - "DPT=3389"
+      - "DPT=445"
+      - "DPT=1433"
+      - "DPT=3306"
+  condition: selection and keywords and suspicious_ports
+level: medium
+tags:
+  - attack.reconnaissance
+  - attack.T1046
+falsepositives:
+  - Trafic réseau normal bloqué

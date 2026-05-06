@@ -1,0 +1,23 @@
+title: ASLR Protection Disabled via Syscall
+id: 550e8400-e29b-41d4-a716-556655446004
+status: stable
+description: Désactivation de la protection ASLR - facilite les exploits
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - "randomize_va_space"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1562
+falsepositives:
+  - Tests de développement

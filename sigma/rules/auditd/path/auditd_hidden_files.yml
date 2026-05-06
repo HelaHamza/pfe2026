@@ -1,0 +1,28 @@
+title: Creation of Hidden Files and Directories
+id: 550e8400-e29b-41d4-a716-446655441003
+status: stable
+description: Détecte la création de fichiers/dossiers cachés (commençant par .)
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " mkdir"
+      - " touch"
+      - " nano"
+      - " vim"
+  hidden:
+    message|re: '\s\.\w+'
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1564.001
+falsepositives:
+  - Fichiers de configuration légitimes

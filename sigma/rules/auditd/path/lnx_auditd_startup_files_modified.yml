@@ -1,0 +1,28 @@
+title: Startup Files Modified
+id: 550e8400-e29b-41d4-a716-556655444004
+status: stable
+description: Modification des fichiers de démarrage - persistence
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/rc.local"
+      - "/etc/init.d/"
+      - "/etc/systemd/system/"
+      - "~/.bashrc"
+      - "~/.bash_profile"
+      - "~/.profile"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.persistence
+  - attack.T1546.004
+falsepositives:
+  - Configuration système légitime

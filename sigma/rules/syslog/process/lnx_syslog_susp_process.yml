@@ -1,0 +1,27 @@
+title: Suspicious Process Execution via Syslog
+id: 550e8400-e29b-41d4-a716-557655460001
+status: stable
+description: >
+  Détecte l'exécution de processus suspects loggés dans syslog.
+  Les processus malveillants peuvent apparaître dans syslog via systemd.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "nc -e"
+      - "bash -i"
+      - "/dev/tcp"
+      - "python -c"
+      - "perl -e"
+  condition: selection
+level: critical
+tags:
+  - attack.execution
+  - attack.T1059
+falsepositives:
+  - Scripts légitimes

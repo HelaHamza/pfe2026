@@ -1,0 +1,32 @@
+title: SSH Non Standard Port Access
+id: 550e8400-e29b-41d4-a716-446655440027
+status: stable
+description: >
+  Connexion SSH sur un port non standard (différent de 22).
+  Peut indiquer un tunnel SSH caché ou une tentative d'évasion.
+  NOTE: auth.log ne contient pas destination.port directement.
+  Cette règle détecte via le message brut du log.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    message|contains:
+      - "port 2222"
+      - "port 2200"
+      - "port 8022"
+      - "port 443"
+      - "port 80"
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - message
+level: medium
+tags:
+  - attack.command_and_control
+  - attack.T1571
+  - attack.defense_evasion

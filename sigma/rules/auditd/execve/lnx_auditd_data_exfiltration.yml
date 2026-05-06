@@ -1,0 +1,36 @@
+title: Data Exfiltration via Command Line
+id: 550e8400-e29b-41d4-a716-556655460008
+status: stable
+description: >
+  Détecte des tentatives d'exfiltration de données via la ligne de commande.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  exfil_tools:
+    message|contains:
+      - " curl "
+      - " wget "
+      - " scp "
+      - " rsync "
+      - " ftp "
+  sensitive_files:
+    message|contains:
+      - "/etc/passwd"
+      - "/etc/shadow"
+      - ".ssh/"
+      - "/root/"
+      - "/home/"
+  condition: selection and exfil_tools and sensitive_files
+level: critical
+tags:
+  - attack.exfiltration
+  - attack.T1048
+  - attack.T1041
+falsepositives:
+  - Backup légitime

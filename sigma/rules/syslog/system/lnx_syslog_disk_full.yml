@@ -1,0 +1,30 @@
+title: Disk Full - Potential Log Deletion Attack
+id: 550e8400-e29b-41d4-a716-557655462002
+status: stable
+description: >
+  Détecte un disque plein dans syslog.
+  Un attaquant peut remplir le disque pour empêcher la journalisation.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    message|contains:
+      - "No space left on device"
+      - "disk full"
+      - "filesystem full"
+      - "cannot write"
+  log_paths:
+    message|contains:
+      - "/var/log"
+      - "/var/lib"
+  condition: selection and log_paths
+level: high
+tags:
+  - attack.impact
+  - attack.T1485
+falsepositives:
+  - Disque plein légitime

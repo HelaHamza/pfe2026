@@ -1,0 +1,26 @@
+title: Fork Bomb or Resource Exhaustion
+id: 550e8400-e29b-41d4-a716-556655453004
+status: stable
+description: >
+  Détecte des indicateurs de fork bomb ou d'épuisement de ressources.
+  Attaque DoS locale.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SYSCALL"
+  keywords:
+    message|contains:
+      - ":(){ :|:& };:"
+      - "fork"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.impact
+  - attack.T1499
+falsepositives:
+  - Tests de charge légitimes

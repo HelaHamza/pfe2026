@@ -1,0 +1,25 @@
+title: Base64 Encoded Command Execution
+id: 550e8400-e29b-41d4-a716-556655443002
+status: stable
+description: Exécution de commandes encodées en base64 - obfuscation
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "base64 -d"
+      - "base64 --decode"
+      - "|base64"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.defense_evasion
+  - attack.T1027
+falsepositives:
+  - Scripts légitimes utilisant base64

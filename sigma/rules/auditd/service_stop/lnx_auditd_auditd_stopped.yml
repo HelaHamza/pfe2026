@@ -1,0 +1,22 @@
+title: Auditd Service Stopped
+id: 550e8400-e29b-41d4-a716-556655445001
+status: stable
+description: Arrêt du service auditd - tentative d'évasion de la détection
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "SERVICE_STOP"
+  keywords:
+    message|contains: "auditd"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1562.001
+falsepositives:
+  - Maintenance système planifiée

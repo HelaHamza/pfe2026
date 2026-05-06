@@ -1,0 +1,31 @@
+title: Suspicious Cron Job Execution
+id: 550e8400-e29b-41d4-a716-557655462005
+status: stable
+description: >
+  Détecte des tâches cron suspectes dans syslog.
+  Un attaquant peut utiliser cron pour la persistence.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    process.name: "CRON"
+  keywords:
+    message|contains:
+      - "/tmp/"
+      - "/dev/shm/"
+      - "wget"
+      - "curl"
+      - "bash -i"
+      - "nc "
+  condition: selection and keywords
+level: high
+tags:
+  - attack.persistence
+  - attack.T1053.003
+  - attack.execution
+falsepositives:
+  - Scripts cron légitimes

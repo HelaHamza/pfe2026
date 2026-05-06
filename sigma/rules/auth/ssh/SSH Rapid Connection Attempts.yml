@@ -1,0 +1,25 @@
+title: SSH Rapid Connection Attempts
+id: 550e8400-e29b-41d4-a716-446655440023
+status: stable
+description: >
+  Trop de tentatives SSH échouées en peu de temps - brute force en cours.
+  NOTE: Le comptage > 10 en 10s est appliqué dans le script Python.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "failure"
+  condition: selection
+fields:
+  - source.ip
+  - user.name
+  - message
+level: high
+tags:
+  - attack.credential_access
+  - attack.T1110
+  - attack.T1110.001

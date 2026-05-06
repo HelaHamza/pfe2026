@@ -1,0 +1,30 @@
+title: SSH Login Outside Business Hours
+id: 550e8400-e29b-41d4-a716-446655440021
+status: stable
+description: >
+  Connexion SSH réussie en dehors des heures de travail (avant 8h ou après 18h).
+  NOTE: Le filtrage temporel est appliqué dans le script de détection Python
+  via le champ ml.hour_of_day ajouté par Logstash.
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "sshd"
+    event.outcome: "success"
+    event.action: "ssh_login"
+    ml.is_off_hours: 1
+  condition: selection
+fields:
+  - user.name
+  - source.ip
+  - ml.hour_of_day
+  - message
+level: medium
+tags:
+  - attack.initial_access
+  - attack.T1078
+
+  #Cette règle ne peut pas être implémentée en Sigma pur car Sigma ne supporte pas les conditions temporelles sur @timestamp. Elle sera gérée dans le script Python

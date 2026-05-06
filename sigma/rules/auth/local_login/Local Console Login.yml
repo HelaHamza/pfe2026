@@ -1,0 +1,23 @@
+title: Local Console Login
+id: 550e8400-e29b-41d4-a716-446655444001
+status: stable
+description: Connexion via terminal physique ou console virtuelle
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    message|contains: "session opened"
+  tty:
+    message|contains:
+      - "tty"
+      - "console"
+  condition: selection and tty
+level: medium
+tags:
+  - attack.initial_access
+  - attack.T1078
+falsepositives:
+  - Connexion locale légitime

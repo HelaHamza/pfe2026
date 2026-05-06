@@ -1,0 +1,28 @@
+title: DHCP Anomaly Detected
+id: 550e8400-e29b-41d4-a716-557655461002
+status: stable
+description: >
+  Détecte des anomalies DHCP dans syslog.
+  Peut indiquer un rogue DHCP server ou une attaque DHCP starvation.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    process.name: "dhclient"
+  keywords:
+    message|contains:
+      - "DHCPNAK"
+      - "no lease"
+      - "no DHCP offers"
+      - "DHCPDECLINE"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1557
+falsepositives:
+  - Problèmes réseau légitimes

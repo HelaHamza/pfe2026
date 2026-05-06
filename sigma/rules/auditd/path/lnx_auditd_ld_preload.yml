@@ -1,0 +1,24 @@
+title: LD_PRELOAD Hijacking
+id: 550e8400-e29b-41d4-a716-556655444005
+status: stable
+description: Modification de LD_PRELOAD pour injection de librairies
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "ld.so.preload"
+      - "/etc/ld.so.preload"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.T1574.006
+falsepositives:
+  - Configuration de librairies légitimes

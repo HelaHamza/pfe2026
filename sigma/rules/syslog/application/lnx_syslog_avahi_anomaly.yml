@@ -1,0 +1,28 @@
+title: Avahi mDNS Anomaly
+id: 550e8400-e29b-41d4-a716-557655464005
+status: stable
+description: >
+  Détecte des anomalies mDNS via Avahi dans syslog.
+  Peut indiquer une attaque de type mDNS poisoning.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: syslog
+detection:
+  selection:
+    event.dataset: "system.syslog"
+    process.name: "avahi-daemon"
+  keywords:
+    message|contains:
+      - "Invalid packet"
+      - "Failed to"
+      - "collision detected"
+      - "Host name conflict"
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.credential_access
+  - attack.T1557
+falsepositives:
+  - Problèmes réseau mDNS légitimes

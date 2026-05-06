@@ -1,0 +1,25 @@
+title: Audio Capture via arecord
+id: 550e8400-e29b-41d4-a716-556655443008
+status: stable
+description: Détecte la capture audio - espionnage potentiel
+author: SigmaHQ
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - "arecord"
+      - "parecord"
+      - "sox "
+  condition: selection and keywords
+level: high
+tags:
+  - attack.collection
+  - attack.T1123
+falsepositives:
+  - Enregistrement audio légitime

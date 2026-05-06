@@ -1,0 +1,30 @@
+title: Authentication Token Files Access
+id: 550e8400-e29b-41d4-a716-556655461001
+status: stable
+description: >
+  Détecte l'accès aux fichiers de tokens d'authentification.
+  Un attaquant peut voler des tokens pour usurper des identités.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - ".aws/credentials"
+      - ".config/gcloud"
+      - ".kube/config"
+      - ".docker/config.json"
+      - ".netrc"
+      - "~/.git-credentials"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1552.001
+falsepositives:
+  - Utilisation légitime des outils cloud

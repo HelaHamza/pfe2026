@@ -1,0 +1,6 @@
+# Clés privées — jamais dans Git
+pki/**/*.key
+pki/root-ca/
+
+# Variables sensibles
+.env

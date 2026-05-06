@@ -1,0 +1,29 @@
+title: Bootloader Configuration Modified
+id: 550e8400-e29b-41d4-a716-556655461004
+status: stable
+description: >
+  Détecte la modification des fichiers de configuration du bootloader.
+  Un attaquant peut modifier le bootloader pour une persistence profonde.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/boot/grub/"
+      - "/boot/grub2/"
+      - "/etc/grub.d/"
+      - "/etc/default/grub"
+      - "/boot/efi/"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.persistence
+  - attack.T1542.001
+falsepositives:
+  - Mise à jour système légitime

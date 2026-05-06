@@ -1,0 +1,21 @@
+title: Su to Root Account
+id: 550e8400-e29b-41d4-a716-446655440011
+status: stable
+description: Changement d'identité vers root via su
+author: hala-hamza
+date: 2026/04/25
+logsource:
+  product: linux
+  service: auth
+detection:
+  selection:
+    process.name: "su"
+    message|contains: "session opened for user root"
+  condition: selection
+fields:
+  - user.name
+  - message
+level: high
+tags:
+  - attack.privilege_escalation
+  - attack.T1548

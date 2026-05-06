@@ -1,0 +1,28 @@
+title: ACL Manipulation
+id: 550e8400-e29b-41d4-a716-556655460003
+status: stable
+description: >
+  Détecte la manipulation des listes de contrôle d'accès (ACL).
+  Utilisé pour modifier les permissions de fichiers sensibles.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "EXECVE"
+  keywords:
+    message|contains:
+      - " setfacl "
+      - " chattr "
+      - " lsattr "
+      - " getfacl "
+  condition: selection and keywords
+level: medium
+tags:
+  - attack.defense_evasion
+  - attack.T1222.002
+falsepositives:
+  - Administration des permissions légitime

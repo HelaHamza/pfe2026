@@ -1,0 +1,28 @@
+title: /etc/passwd or /etc/shadow Modified
+id: 550e8400-e29b-41d4-a716-556655444003
+status: stable
+description: Modification directe de /etc/passwd ou /etc/shadow
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/etc/passwd"
+      - "/etc/shadow"
+      - "/etc/gshadow"
+      - "/etc/sudoers"
+  condition: selection and keywords
+level: critical
+tags:
+  - attack.credential_access
+  - attack.T1003.008
+  - attack.persistence
+  - attack.T1136
+falsepositives:
+  - Backup système légitime

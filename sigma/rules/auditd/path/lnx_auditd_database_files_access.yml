@@ -1,0 +1,30 @@
+title: Database Files Direct Access
+id: 550e8400-e29b-41d4-a716-556655461007
+status: stable
+description: >
+  Détecte l'accès direct aux fichiers de base de données.
+  Un attaquant peut voler des données sensibles directement.
+author: hala-hamza
+date: 2026/04/27
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    event.dataset: "auditd.log"
+    message|contains: "PATH"
+  keywords:
+    message|contains:
+      - "/var/lib/mysql/"
+      - "/var/lib/postgresql/"
+      - "/var/lib/mongodb/"
+      - "/var/lib/redis/"
+      - ".sqlite"
+      - ".db"
+  condition: selection and keywords
+level: high
+tags:
+  - attack.collection
+  - attack.T1005
+falsepositives:
+  - Backup de base de données
