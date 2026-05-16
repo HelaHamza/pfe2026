@@ -1,12 +1,5 @@
-  torch 
-  scikit-learn 
-  pandas 
-  joblib 
-  numpy
-  matplotlib
 
-
-  torch
+torch
 scikit-learn
 pandas
 numpy
@@ -14,3 +7,6 @@ joblib
 scipy
 matplotlib
 groq
+redis
+python-dotenv
+pytest

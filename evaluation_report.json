@@ -1,0 +1,180 @@
+{
+  "version": "v2_4risques_corriges",
+  "device": "cpu",
+  "total_params": 34203,
+  "epochs_trained": 137,
+  "best_val_loss": 0.002993,
+  "train_duration_s": 600.36,
+  "alphas_learned": {
+    "auditd": 0.101,
+    "auth": 0.1,
+    "syslog": 0.101
+  },
+  "cleaning_stats": {
+    "syslog": {
+      "before": 25561,
+      "excluded": 512,
+      "after": 25049,
+      "threshold_clean": 0.073929
+    },
+    "auth": {
+      "before": 6289,
+      "excluded": 126,
+      "after": 6163,
+      "threshold_clean": 1.809939
+    },
+    "auditd": {
+      "before": 14201,
+      "excluded": 710,
+      "after": 13491,
+      "threshold_clean": 0.005069
+    }
+  },
+  "split": {
+    "train": 0.75,
+    "val": 0.25,
+    "test_index": "test-ml-logs",
+    "synth_index": "ids-train-normal"
+  },
+  "thresholds": {
+    "syslog": {
+      "business": 0.077235,
+      "night": 0.077235,
+      "other": 0.077235
+    },
+    "auth": {
+      "business": 1.669461,
+      "night": 1.681448,
+      "other": 1.806246
+    },
+    "auditd": {
+      "business": 0.035,
+      "night": 0.035,
+      "other": 0.035
+    }
+  },
+  "global_metrics": {
+    "precision": 0.7416,
+    "recall": 0.9975,
+    "f1_score": 0.8507,
+    "auc_roc": 0.9744,
+    "auc_pr": 0.9766,
+    "mse_normal": 0.122908,
+    "mse_attack": 39.43572,
+    "mse_ratio": 320.86,
+    "cm": {
+      "tp": 399,
+      "fp": 139,
+      "fn": 1,
+      "tn": 461
+    }
+  },
+  "metrics_by_source": {
+    "syslog": {
+      "precision": 0.987,
+      "recall": 1.0,
+      "f1": 0.9935,
+      "auc_roc": 0.9993
+    },
+    "auth": {
+      "precision": 1.0,
+      "recall": 0.9919,
+      "f1": 0.996,
+      "auc_roc": 1.0
+    },
+    "auditd": {
+      "precision": 0.5917,
+      "recall": 1.0,
+      "f1": 0.7435,
+      "auc_roc": 1.0
+    }
+  },
+  "attack_result": {
+    "brute_force_ssh": {
+      "recall": 0.5,
+      "detected": 25,
+      "total": 50
+    },
+    "credential_access": {
+      "recall": 0.5,
+      "detected": 25,
+      "total": 50
+    },
+    "cryptominer": {
+      "recall": 0.48,
+      "detected": 24,
+      "total": 50
+    },
+    "lateral_movement": {
+      "recall": 0.48,
+      "detected": 24,
+      "total": 50
+    },
+    "log_tampering": {
+      "recall": 0.5,
+      "detected": 25,
+      "total": 50
+    },
+    "privilege_escalation": {
+      "recall": 0.58,
+      "detected": 29,
+      "total": 50
+    },
+    "reverse_shell": {
+      "recall": 0.62,
+      "detected": 31,
+      "total": 50
+    },
+    "ssh_key_implant": {
+      "recall": 0.6,
+      "detected": 30,
+      "total": 50
+    }
+  },
+  "inference_timing": {
+    "by_source": {
+      "syslog": {
+        "n_events": 276,
+        "mean_ms": 4.217,
+        "std_ms": 0.493,
+        "per_us": 15.28
+      },
+      "auth": {
+        "n_events": 324,
+        "mean_ms": 4.699,
+        "std_ms": 0.765,
+        "per_us": 14.5
+      },
+      "auditd": {
+        "n_events": 400,
+        "mean_ms": 4.12,
+        "std_ms": 1.0,
+        "per_us": 10.3
+      }
+    },
+    "total_ms": 13.036,
+    "per_event_us": 13.04
+  },
+  "robustness": {
+    "f1": {
+      "mean": 0.8509,
+      "std": 0.0073,
+      "cv_pct": 0.86
+    },
+    "precision": {
+      "mean": 0.7418,
+      "std": 0.011,
+      "cv_pct": 1.49
+    },
+    "recall": {
+      "mean": 0.9976,
+      "std": 0.0017,
+      "cv_pct": 0.17
+    },
+    "auc_roc": {
+      "mean": 0.9749,
+      "std": 0.0031,
+      "cv_pct": 0.32
+    }
+  }
+}
