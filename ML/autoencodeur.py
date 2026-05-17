@@ -1690,7 +1690,6 @@ if __name__ == "__main__":
     plot_all(train_hist, val_hist, y_true, y_pred, y_score,
              thresholds, src_arr, gm, timing, robustness, attack_result)
 
-    # ── [9/9] Inférence production + écriture ES ──────────────────
 # ── [9/9] Inférence production + écriture ES ──────────────────
     print("\n[9/9] Inférence production + écriture ES...")
     results = []
