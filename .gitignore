@@ -2,5 +2,20 @@
 pki/**/*.key
 pki/root-ca/
 
+# Create .gitignore at the root
+@"
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
 # Variables sensibles
-.env
+backend/.env 
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Misc
+.DS_Store
+*.pyc
+"@ | Out-File -Encoding utf8 .gitignore
