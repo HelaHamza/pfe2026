@@ -1,0 +1,101 @@
+
+════════════════════════════════════════════════════════
+ DIAGNOSTIC ES — IDS SOC Dashboard
+════════════════════════════════════════════════════════
+
+── 1. CURSEUR ACTUEL ────────────────────────────────────
+  cursor = 2026-05-13T19:25:44.000Z
+
+── 2. AE INDEX : ml-autoencoder-scores ─────────────────
+  Total docs dans l'index (tous) : 157552
+  ae_is_anomaly = 1 (tous) : 157552
+  ae_is_anomaly = 1 DEPUIS curseur : 157552
+
+  AE par source (ae_is_anomaly=1, tous) :
+    auditd     : 138210
+    syslog     : 16196
+    auth       : 3146
+
+  AE par detection_source (tous) :
+    ae_only         : 157552
+
+── 3. SIGMA INDEX : sigma-alerts ───────────────────────
+  Total docs dans l'index (tous) : 9462
+  Total alertes DEPUIS curseur : 3771
+
+  Sigma par alert.level (tous) :
+    CRITICAL   : 5180
+    MEDIUM     : 2647
+    HIGH       : 1610
+    LOW        : 25
+    TOTAL BUCKETS : 9462
+
+  Sigma par alert.level DEPUIS curseur :
+    CRITICAL   : 2262
+    MEDIUM     : 755
+    HIGH       : 754
+    TOTAL BUCKETS : 3771
+
+  Sigma ae_correlated=true (tous) :
+    0
+
+  Sigma detection_source par valeur (tous) :
+    sigma_only      : 2100
+
+── 4. CHAMPS SIGMA — vérification mapping ───────────────
+  Champs indexés dans sigma-alerts :
+    @timestamp
+    ae_correlated
+    alert
+    detection_source
+    event
+    llm_explanation
+    llm_model
+    matched_doc_ids
+    prompt_tokens
+
+── 5. EXEMPLE DOCUMENT sigma-alerts (dernier) ───────────
+    @timestamp                     = 2026-05-19T14:26:02Z
+    ae_correlated                  = False
+    alert.details                  = ['2026-05-07T17:26:04 | process=wpa_supplicant\n    wlo1: Reject scan trigger si
+    alert.hits                     = 2
+    alert.level                    = MEDIUM
+    alert.source                   = sigma
+    alert.tactic                   = Reconnaissance
+    alert.title                    = Network Scan Detected via Syslog
+    detection_source               = sigma_only
+    event.category                 = intrusion_detection
+    event.kind                     = alert
+    llm_explanation                = **1. Type d'attaque probable**
+
+Cette règle Sigma a détecté un scénario de recon
+    llm_model                      = llama-3.1-8b-instant
+    matched_doc_ids                = ['I1VCA54BUUOYLRxh9drz', 'ztEB0Z0BwqfISFGoJL0d']
+    prompt_tokens                  = 156
+
+── 6. EXEMPLE DOCUMENT ml-autoencoder-scores (anomalie) ─
+    @timestamp                     = 2026-05-18T12:48:29.875127+00:00
+    ae_anomaly_score               = 0.4642
+    ae_is_anomaly                  = 1
+    ae_mse_error                   = 0.047434
+    ae_threshold                   = 0.035
+    composite_score                = 2
+    detection_source               = ae_only
+    kb_severity                    = LOW
+    llm_explanation                = **1. Type d'attaque probable**
+Activité auditd suspecte sur source auditd.
+
+**2.
+    llm_model                      = kb-auto-template
+    log_source                     = auditd
+    mitre_flags                    = T1059 — Command and Scripting Interpreter
+    ml                             = {'hour_cos': 0.866, 'payload_size_log': 0.0, 'aud_cryptominer': 0.0, 'msg_has_pi
+    priority_label                 = unknown
+    prompt_tokens                  = 0
+    rag_context_n                  = 1
+    source_id                      = cAPF6p0BfFDF29MIaH6W
+
+════════════════════════════════════════════════════════
+ FIN DU DIAGNOSTIC
+════════════════════════════════════════════════════════
+

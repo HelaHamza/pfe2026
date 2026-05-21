@@ -1,7 +1,0 @@
-fastapi
-uvicorn[standard]
-python-dotenv
-pymongo
-bcrypt
-python-jose[cryptography]
-pydantic

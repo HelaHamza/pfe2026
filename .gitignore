@@ -1,22 +1,14 @@
-# Clés privées — jamais dans Git
-pki/**/*.key
-pki/root-ca/
-
-# Variables sensibles
-.env
-
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
 
-# Virtual environments
+# Environments
 venv/
 pfe-venv/
 
-# Python
-.python-version
+# Secrets
+.env
 
-# VS Code
+# OS / IDE
 .vscode/
-

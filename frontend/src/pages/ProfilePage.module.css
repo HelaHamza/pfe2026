@@ -1,0 +1,251 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f5f2eb;
+}
+
+.main {
+  flex: 1;
+  padding: 2.5rem 2.5rem 4rem;
+  overflow-y: auto;
+  max-width: 780px;
+}
+
+/* Header */
+.header { margin-bottom: 2rem; }
+
+.title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.9rem;
+  font-weight: 400;
+  color: #1a1a2e;
+  margin-bottom: 0.3rem;
+}
+
+.sub {
+  font-size: 0.875rem;
+  color: #8a8aaa;
+}
+
+/* Form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeUp 0.35s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Avatar */
+.avatarSection {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: #fff;
+  border: 1px solid #ede8dc;
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.avatarWrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 2px solid #ede8dc;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: #eae6dc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa8c0;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,26,46,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: 50%;
+}
+
+.avatarWrap:hover .avatarOverlay { opacity: 1; }
+
+.avatarName {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.15rem;
+  color: #1a1a2e;
+  margin-bottom: 0.4rem;
+}
+
+.avatarChangeBtn {
+  font-size: 0.8rem;
+  color: #c9a96e;
+  font-family: 'DM Sans', sans-serif;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.avatarChangeBtn:hover { color: #a8863a; }
+
+/* Card */
+.card {
+  background: #fff;
+  border: 1px solid #ede8dc;
+  border-radius: 14px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cardTitle {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8aaa;
+  margin-bottom: 0.25rem;
+}
+
+/* Row */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Field */
+.fieldWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.fieldFull { grid-column: 1 / -1; }
+
+.label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #4a4a6a;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.input,
+.select {
+  padding: 9px 12px;
+  font-size: 0.875rem;
+  font-family: 'DM Sans', sans-serif;
+  background: #fafaf8;
+  border: 1px solid #e0ddd4;
+  border-radius: 8px;
+  color: #1a1a2e;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+}
+
+.input::placeholder { color: #bbb8d0; }
+
+.input:focus,
+.select:focus {
+  border-color: #c9a96e;
+  box-shadow: 0 0 0 3px rgba(201,169,110,0.15);
+  background: #fff;
+}
+
+.inputError { border-color: #c0392b !important; }
+
+.errorMsg {
+  font-size: 0.75rem;
+  color: #c0392b;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.savedBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #1a6b45;
+  background: #edf7f2;
+  border: 1px solid rgba(26,107,69,0.15);
+  border-radius: 20px;
+  padding: 5px 12px;
+  margin-right: auto;
+}
+
+.cancelBtn {
+  padding: 9px 20px;
+  font-size: 0.875rem;
+  font-family: 'DM Sans', sans-serif;
+  color: #4a4a6a;
+  background: #fff;
+  border: 1px solid #e0ddd4;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cancelBtn:hover { background: #f5f2eb; border-color: #ccc8bc; }
+
+.saveBtn {
+  padding: 9px 24px;
+  font-size: 0.875rem;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  color: #e8e4d9;
+  background: #1a1a2e;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.saveBtn:hover { background: #2a2a4e; }
+.saveBtn:active { transform: scale(0.98); }
+
+@media (max-width: 640px) {
+  .main { padding: 1.5rem; }
+  .row { grid-template-columns: 1fr; }
+}
+
+.inputReadonly {
+  background: #f0ece4 !important;
+  color: #8a8aaa !important;
+  cursor: not-allowed;
+}
