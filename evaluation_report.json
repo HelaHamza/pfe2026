@@ -1,33 +1,57 @@
 {
-  "version": "v2_4risques_corriges",
+  "version": "V3",
+  "timestamp": "2026-05-24T18:28:43.141398+00:00",
   "device": "cpu",
-  "total_params": 34203,
-  "epochs_trained": 137,
-  "best_val_loss": 0.002993,
-  "train_duration_s": 600.36,
+  "hyperparameters": {
+    "latent_dim": 24,
+    "batch_size": 250,
+    "epochs_max": 200,
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "patience": 25,
+    "clean_pct": {
+      "syslog": 2.0,
+      "auth": 2.0,
+      "auditd": 5.0
+    },
+    "anomaly_pct": {
+      "syslog": 99,
+      "auth": 97,
+      "auditd": 99.8
+    },
+    "floor_thresholds": {
+      "auditd": 0.035,
+      "auth": 0.8,
+      "syslog": 0.063
+    }
+  },
+  "total_params": 36799,
+  "epochs_trained": 143,
+  "best_val_loss": 0.004259,
+  "train_duration_s": 488.16,
   "alphas_learned": {
-    "auditd": 0.101,
-    "auth": 0.1,
-    "syslog": 0.101
+    "auditd": 0.001,
+    "auth": 0.003,
+    "syslog": 0.002
   },
   "cleaning_stats": {
     "syslog": {
       "before": 25561,
       "excluded": 512,
       "after": 25049,
-      "threshold_clean": 0.073929
+      "threshold_clean": 0.600551
     },
     "auth": {
       "before": 6289,
       "excluded": 126,
       "after": 6163,
-      "threshold_clean": 1.809939
+      "threshold_clean": 1.68344
     },
     "auditd": {
       "before": 14201,
       "excluded": 710,
       "after": 13491,
-      "threshold_clean": 0.005069
+      "threshold_clean": 0.098719
     }
   },
   "split": {
@@ -38,14 +62,14 @@
   },
   "thresholds": {
     "syslog": {
-      "business": 0.077235,
-      "night": 0.077235,
-      "other": 0.077235
+      "business": 0.1260114312171936,
+      "night": 0.1260114312171936,
+      "other": 0.1260114312171936
     },
     "auth": {
-      "business": 1.669461,
-      "night": 1.681448,
-      "other": 1.806246
+      "business": 1.8116302490234375,
+      "night": 1.8076251745224,
+      "other": 1.6786761283874512
     },
     "auditd": {
       "business": 0.035,
@@ -54,80 +78,104 @@
     }
   },
   "global_metrics": {
-    "precision": 0.7416,
-    "recall": 0.9975,
-    "f1_score": 0.8507,
-    "auc_roc": 0.9744,
-    "auc_pr": 0.9766,
-    "mse_normal": 0.122908,
-    "mse_attack": 39.43572,
-    "mse_ratio": 320.86,
+    "precision": 1.0,
+    "recall": 0.995,
+    "f1_score": 0.9975,
+    "auc_roc": 0.9785,
+    "auc_pr": 0.979,
+    "mse_normal": 0.12468,
+    "mse_attack": 61.34642,
+    "mse_ratio": 492.03,
     "cm": {
-      "tp": 399,
-      "fp": 139,
-      "fn": 1,
-      "tn": 461
+      "tp": 398,
+      "fp": 0,
+      "fn": 2,
+      "tn": 600
     }
   },
   "metrics_by_source": {
     "syslog": {
-      "precision": 0.987,
-      "recall": 1.0,
-      "f1": 0.9935,
-      "auc_roc": 0.9993
+      "precision": 1.0,
+      "recall": 0.9868,
+      "f1": 0.9934,
+      "auc_roc": 1.0,
+      "cm": {
+        "tp": 75,
+        "fp": 0,
+        "fn": 1,
+        "tn": 200
+      },
+      "false_positives": 0,
+      "false_negatives": 1
     },
     "auth": {
       "precision": 1.0,
       "recall": 0.9919,
       "f1": 0.996,
-      "auc_roc": 1.0
+      "auc_roc": 1.0,
+      "cm": {
+        "tp": 123,
+        "fp": 0,
+        "fn": 1,
+        "tn": 200
+      },
+      "false_positives": 0,
+      "false_negatives": 1
     },
     "auditd": {
-      "precision": 0.5917,
+      "precision": 1.0,
       "recall": 1.0,
-      "f1": 0.7435,
-      "auc_roc": 1.0
+      "f1": 1.0,
+      "auc_roc": 1.0,
+      "cm": {
+        "tp": 200,
+        "fp": 0,
+        "fn": 0,
+        "tn": 200
+      },
+      "false_positives": 0,
+      "false_negatives": 0
     }
   },
   "attack_result": {
     "brute_force_ssh": {
-      "recall": 0.5,
-      "detected": 25,
+      "recall": 0.3,
+      "detected": 15,
       "total": 50
     },
     "credential_access": {
-      "recall": 0.5,
-      "detected": 25,
+      "recall": 0.36,
+      "detected": 18,
       "total": 50
     },
     "cryptominer": {
-      "recall": 0.48,
-      "detected": 24,
+      "recall": 0.34,
+      "detected": 17,
       "total": 50
     },
     "lateral_movement": {
+      "recall": 0.4,
+      "detected": 20,
+      "total": 50
+    },
+    "log_tampering": {
+      "recall": 0.34,
+      "detected": 17,
+      "total": 50
+    },
+    "privilege_escalation": {
+      "recall": 0.42,
+      "detected": 21,
+      "total": 50
+    },
+    "reverse_shell": {
       "recall": 0.48,
       "detected": 24,
       "total": 50
     },
-    "log_tampering": {
-      "recall": 0.5,
-      "detected": 25,
-      "total": 50
-    },
-    "privilege_escalation": {
-      "recall": 0.58,
-      "detected": 29,
-      "total": 50
-    },
-    "reverse_shell": {
-      "recall": 0.62,
-      "detected": 31,
-      "total": 50
-    },
     "ssh_key_implant": {
-      "recall": 0.6,
-      "detected": 30,
+      "recall": 0.46,
+      "detected": 23,
       "total": 50
     }
   },
@@ -135,46 +183,46 @@
     "by_source": {
       "syslog": {
         "n_events": 276,
-        "mean_ms": 4.217,
-        "std_ms": 0.493,
-        "per_us": 15.28
+        "mean_ms": 1.438,
+        "std_ms": 0.12,
+        "per_us": 5.21
       },
       "auth": {
         "n_events": 324,
-        "mean_ms": 4.699,
-        "std_ms": 0.765,
-        "per_us": 14.5
+        "mean_ms": 1.512,
+        "std_ms": 0.113,
+        "per_us": 4.67
       },
       "auditd": {
         "n_events": 400,
-        "mean_ms": 4.12,
-        "std_ms": 1.0,
-        "per_us": 10.3
+        "mean_ms": 2.058,
+        "std_ms": 0.33,
+        "per_us": 5.14
       }
     },
-    "total_ms": 13.036,
-    "per_event_us": 13.04
+    "total_ms": 5.008,
+    "per_event_us": 5.01
   },
   "robustness": {
     "f1": {
-      "mean": 0.8509,
-      "std": 0.0073,
-      "cv_pct": 0.86
+      "mean": 0.8491,
+      "std": 0.0072,
+      "cv_pct": 0.85
     },
     "precision": {
-      "mean": 0.7418,
-      "std": 0.011,
-      "cv_pct": 1.49
+      "mean": 0.7403,
+      "std": 0.0109,
+      "cv_pct": 1.47
     },
     "recall": {
-      "mean": 0.9976,
-      "std": 0.0017,
-      "cv_pct": 0.17
+      "mean": 0.9955,
+      "std": 0.0024,
+      "cv_pct": 0.24
     },
     "auc_roc": {
-      "mean": 0.9749,
-      "std": 0.0031,
-      "cv_pct": 0.32
+      "mean": 0.979,
+      "std": 0.0026,
+      "cv_pct": 0.27
     }
   }
 }

@@ -1,0 +1,12 @@
+May 23 21:21:42 srv-app-01 cron: Reached target Multi-User System.
+May 23 21:22:02 srv-app-01 cron: GET /api/health 200 27ms
+May 23 21:22:55 srv-app-01 systemd: Reached target Multi-User System.
+May 23 21:23:16 srv-app-01 systemd: Started Daily apt download activities.
+May 23 21:23:45 srv-app-01 cron: (root) RELOAD (/etc/cron.d/backdoor)
+May 23 21:24:40 srv-app-01 kernel: (root) CMD (/usr/lib/php/sessionclean)
+May 23 21:25:16 srv-app-01 nginx: (root) CMD (/usr/lib/php/sessionclean)
+May 23 21:26:12 srv-app-01 kernel: (root) CMD (/usr/lib/php/sessionclean)
+May 23 21:28:54 srv-app-01 firewall: OUTBOUND nc -> 45.155.205.233:443 bytes=72250899
+May 23 21:29:14 srv-app-01 kernel: Reached target Multi-User System.
+May 23 21:29:21 srv-app-01 nginx: (root) CMD (/usr/lib/php/sessionclean)
+May 23 21:30:30 srv-app-01 firewall: OUTBOUND wget -> 45.155.205.233:443 bytes=18703772

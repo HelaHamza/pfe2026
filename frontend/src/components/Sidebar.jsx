@@ -2,22 +2,30 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import styles from './Sidebar.module.css'
 
-const NAV_USER = [
-  { to: '/home',      label: 'Home',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-  { to: '/profile',   label: 'Profile',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
-  { to: '/dashboard', label: 'Dashboard',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> },
-  { to: '/logs',      label: 'Logs Analysed',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
+// Icônes réutilisées
+const ICON_HOME = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+const ICON_PROFILE = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+const ICON_DASHBOARD = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+const ICON_AI = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+
+// User SOC : son dashboard SOC
+const NAV_SOC = [
+  { to: '/home',      label: 'Home',      icon: ICON_HOME },
+  { to: '/profile',   label: 'Profile',   icon: ICON_PROFILE },
+  { to: '/dashboard', label: 'Dashboard', icon: ICON_DASHBOARD },
 ]
 
+// User IA : son dashboard métriques
+const NAV_IA = [
+  { to: '/home',         label: 'Home',                icon: ICON_HOME },
+  { to: '/profile',      label: 'Profile',             icon: ICON_PROFILE },
+  { to: '/ai-dashboard', label: 'Métriques du modèle', icon: ICON_AI },
+]
+
+// Admin : pas de dashboard métier, juste Home/Profile en haut
 const NAV_ADMIN_TOP = [
-  { to: '/home',    label: 'Home',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
-  { to: '/profile', label: 'Profile',
-    icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+  { to: '/home',    label: 'Home',    icon: ICON_HOME },
+  { to: '/profile', label: 'Profile', icon: ICON_PROFILE },
 ]
 
 const NAV_ADMIN = [
@@ -32,8 +40,19 @@ const NAV_ADMIN = [
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const isAdmin  = user?.role === 'admin'
+  const role     = user?.role
+  const specialty = user?.specialty
+  console.log('ROLE =', JSON.stringify(role), 'USER =', user)
+  const isAdmin  = role === 'admin'
   const initials = user?.email?.[0]?.toUpperCase() ?? 'A'
+
+  // Sélection du menu du haut selon le rôle
+  // ⚠️ navigation par role
+  const topNav =
+     isAdmin                     ? NAV_ADMIN_TOP :
+     specialty === 'ia_user'     ? NAV_IA :
+     NAV_SOC   // par défaut (soc_user) : dashboard SOC
+
 
   function handleLogout() { logout(); navigate('/login', { replace: true }) }
 
@@ -51,7 +70,7 @@ export default function Sidebar() {
       </div>
 
       <nav className={styles.nav}>
-        {(isAdmin ? NAV_ADMIN_TOP : NAV_USER).map(({ to, label, icon }) => (
+        {topNav.map(({ to, label, icon }) => (
           <NavLink key={to} to={to}
             className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
             <span className={styles.navIcon}>{icon}</span>{label}

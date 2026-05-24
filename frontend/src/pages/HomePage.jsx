@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { feedbackService } from '../services/api.js'
-import styles from './HomePage.module.css'
+import styles from './Homepage.module.css'
 
 const NAV_LINKS = ['About', 'Testimonials', 'Contact']
 
@@ -10,6 +10,10 @@ export default function HomePage() {
   const { user, logout } = useAuth()
   const navigate  = useNavigate()
   const isAdmin   = user?.role === 'admin'
+  const specialty = user?.specialty
+// Destination du dashboard selon la spécialité
+  const dashboardPath = specialty === 'ia_user' ? '/ai-dashboard' : '/dashboard'
+  const dashboardLabel = specialty === 'ia_user' ? 'Métriques du modèle' : 'Dashboard'
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [testimonials, setTestimonials] = useState([])
   const [feedback, setFeedback]         = useState('')
@@ -94,10 +98,12 @@ export default function HomePage() {
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Profile
               </button>
-              <button className={styles.dropdownItem} onClick={() => { navigate('/dashboard'); setDropdownOpen(false) }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                Dashboard
-              </button>
+              {isAdmin && (
+  <button className={styles.dropdownItem} onClick={() => { navigate('/admin/pending'); setDropdownOpen(false) }}>
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+    Dashboard
+  </button>
+)}
               <div className={styles.dropdownDivider} />
               <button className={`${styles.dropdownItem} ${styles.dropdownLogout}`} onClick={handleLogout}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>

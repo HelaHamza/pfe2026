@@ -87,8 +87,8 @@ PLOTS_DIR    = "moe_plots"
 
 SOURCES      = ["syslog", "auth", "auditd"]
 
-LATENT_DIM   = 16
-BATCH_SIZE   = 256
+LATENT_DIM   = 24
+BATCH_SIZE   = 250
 EPOCHS       = 200
 LR           = 1e-3
 WEIGHT_DECAY = 1e-5
@@ -172,6 +172,10 @@ EXPERT_FEATURES = {
         "aud_cryptominer", "aud_log_delete", "aud_network_scan",
         "aud_exfiltration", "aud_suspicious_combo", "delta_time_log",
         "event_count_ip",
+        "aud_rare_syscall",          # appels système rares
+        "aud_execve_chain_length",   # longueur chaîne d'exécution
+        "aud_parent_child_mismatch", # parent/enfant incohérent
+        "aud_net_connect_after_exec",# connexion réseau post-
     ],
 }
 EXPERT_DIMS = {s: len(f) for s, f in EXPERT_FEATURES.items()}
@@ -342,8 +346,7 @@ class MoEAutoencoder(nn.Module):
 
 
     def get_alpha(self, src):
-        raw = self._alpha_raw[src]
-        return 0.10 + 0.80 * torch.sigmoid(raw)
+        return torch.sigmoid(self._alpha_raw[src])  # [0, 1] libre
 
     def get_alphas(self):
         """Retourne un dict {src: alpha_value} pour tous les experts."""
@@ -1020,11 +1023,24 @@ def compute_predictions(model, df_test, scalers, thresholds):
             df_src.get("day_of_week", 3), errors="coerce"
         ).fillna(3).astype(int).values
 
-        pred = np.array([
-            1 if mse[i] > get_threshold(thresholds, src, hours[i], dows[i])
-            else 0
-            for i in range(len(mse))
-        ])
+        if src == "auditd":
+            composite = pd.to_numeric(
+                df_src.get("composite_score", 0), errors="coerce"
+            ).fillna(0).values
+            pred = np.array([
+                1 if (mse[i] > get_threshold(thresholds, src, hours[i], dows[i])
+                      and composite[i] >= 2)
+                else 0
+                for i in range(len(mse))
+            ])
+        else:
+            pred = np.array([
+                1 if (
+                    mse[i] > get_threshold(thresholds, src, hours[i], dows[i])
+                )
+                else 0
+                for i in range(len(mse))
+            ])
 
         true = df_src["ground_truth"].values.astype(int) \
                if "ground_truth" in df_src.columns \
@@ -1042,6 +1058,7 @@ def compute_predictions(model, df_test, scalers, thresholds):
     return (np.array(all_true), np.array(all_pred),
             np.array(all_mse),  np.array(all_src))
 
+            
 
 def compute_global_metrics(y_true, y_pred, y_score):
     prec    = float(precision_score(y_true, y_pred, zero_division=0))
@@ -1630,7 +1647,7 @@ if __name__ == "__main__":
     joblib.dump(thresholds, THRESH_PATH)
     print(f"  Seuils → {THRESH_PATH}")
 
-    # ── [7/9] Évaluation complète ────────────────────────────────
+   # ── [7/9] Évaluation complète ────────────────────────────────
     print("\n[7/9] Évaluation sur le jeu de test...")
     y_true, y_pred, y_score, src_arr = compute_predictions(
         model, df_test, scalers, thresholds
@@ -1665,6 +1682,10 @@ if __name__ == "__main__":
         mask = (src_arr == src)
         if mask.sum() == 0 or y_true[mask].sum() == 0:
             continue
+
+        cm_src = confusion_matrix(y_true[mask], y_pred[mask], labels=[0, 1])
+        tn_s, fp_s, fn_s, tp_s = cm_src.ravel()
+
         metrics_by_source[src] = {
             "precision": round(float(precision_score(
                 y_true[mask], y_pred[mask], zero_division=0)), 4),
@@ -1674,21 +1695,82 @@ if __name__ == "__main__":
                 y_true[mask], y_pred[mask], zero_division=0)), 4),
             "auc_roc":   round(float(roc_auc_score(
                 y_true[mask], y_score[mask])), 4),
+            "cm": {
+                "tp": int(tp_s),
+                "fp": int(fp_s),
+                "fn": int(fn_s),
+                "tn": int(tn_s),
+            },
+            "false_positives": int(fp_s),
+            "false_negatives": int(fn_s),
         }
         print(f"  {src:8s}: P={metrics_by_source[src]['precision']:.4f} | "
               f"R={metrics_by_source[src]['recall']:.4f} | "
-              f"F1={metrics_by_source[src]['f1']:.4f}")
+              f"F1={metrics_by_source[src]['f1']:.4f} | "
+              f"FP={fp_s:4d} | FN={fn_s:4d}")
 
-    # ── [8/9] Timing + Robustesse ─────────────────────────────────
+    # ── [8/9] Timing + Robustesse — CALCULÉS AVANT LE RAPPORT ────
     print("\n[8/9] Timing d'inférence + robustesse bootstrap...")
     print("\n  Temps d'inférence :")
     timing = measure_inference_time(model, scalers, df_test)
     print(f"\n  Robustesse ({N_BOOTSTRAP} bootstrap) :")
     robustness = measure_robustness(y_score, y_true, thresholds, src_arr, df_test)
 
+    # ── Écriture du rapport JSON — timing & robustness existent maintenant ──
+    report = {
+        "version":          "V3",
+        "timestamp":        datetime.now(timezone.utc).isoformat(),
+        "device":           str(DEVICE),
+        "hyperparameters": {
+            "latent_dim":    LATENT_DIM,
+            "batch_size":    BATCH_SIZE,
+            "epochs_max":    EPOCHS,
+            "lr":            LR,
+            "weight_decay":  WEIGHT_DECAY,
+            "patience":      PATIENCE,
+            "clean_pct":     CLEAN_PCT_BY_SOURCE,
+            "anomaly_pct":   ANOMALY_PCT_BY_SOURCE,
+            "floor_thresholds": FLOOR_THRESHOLDS,
+        },
+        "total_params":     sum(p.numel() for p in model.parameters()),
+        "epochs_trained":   len(train_hist),
+        "best_val_loss":    round(float(min(val_hist)), 6),
+        "train_duration_s": round(duration, 2),
+        "alphas_learned":   model.get_alphas(),
+        "cleaning_stats":   cleaning_stats,
+        "split": {
+            "train":        TRAIN_RATIO,
+            "val":          VAL_RATIO,
+            "test_index":   ES_INDEX_TEST,
+            "synth_index":  ES_INDEX_SYNTH,
+        },
+        "thresholds":         thresholds,
+        "global_metrics":     gm,
+        "metrics_by_source":  metrics_by_source,
+        "attack_result":      attack_result,
+        "inference_timing":   timing,
+        "robustness":         robustness,
+    }
+    with open(REPORT_PATH, "w") as f:
+        json.dump(sanitize_for_json(report), f, indent=2)
+    print(f"\n  Rapport → {REPORT_PATH}")
+
+    # ── Ingestion automatique en base — SYNCHRONE (pas asyncio) ──
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+        from scripts.ingest_metrics import ingest
+        ingest(REPORT_PATH)
+    except Exception as e:
+        print(f"  [DASHBOARD] Ingestion ignorée — {e}")
+
+    # ── Génération des graphiques ────────────────────────────────
     print("\n  Génération des graphiques...")
     plot_all(train_hist, val_hist, y_true, y_pred, y_score,
              thresholds, src_arr, gm, timing, robustness, attack_result)
+
+    # ── [9/9] Inférence production + écriture ES ──────────────────
+    print("\n[9/9] Inférence production + écriture ES...")
+    # ... (cette partie reste identique à ton code actuel, ne la change pas)
 
 # ── [9/9] Inférence production + écriture ES ──────────────────
     print("\n[9/9] Inférence production + écriture ES...")
@@ -1780,3 +1862,13 @@ if __name__ == "__main__":
 #     {PLOTS_DIR}/robustness.png
 #     {PLOTS_DIR}/recall_by_attack.png
 # """)
+
+
+
+
+# ── Ingestion automatique du rapport en base (pour le dashboard) ──
+    # try:
+    #     from scripts.ingest_metrics import ingest
+    #     asyncio.run(ingest(REPORT_PATH))
+    # except Exception as e:
+    #     print(f"  [DASHBOARD] Ingestion ignorée — {e}")  ==> après l'écriture du evaluation_report.json

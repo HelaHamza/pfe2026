@@ -3,12 +3,12 @@
 SIGMA DETECTION ENGINE — version complète avec explication LLM
 =============================================================================
 
-MODIFICATIONS vs version originale :
-  1. print_alert()          → retourne l'es_id du doc créé dans sigma-alerts
-  2. run_simple_rules()     → retourne la liste des alertes avec es_id
-  3. run_aggregation_rules()→ retourne la liste des alertes avec es_id
-  4. explain_sigma_alerts() → génère une explication LLM pour chaque alerte
-  5. main()                 → collecte toutes les alertes et appelle le LLM
+MODIFICATIONS :
+  1. print_alert()           → retourne l'es_id du doc créé dans sigma-alerts
+  2. run_simple_rules()      → fenêtre ]cursor, until] + matched_doc_ids
+  3. run_aggregation_rules() → inchangée (fenêtre glissante now-Xm)
+  4. explain_sigma_alerts()  → génère une explication LLM pour chaque alerte
+  5. main()                  → collecte toutes les alertes et appelle le LLM
 =============================================================================
 """
 
@@ -149,17 +149,17 @@ AGGREGATION_RULES = {
 def save_alert(title, level, tactic, hits, details) -> str:
     """Sauvegarde l'alerte dans sigma-alerts et retourne son _id ES."""
     alert = {
-        "@timestamp"     : datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "alert.title"    : title,
-        "alert.level"    : level,
-        "alert.tactic"   : tactic,
-        "alert.hits"     : hits,
-        "alert.details"  : details[:5] if isinstance(details, list) else [details],
-        "alert.source"   : "sigma",
-        "event.kind"     : "alert",
-        "event.category" : "intrusion_detection",
-        "ae_correlated"  :    False,        # ← ajouter
-        "detection_source": "sigma_only", # ← ajouter
+        "@timestamp"      : datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "alert.title"     : title,
+        "alert.level"     : level,
+        "alert.tactic"    : tactic,
+        "alert.hits"      : hits,
+        "alert.details"   : details[:5] if isinstance(details, list) else [details],
+        "alert.source"    : "sigma",
+        "event.kind"      : "alert",
+        "event.category"  : "intrusion_detection",
+        "ae_correlated"   : False,
+        "detection_source": "sigma_only",
     }
     try:
         r = requests.post(
@@ -168,7 +168,7 @@ def save_alert(title, level, tactic, hits, details) -> str:
             verify=False,
             json=alert
         )
-        return r.json().get("_id")   # ← retourne l'ID pour mise à jour LLM
+        return r.json().get("_id")
     except Exception as e:
         print(f"  [SIGMA] Save alert error: {e}")
         return None
@@ -210,14 +210,33 @@ def sigma_to_lucene(path):
         return None
 
 
-def es_search(index, query, source_fields, size=5):
+def _time_filter(cursor: str = None, until: str = None):
+    """Retourne une clause range @timestamp ]cursor, until] ou None."""
+    r = {}
+    if cursor:
+        r["gt"] = cursor
+    if until:
+        r["lte"] = until
+    return {"range": {"@timestamp": r}} if r else None
+
+
+def es_search(index, query, source_fields, size=500, time_filter=None):
+    """
+    Recherche ES. Si time_filter est fourni, enveloppe la query dans
+    un bool/must pour restreindre à la fenêtre temporelle.
+    size=500 pour capturer tous les _id matchés (corrélation exacte).
+    """
+    if time_filter:
+        wrapped = {"bool": {"must": [query, time_filter]}}
+    else:
+        wrapped = query
     try:
         r = requests.post(
             f"{ES_HOST}/{index}/_search",
             auth=(ES_USER, ES_PASS), verify=False,
             json={
                 "size"   : size,
-                "query"  : query,
+                "query"  : wrapped,
                 "_source": source_fields,
                 "sort"   : [{"@timestamp": "desc"}]
             }
@@ -345,23 +364,25 @@ def print_alert(title, level, tactic, hits_info, hits_count=0) -> str:
     print(f"  Tactic : {tactic}")
     for info in hits_info:
         print(f"  → {info}")
-    return save_alert(title, level, tactic, hits_count, hits_info)  # retourne es_id
+    return save_alert(title, level, tactic, hits_count, hits_info)
 
 
 def print_ok(title):
     print(f"{COLORS['OK']}[OK]{COLORS['RESET']}    {title}")
 
 # =============================================================================
-# RÈGLES SIMPLES — retourne la liste des alertes avec es_id
+# RÈGLES SIMPLES — fenêtre ]cursor, until] + matched_doc_ids
 # =============================================================================
 
-def run_simple_rules(summary) -> list:
+def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
     """
-    Parcourt les règles Sigma simples.
-    Retourne une liste de dicts {title, level, tactic, hits, details, es_id}.
+    Parcourt les règles Sigma simples, restreintes à la fenêtre ]cursor, until].
+    Retourne une liste de dicts
+        {title, level, tactic, hits, details, es_id, matched_doc_ids}.
     """
     AGG_TITLES = set(AGGREGATION_RULES.keys())
     results    = []
+    tfilter    = _time_filter(cursor, until)
 
     for root, _, files in os.walk(SIGMA_PATH):
         for file in sorted(files):
@@ -381,23 +402,27 @@ def run_simple_rules(summary) -> list:
                 INDEX,
                 {"query_string": {"query": lucene, "default_field": "message"}},
                 ["@timestamp", "process.name", "user.name",
-                 "source.ip", "message", "event.outcome"]
+                 "source.ip", "message", "event.outcome"],
+                time_filter=tfilter,
             )
             if not data:
                 continue
 
             count = data["hits"]["total"]["value"]
             if count > 0:
-                hits_info = [format_sample(h) for h in data["hits"]["hits"][:3]]
-                es_id     = print_alert(title, level, "voir règle", hits_info, count)
+                all_hits    = data["hits"]["hits"]
+                hits_info   = [format_sample(h) for h in all_hits[:3]]
+                matched_ids = [h["_id"] for h in all_hits]
+                es_id       = print_alert(title, level, "voir règle", hits_info, count)
                 summary.append({"rule": title, "level": level, "hits": count})
                 results.append({
-                    "title":   title,
-                    "level":   level,
-                    "tactic":  "voir règle",
-                    "hits":    count,
-                    "details": hits_info,
-                    "es_id":   es_id,
+                    "title":           title,
+                    "level":           level,
+                    "tactic":          "voir règle",
+                    "hits":            count,
+                    "details":         hits_info,
+                    "es_id":           es_id,
+                    "matched_doc_ids": matched_ids,
                 })
             else:
                 print_ok(title)
@@ -405,13 +430,14 @@ def run_simple_rules(summary) -> list:
     return results
 
 # =============================================================================
-# RÈGLES AVEC AGRÉGATION — retourne la liste des alertes avec es_id
+# RÈGLES AVEC AGRÉGATION — inchangée (fenêtre glissante now-Xm)
 # =============================================================================
 
 def run_aggregation_rules(summary) -> list:
     """
     Parcourt les règles Sigma avec agrégation/corrélation.
     Retourne une liste de dicts {title, level, tactic, hits, details, es_id}.
+    Pas de matched_doc_ids : ces règles ne seront pas corrélées avec l'AE.
     """
     print(f"\n--- Règles avec agrégation ---\n")
     results = []
@@ -497,9 +523,6 @@ def explain_sigma_alerts(alerts: list):
     """
     Pour chaque alerte Sigma, génère une explication LLM en français
     et met à jour le document dans sigma-alerts via _update.
-
-    Appelle call_llm_with_retry depuis rag_explainer.py
-    → gère automatiquement le rate limit 429 de Groq.
     """
     import json
     import ssl
@@ -508,7 +531,6 @@ def explain_sigma_alerts(alerts: list):
     import sys
     import os
 
-    # Ajouter le dossier ML au path pour trouver rag_explainer
     ml_dir = os.path.dirname(os.path.abspath(__file__))
     if ml_dir not in sys.path:
         sys.path.insert(0, ml_dir)
@@ -525,7 +547,6 @@ def explain_sigma_alerts(alerts: list):
         print(f"  [SIGMA-LLM] Skipped — {e}")
         return
 
-    # Client urllib pour les updates ES
     ctx_ssl = ssl.create_default_context()
     ctx_ssl.check_hostname = False
     ctx_ssl.verify_mode    = ssl.CERT_NONE
@@ -546,7 +567,6 @@ def explain_sigma_alerts(alerts: list):
         details = alert.get("details", [])
         es_id   = alert.get("es_id")
 
-        # Construction du prompt
         details_str = "\n".join(f"  - {d}" for d in details[:5])
         prompt = f"""Tu es un expert SOC spécialisé en détection d'intrusion Linux.
 Une règle Sigma a déclenché une alerte.
@@ -596,7 +616,6 @@ Moins de 350 mots. Factuel uniquement.
             explanation = f"Erreur LLM : {type(e).__name__} — {e}"
             print(f"  [SIGMA-LLM] Erreur sur '{title}': {e}")
 
-        # Mise à jour du doc dans sigma-alerts
         update_payload = {
             "llm_explanation": explanation,
             "llm_model"      : "llama-3.1-8b-instant",
@@ -635,14 +654,11 @@ def main():
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*65}\n")
 
-    # ── Règles simples ────────────────────────────────────────────
     print("--- Règles simples ---\n")
     all_alerts += run_simple_rules(summary)
 
-    # ── Règles avec agrégation ────────────────────────────────────
     all_alerts += run_aggregation_rules(summary)
 
-    # ── Résumé ────────────────────────────────────────────────────
     print(f"\n{'='*65}")
     print(f"  RÉSUMÉ : {len(summary)} règle(s) déclenchée(s)")
     print(f"{'='*65}")
@@ -655,7 +671,6 @@ def main():
     print(f"{'='*65}\n")
     print(f"  Alertes sauvegardées dans : {ALERT_INDEX}")
 
-    # ── Explication LLM de toutes les alertes ─────────────────────
     import sys as _sys, os as _os
     for _p in [
         _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', 'core'),

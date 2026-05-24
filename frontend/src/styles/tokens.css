@@ -1,0 +1,88 @@
+/* =============================================================================
+   tokens.css — Design system du Dashboard Expert IA
+   Palette "console scientifique" : sobre, dense, un accent par direction.
+   Thème piloté par [data-theme="dark"|"light"] sur <html> ou un conteneur.
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Spline+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+
+:root,
+[data-theme="light"] {
+  /* Surfaces */
+  --bg:            #f4f5f3;
+  --surface:       #ffffff;
+  --surface-2:     #fafbf9;
+  --surface-sunk:  #f0f1ee;
+  --border:        #e3e5e0;
+  --border-strong: #c9ccc4;
+
+  /* Texte */
+  --text:          #1a1d1a;
+  --text-soft:     #565a54;
+  --text-faint:    #8a8f86;
+
+  /* Accent principal (identité) */
+  --accent:        #1f6f5c;
+  --accent-soft:   #e4f0ec;
+  --accent-text:   #15503f;
+
+  /* Sémantique directionnelle */
+  --up:            #1f7a4d;   /* amélioration */
+  --up-bg:         #e6f3eb;
+  --down:          #b3402e;   /* régression */
+  --down-bg:       #f7e7e3;
+  --warn:          #b07415;   /* alerte / risque */
+  --warn-bg:       #f8efdc;
+  --new:           #2563a8;   /* nouveau */
+  --new-bg:        #e6eef7;
+
+  --shadow:        0 1px 2px rgba(20,24,20,.04), 0 4px 16px rgba(20,24,20,.06);
+  --shadow-lg:     0 2px 6px rgba(20,24,20,.06), 0 12px 40px rgba(20,24,20,.10);
+}
+
+[data-theme="dark"] {
+  --bg:            #0f1311;
+  --surface:       #181d1a;
+  --surface-2:     #1d231f;
+  --surface-sunk:  #121613;
+  --border:        #2a322d;
+  --border-strong: #3a443d;
+
+  --text:          #e8ebe6;
+  --text-soft:     #a4aca3;
+  --text-faint:    #6d756c;
+
+  --accent:        #4fcaa6;
+  --accent-soft:   #16302a;
+  --accent-text:   #7fdcc0;
+
+  --up:            #58c98a;
+  --up-bg:         #142c1f;
+  --down:          #e07a64;
+  --down-bg:       #331c17;
+  --warn:          #e0a948;
+  --warn-bg:       #322611;
+  --new:           #6aa8e6;
+  --new-bg:        #15263a;
+
+  --shadow:        0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:     0 2px 6px rgba(0,0,0,.4), 0 12px 40px rgba(0,0,0,.55);
+}
+
+/* Tokens non thématisés */
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body:    'Spline Sans', system-ui, sans-serif;
+  --font-mono:    'Spline Sans Mono', 'SF Mono', monospace;
+
+  --r-sm: 7px;
+  --r-md: 11px;
+  --r-lg: 16px;
+
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;
+  --sp-4: 16px; --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
+
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+* { box-sizing: border-box; }

@@ -1,0 +1,57 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  overflow-y: auto;
+}
+
+.header {
+  border-bottom: 1px solid #ECECEC;
+  padding-bottom: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #777;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2a2a3e;
+}
+
+.state {
+  padding: 24px;
+  color: #555;
+}
+
+.error {
+  padding: 16px 20px;
+  border-radius: 8px;
+  background: #FCEBEB;
+  color: #C62828;
+  font-size: 14px;
+}

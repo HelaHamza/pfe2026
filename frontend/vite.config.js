@@ -6,10 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/auth':     'http://127.0.0.1:8000',
-      '/profile':  'http://127.0.0.1:8000',
-      '/admin':    'http://127.0.0.1:8000',
-      '/feedback': 'http://127.0.0.1:8000',
+      '/api': { // ← toutes les requêtes commençant par /api seront proxyfiées vers le backend
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''), // ← supprime le préfixe /api avant de proxyfier vers le backend
+      },
     },
   },
 })

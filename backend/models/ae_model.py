@@ -4,6 +4,7 @@ backend/models/ae_model.py
 MODEL — Autoencoder MoE-AE.
 Charge model_moe_ae.pt une seule fois au démarrage (singleton).
 Expose infer(cursor) qui lit ES, calcule MSE, écrit les résultats.
+c'est un wrappers autour de scripts ML
 """
 
 import os

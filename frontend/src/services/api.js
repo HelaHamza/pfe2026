@@ -1,10 +1,9 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/',
+  baseURL: '/api',   // ← toutes les requêtes deviennent /api/dashboard, /api/auth/login, etc.
   headers: { 'Content-Type': 'application/json' },
 })
-
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
@@ -35,4 +34,17 @@ export const feedbackService = {
   action:          (feedback_id, action) => api.post('/feedback/action', { feedback_id, action }).then(r => r.data),
 }
 
+export const dashboardService = {
+  getDashboard:    ()             => api.get('/dashboard').then(r => r.data),
+  getResults:      (limit = 500)  => api.get('/results', { params: { limit } }).then(r => r.data),
+  getResultDetail: (type, id)     => api.get(`/results/${type}/${id}`).then(r => r.data),
+  launchAnalysis:  ()             => api.post('/run/analyse').then(r => r.data),
+}
+
+
+export const aiDashboardService = {
+  getVersions: ()          => api.get('/ai-dashboard/versions').then(r => r.data),
+  getOverview: (version)   => api.get('/ai-dashboard/overview', { params: version ? { version } : {} }).then(r => r.data),
+  compare:     (versions)  => api.get('/ai-dashboard/compare',  { params: versions ? { versions } : {} }).then(r => r.data),
+}
 export default api

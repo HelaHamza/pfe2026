@@ -64,7 +64,7 @@ def signup_user(body: SignUpRequest) -> dict:
 
 
 def seed_admin() -> dict:
-    email = "oumaimabani2@gmail.com"
+    email = "helahamza2020@gmail.com"
 
     if users_collection.find_one({"email": email}):
         return {"message": "Admin already exists"}

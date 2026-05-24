@@ -1,0 +1,60 @@
+{"source": "syslog", "prog": "cron", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 62174 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.38 port 58591 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 53825 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.22 port 52504 ssh2", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.16 port 51029 ssh2", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.30 port 51954 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.34 port 48743 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.17 port 62433 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.10 port 63661 ssh2", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "GET /api/health 200 39ms", "sigma": null}
+{"source": "syslog", "prog": "cron", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.26 port 56171 ssh2", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "syslog", "prog": "firewall", "msg": "OUTBOUND curl -> 45.155.205.233:443 bytes=8356886", "sigma": "suspicious_outbound"}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.17 port 41051 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.16 port 61960 ssh2", "sigma": null}
+{"source": "syslog", "prog": "firewall", "msg": "OUTBOUND nc -> 45.155.205.233:443 bytes=37868828", "sigma": "suspicious_outbound"}
+{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.35 port 62298 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 64132 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 42848 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.37 port 43592 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 64270 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 59349 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
+{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/bin/systemctl restart nginx", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.28 port 58150 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.28 port 55488 ssh2", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.29 port 60806 ssh2", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "GET /api/health 200 26ms", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.38 port 50076 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.24 port 56959 ssh2", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "GET /api/health 200 39ms", "sigma": null}
+{"source": "auth", "prog": "sudo", "msg": "alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/bin/systemctl restart nginx", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.27 port 57378 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 43358 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.27 port 48609 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.10 port 42326 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.16 port 57669 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.15 port 55147 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.22 port 61064 ssh2", "sigma": null}
+{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "auth", "prog": "sudo", "msg": "alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 57870 ssh2", "sigma": "ssh_bruteforce"}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.13 port 51763 ssh2", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.38 port 63524 ssh2", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
+{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
+{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.36 port 60599 ssh2", "sigma": null}
