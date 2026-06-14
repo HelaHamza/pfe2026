@@ -73,10 +73,27 @@ export default function ProfilePage() {
     }
   }
 
+  // Compute initials for avatar fallback
+  const initials = (() => {
+    const f = form.first_name?.[0] || ''
+    const l = form.last_name?.[0]  || ''
+    return (f + l).toUpperCase() || (user?.email?.[0] || '?').toUpperCase()
+  })()
+
+  // Role/specialty badge label
+  const roleLabel = user?.specialty === 'soc_user' ? 'SOC Operator'
+                  : user?.specialty === 'ia_user'  ? 'IA Analyst'
+                  : 'Operator'
+
   if (loading) return (
     <div className={styles.layout}>
       <Sidebar />
-      <main className={styles.main}><p className={styles.sub} style={{marginTop:'2rem'}}>Loading…</p></main>
+      <main className={styles.main}>
+        <div className={styles.loadingState}>
+          <span className={styles.spinner} />
+          <p className={styles.sub}>Loading profile…</p>
+        </div>
+      </main>
     </div>
   )
 
@@ -85,21 +102,25 @@ export default function ProfilePage() {
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.header}>
+          <div className={styles.breadcrumb}>
+            <span className={styles.dotGreen} />
+            <span>Operator console</span>
+            <span className={styles.crumbSep}>/</span>
+            <span className={styles.crumbActive}>Profile</span>
+          </div>
           <h1 className={styles.title}>Profile</h1>
-          <p className={styles.sub}>Manage your personal information</p>
+          <p className={styles.sub}>Manage your operator identity and contact details.</p>
         </div>
 
         <form onSubmit={handleSubmit} noValidate className={styles.form}>
 
-          {/* Avatar */}
+          {/* ─── Avatar / Identity card ─── */}
           <div className={styles.avatarSection}>
             <div className={styles.avatarWrap} onClick={() => fileRef.current.click()}>
               {avatar
                 ? <img src={avatar} alt="Profile" className={styles.avatarImg} />
                 : <div className={styles.avatarPlaceholder}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
+                    <span className={styles.avatarInitials}>{initials}</span>
                   </div>
               }
               <div className={styles.avatarOverlay}>
@@ -109,25 +130,47 @@ export default function ProfilePage() {
               </div>
             </div>
             <input ref={fileRef} type="file" accept="image/*" hidden onChange={handleAvatar} />
-            <div>
+            <div className={styles.avatarMeta}>
               <p className={styles.avatarName}>
                 {form.first_name || form.last_name
                   ? `${form.first_name} ${form.last_name}`.trim()
                   : user?.email}
               </p>
-              <button type="button" className={styles.avatarChangeBtn} onClick={() => fileRef.current.click()}>
-                Change photo
-              </button>
+              <div className={styles.avatarBadges}>
+                <span className={styles.roleBadge}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  {roleLabel}
+                </span>
+                <button type="button" className={styles.avatarChangeBtn} onClick={() => fileRef.current.click()}>
+                  Change photo →
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Fields */}
+          {/* ─── Personal Information card ─── */}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Personal Information</h2>
+            <div className={styles.cardHead}>
+              <h2 className={styles.cardTitle}>
+                <span className={styles.cardTitleDot} />
+                Personal information
+              </h2>
+              <span className={styles.cardHint}>All fields optional</span>
+            </div>
 
             {/* Email — read only */}
             <div className={styles.fieldWrap}>
-              <label className={styles.label}>Email</label>
+              <label className={styles.label}>
+                <span>Email</span>
+                <span className={styles.labelHint}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{verticalAlign:'-1px', marginRight:'3px'}}>
+                    <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  read-only
+                </span>
+              </label>
               <input
                 type="email"
                 value={user?.email || ''}
@@ -137,14 +180,16 @@ export default function ProfilePage() {
             </div>
 
             <div className={styles.row}>
-              <Field label="First Name (optional)" name="first_name" value={form.first_name} onChange={handleChange} placeholder="Yassine" />
-              <Field label="Last Name (optional)"  name="last_name"  value={form.last_name}  onChange={handleChange} placeholder="Benali" />
+              <Field label="First name"   name="first_name" value={form.first_name} onChange={handleChange} placeholder="Yassine" />
+              <Field label="Last name"    name="last_name"  value={form.last_name}  onChange={handleChange} placeholder="Benali" />
             </div>
 
             <div className={styles.row}>
-              <Field label="Phone (optional)" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} placeholder="+213 xxx xxx xxx" type="tel" />
+              <Field label="Phone" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} placeholder="+213 xxx xxx xxx" type="tel" />
               <div className={styles.fieldWrap}>
-                <label className={styles.label}>Sex (optional)</label>
+                <label className={styles.label}>
+                  <span>Sex</span>
+                </label>
                 <select name="sex" value={form.sex} onChange={handleChange} className={styles.select}>
                   <option value="">Select…</option>
                   <option value="male">Male</option>
@@ -154,18 +199,21 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <Field label="Address (optional)" name="address" value={form.address} onChange={handleChange} placeholder="Street, City, Country" fullWidth />
+            <Field label="Address" name="address" value={form.address} onChange={handleChange} placeholder="Street, city, country" fullWidth />
           </div>
 
-          {/* Actions */}
+          {/* ─── Actions bar ─── */}
           <div className={styles.actions}>
             {saved && (
               <span className={styles.savedBadge}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Saved successfully
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Changes saved
               </span>
             )}
             <button type="submit" className={styles.saveBtn} disabled={saving}>
+              {saving && <span className={styles.btnSpinner} />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </div>
@@ -179,9 +227,17 @@ export default function ProfilePage() {
 function Field({ label, name, value, onChange, error, placeholder, type = 'text', fullWidth }) {
   return (
     <div className={`${styles.fieldWrap} ${fullWidth ? styles.fieldFull : ''}`}>
-      <label className={styles.label}>{label}</label>
-      <input type={type} name={name} value={value} onChange={onChange} placeholder={placeholder}
-        className={`${styles.input} ${error ? styles.inputError : ''}`} />
+      <label className={styles.label}>
+        <span>{label}</span>
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`${styles.input} ${error ? styles.inputError : ''}`}
+      />
       {error && <span className={styles.errorMsg}>{error}</span>}
     </div>
   )

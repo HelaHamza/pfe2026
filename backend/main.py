@@ -8,11 +8,11 @@ from views.admin_views     import router as admin_router
 from views.feedback_views  import router as feedback_router
 
 # Routers SOC (nouveaux)
-from views.analyse_views   import router as analyse_router
-from views.results_views   import router as results_router
-from views.dashboard_views import router as dashboard_router
+# from views.analyse_views   import router as analyse_router
+# from views.results_views   import router as results_router
+# from views.dashboard_views import router as dashboard_router
 
-from views.ai_dashboard_views import router as ai_dashboard_router
+# from views.ai_dashboard_views import router as ai_dashboard_router
 
 app = FastAPI(title="PFE 2026 API", version="2.0.0")
 
@@ -31,13 +31,13 @@ app.include_router(admin_router)
 app.include_router(feedback_router)
 
 # Routers SOC
-app.include_router(analyse_router)
-app.include_router(results_router)
-app.include_router(dashboard_router)
+# app.include_router(analyse_router)
+# app.include_router(results_router)
+# app.include_router(dashboard_router)
 
 
 
-app.include_router(ai_dashboard_router)
+#app.include_router(ai_dashboard_router)
 
 
 @app.get("/")

@@ -4,6 +4,12 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
 
+
+
+import secrets
+import hashlib
+
+
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
@@ -33,3 +39,28 @@ def decode_access_token(token: str) -> dict | None:
         return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except JWTError:
         return None
+
+
+
+
+def generate_reset_token() -> str:
+    """Token aléatoire haute entropie (256 bits) — celui qui part dans l'email."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_token(token: str) -> str:
+    """Hash stocké en base. SHA-256 suffit : le token est déjà inviolable par entropie."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+
+
+OTP_TTL_MINUTES = 10  # ou dans config.py
+
+def generate_otp(length: int = 6) -> str:
+    """Génère un code numérique à 6 chiffres."""
+    return str(secrets.randbelow(10**length)).zfill(length)
+
+def hash_otp(code: str) -> str:
+    """Hash SHA-256 simple pour stocker l'OTP."""
+    return hashlib.sha256(code.encode()).hexdigest()

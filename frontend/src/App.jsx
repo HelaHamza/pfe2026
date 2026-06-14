@@ -10,6 +10,8 @@ import PendingUsersPage  from './pages/PendingUsersPage.jsx'
 import ApprovedUsersPage from './pages/ApprovedUsersPage.jsx'
 import FeedbacksPage     from './pages/FeedbacksPage.jsx'
 import AiDashboardPage from './pages/AiDashboardPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
+import ResetPasswordPage  from './pages/ResetPasswordPage.jsx'
 
 //import Dashboard from "./pages/dashboard.jsx";
 
@@ -20,6 +22,8 @@ export default function App() {
         <Routes>
   <Route path="/login"  element={<LoginPage />} />
   <Route path="/signup" element={<SignUpPage />} />
+  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+  <Route path="/reset-password" element={<ResetPasswordPage />} />
   <Route path="/home"      element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
   <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
   <Route path="/profile"   element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

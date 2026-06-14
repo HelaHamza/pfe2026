@@ -1,48 +1,30 @@
 from fastapi import HTTPException, status
-from core.database import users_collection
 from core.email import send_approval_notification, send_rejection_notification
 from models.user_model import ApproveUserRequest, UserResponse
+from repositories import user_repository as users
 from typing import List
 
 
-def _to_user_response(u: dict) -> UserResponse:
-    return UserResponse(
-        email=u["email"],
-        role=u.get("role", "user"),
-        first_name=u.get("first_name", ""),
-        last_name=u.get("last_name", ""),
-        phone=u.get("phone", ""),
-        sex=u.get("sex", ""),
-        address=u.get("address", ""),
-        specialty=u.get("specialty", ""),
-        status=u.get("status", "pending"),
-        avatar=u.get("avatar"),
-    )
-
-
 def list_pending_users() -> List[UserResponse]:
-    users = users_collection.find({"status": "pending"})
-    return [_to_user_response(u) for u in users]
+    return [UserResponse.from_mongo(u) for u in users.list_by_status("pending")]
 
 
 def list_all_users() -> List[UserResponse]:
-    users = users_collection.find({"role": {"$ne": "admin"}})
-    return [_to_user_response(u) for u in users]
+    return [UserResponse.from_mongo(u) for u in users.list_non_admin()]
 
 
 def approve_or_reject_user(body: ApproveUserRequest) -> dict:
-    user = users_collection.find_one({"email": body.email})
+    user = users.find_by_email(body.email)
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if user.get("status") == ("approved" if body.action == "approve" else "rejected"):
-        return {"message": f"User is already {body.action}d"}
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
 
     new_status = "approved" if body.action == "approve" else "rejected"
-    users_collection.update_one({"email": body.email}, {"$set": {"status": new_status}})
+    if user.get("status") == new_status:
+        return {"message": f"User is already {body.action}d"}
+
+    users.update_fields(body.email, {"status": new_status})
 
     full_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip() or user["email"]
-
     try:
         if body.action == "approve":
             send_approval_notification(user["email"], full_name)

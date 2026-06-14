@@ -11,7 +11,7 @@ class UserInDB(BaseModel):
     phone:      str = ""
     sex:        str = ""
     address:    str = ""
-    specialty: Literal["ia_user", "soc_user"] = "ia_user"
+    specialty: Literal["ia_user", "soc_user", "admin"] = "ia_user"   # ← "admin" ajouté
     role: Literal["admin", "user"] = "user"
     status: Literal["pending", "approved", "rejected"] = "pending"
     avatar: Optional[str] = None
@@ -65,8 +65,40 @@ class UserResponse(BaseModel):
     status:     str       = ""
     avatar:     Optional[str] = None
 
+    @classmethod
+    def from_mongo(cls, u: dict) -> "UserResponse":
+        """Convertit un document Mongo brut en schéma de réponse."""
+        return cls(
+            email=u["email"],
+            role=u.get("role", "user"),
+            first_name=u.get("first_name", ""),
+            last_name=u.get("last_name", ""),
+            phone=u.get("phone", ""),
+            sex=u.get("sex", ""),
+            address=u.get("address", ""),
+            specialty=u.get("specialty", ""),
+            status=u.get("status", "pending"),
+            avatar=u.get("avatar"),
+        )
+
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type:   str = "bearer"
     user:         UserResponse
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6)   # même règle que SignUpRequest
+
+
+
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    code: str

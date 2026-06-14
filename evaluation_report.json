@@ -1,228 +1,57 @@
 {
-  "version": "V3",
-  "timestamp": "2026-05-24T18:28:43.141398+00:00",
-  "device": "cpu",
-  "hyperparameters": {
-    "latent_dim": 24,
-    "batch_size": 250,
-    "epochs_max": 200,
-    "lr": 0.001,
-    "weight_decay": 1e-05,
-    "patience": 25,
-    "clean_pct": {
-      "syslog": 2.0,
-      "auth": 2.0,
-      "auditd": 5.0
-    },
-    "anomaly_pct": {
-      "syslog": 99,
-      "auth": 97,
-      "auditd": 99.8
-    },
-    "floor_thresholds": {
-      "auditd": 0.035,
-      "auth": 0.8,
-      "syslog": 0.063
-    }
-  },
-  "total_params": 36799,
-  "epochs_trained": 143,
-  "best_val_loss": 0.004259,
-  "train_duration_s": 488.16,
-  "alphas_learned": {
-    "auditd": 0.001,
-    "auth": 0.003,
-    "syslog": 0.002
-  },
-  "cleaning_stats": {
-    "syslog": {
-      "before": 25561,
-      "excluded": 512,
-      "after": 25049,
-      "threshold_clean": 0.600551
-    },
-    "auth": {
-      "before": 6289,
-      "excluded": 126,
-      "after": 6163,
-      "threshold_clean": 1.68344
-    },
-    "auditd": {
-      "before": 14201,
-      "excluded": 710,
-      "after": 13491,
-      "threshold_clean": 0.098719
-    }
-  },
-  "split": {
-    "train": 0.75,
-    "val": 0.25,
-    "test_index": "test-ml-logs",
-    "synth_index": "ids-train-normal"
-  },
   "thresholds": {
-    "syslog": {
-      "business": 0.1260114312171936,
-      "night": 0.1260114312171936,
-      "other": 0.1260114312171936
-    },
     "auth": {
-      "business": 1.8116302490234375,
-      "night": 1.8076251745224,
-      "other": 1.6786761283874512
-    },
-    "auditd": {
-      "business": 0.035,
-      "night": 0.035,
-      "other": 0.035
-    }
-  },
-  "global_metrics": {
-    "precision": 1.0,
-    "recall": 0.995,
-    "f1_score": 0.9975,
-    "auc_roc": 0.9785,
-    "auc_pr": 0.979,
-    "mse_normal": 0.12468,
-    "mse_attack": 61.34642,
-    "mse_ratio": 492.03,
-    "cm": {
-      "tp": 398,
-      "fp": 0,
-      "fn": 2,
-      "tn": 600
-    }
-  },
-  "metrics_by_source": {
-    "syslog": {
-      "precision": 1.0,
-      "recall": 0.9868,
-      "f1": 0.9934,
-      "auc_roc": 1.0,
-      "cm": {
-        "tp": 75,
-        "fp": 0,
-        "fn": 1,
-        "tn": 200
-      },
-      "false_positives": 0,
-      "false_negatives": 1
-    },
-    "auth": {
-      "precision": 1.0,
-      "recall": 0.9919,
-      "f1": 0.996,
-      "auc_roc": 1.0,
-      "cm": {
-        "tp": 123,
-        "fp": 0,
-        "fn": 1,
-        "tn": 200
-      },
-      "false_positives": 0,
-      "false_negatives": 1
-    },
-    "auditd": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1": 1.0,
-      "auc_roc": 1.0,
-      "cm": {
-        "tp": 200,
-        "fp": 0,
-        "fn": 0,
-        "tn": 200
-      },
-      "false_positives": 0,
-      "false_negatives": 0
-    }
-  },
-  "attack_result": {
-    "brute_force_ssh": {
-      "recall": 0.3,
-      "detected": 15,
-      "total": 50
-    },
-    "credential_access": {
-      "recall": 0.36,
-      "detected": 18,
-      "total": 50
-    },
-    "cryptominer": {
-      "recall": 0.34,
-      "detected": 17,
-      "total": 50
-    },
-    "lateral_movement": {
-      "recall": 0.4,
-      "detected": 20,
-      "total": 50
-    },
-    "log_tampering": {
-      "recall": 0.34,
-      "detected": 17,
-      "total": 50
-    },
-    "privilege_escalation": {
-      "recall": 0.42,
-      "detected": 21,
-      "total": 50
-    },
-    "reverse_shell": {
-      "recall": 0.48,
-      "detected": 24,
-      "total": 50
-    },
-    "ssh_key_implant": {
-      "recall": 0.46,
-      "detected": 23,
-      "total": 50
-    }
-  },
-  "inference_timing": {
-    "by_source": {
-      "syslog": {
-        "n_events": 276,
-        "mean_ms": 1.438,
-        "std_ms": 0.12,
-        "per_us": 5.21
-      },
-      "auth": {
-        "n_events": 324,
-        "mean_ms": 1.512,
-        "std_ms": 0.113,
-        "per_us": 4.67
-      },
-      "auditd": {
-        "n_events": 400,
-        "mean_ms": 2.058,
-        "std_ms": 0.33,
-        "per_us": 5.14
+      "threshold": 21.030899343491118,
+      "info": {
+        "method": "gpd_pot",
+        "u": 6.205693759918213,
+        "xi": 0.7160864350470648,
+        "scale": 4.685645120534797,
+        "n_excess": 66,
+        "gpd_level": 17.319856680611323,
+        "emp": 21.030899343491118,
+        "floored": true
       }
     },
-    "total_ms": 5.008,
-    "per_event_us": 5.01
-  },
-  "robustness": {
-    "f1": {
-      "mean": 0.8491,
-      "std": 0.0072,
-      "cv_pct": 0.85
-    },
-    "precision": {
-      "mean": 0.7403,
-      "std": 0.0109,
-      "cv_pct": 1.47
-    },
-    "recall": {
-      "mean": 0.9955,
-      "std": 0.0024,
-      "cv_pct": 0.24
-    },
-    "auc_roc": {
-      "mean": 0.979,
-      "std": 0.0026,
-      "cv_pct": 0.27
+    "syslog": {
+      "threshold": 41.94446010971177,
+      "info": {
+        "method": "gpd_pot",
+        "u": 5.527945728302052,
+        "xi": 0.35705494689451267,
+        "scale": 3.289043456523459,
+        "n_excess": 1400,
+        "gpd_level": 23.16199608359632,
+        "emp": 41.94446010971177,
+        "floored": true
+      }
     }
-  }
+  },
+  "unsupervised_diagnostics": {
+    "auth": {
+      "n": 3999,
+      "alert_rate_pct": 0.025,
+      "mse_median": 0.004657,
+      "mse_p99": 6.940032,
+      "mse_skewness": 8.53,
+      "mse_kurtosis": 76.181,
+      "latent_var_min": 0.695176,
+      "latent_var_mean": 2.75507,
+      "latent_dead_dims": 0
+    },
+    "syslog": {
+      "n": 69301,
+      "alert_rate_pct": 0.118,
+      "mse_median": 0.012952,
+      "mse_p99": 7.116115,
+      "mse_skewness": 22.72,
+      "mse_kurtosis": 702.013,
+      "latent_var_min": 1.236818,
+      "latent_var_mean": 6.942518,
+      "latent_dead_dims": 0
+    }
+  },
+  "n_scored": 73300,
+  "n_alerts": 83,
+  "n_alert_episodes": 40
 }

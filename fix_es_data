@@ -1,23 +1,0 @@
-Script démarré sur 2026-05-19 15:31:35+01:00 [TERM="xterm-256color" TTY="/dev/pts/3" COLUMNS="508" LINES="20"]
-[?2004h]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ "    print('aucun doc normal trouvé')else:[K    print(json.dumps({k:v for k,v in src.items() if k != 'ml'}, indent=2))[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Csrc=hits[0]['_source'][Kprint(json.dumps({k:v for k,v in src.items() if k != 'ml'}, indent=2))[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[C[Celse:[K    print('aucun doc normal trouvé')"[K[K[K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [K]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ ^C[?2004l[?2004h[?2004l
-[?2004h]0;hala-hamza@ASUS-X415JA: ~/pfe-backend-2026[01;32mhala-hamza@ASUS-X415JA[00m:[01;34m~/pfe-backend-2026[00m$ [7mpython3 -m backend.main[27mpython3 -m backend.main
-[?2004l[32mINFO[0m:     Will watch for changes in these directories: ['/home/hala-hamza/pfe-backend-2026']
-[32mINFO[0m:     Uvicorn running on [1mhttp://0.0.0.0:8000[0m (Press CTRL+C to quit)
-[32mINFO[0m:     Started reloader process [[36m[1m38145[0m] using [36m[1mStatReload[0m
-[32mINFO[0m:     Started server process [[36m38198[0m]
-[32mINFO[0m:     Waiting for application startup.
-[32mINFO[0m:     Application startup complete.
-[32mINFO[0m:     127.0.0.1:39704 - "[1mPOST /run/analyse HTTP/1.1[0m" [32m200 OK[0m
-[AnalyseController] Analyse depuis : 2026-05-13T19:25:44.000Z
-[AnalyseController] Nouveaux logs : 0
-[AnalyseController] Aucun nouveau log — analyse ignorée
-[32mINFO[0m:     127.0.0.1:39704 - "[1mGET /run/analyse/status HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36090 - "[1mGET /stats/logs-by-source HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36062 - "[1mGET /stats/by-tactic HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36068 - "[1mGET /results?limit=500 HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36054 - "[1mGET /stats/timeline?days=7 HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36082 - "[1mGET /stats/detection-source HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:39704 - "[1mGET /stats HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36068 - "[1mGET /stats/sigma-by-source HTTP/1.1[0m" [32m200 OK[0m
-[32mINFO[0m:     127.0.0.1:36090 - "[1mGET /stats/attacks-by-source HTTP/1.1[0m" [32m200 OK[0m
-[MongoDB] get_last_report error: bad auth : Authentication failed., full error: {'ok': 0, 'errmsg': 'bad auth : Authentication failed.', 'code': 8000, 'codeName': 'AtlasErro

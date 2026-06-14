@@ -1,3 +1,4 @@
+# models/feedback_model.py
 from pydantic import BaseModel, EmailStr
 from typing import Literal, Optional
 
@@ -15,6 +16,20 @@ class FeedbackResponse(BaseModel):
     rating:     Optional[int] = None
     status:     Literal["pending", "approved", "rejected"] = "pending"
     created_at: str
+
+    @classmethod
+    def from_mongo(cls, f: dict) -> "FeedbackResponse":
+        """Convertit un document Mongo brut en schéma de réponse.
+        Le str(_id) est l'inverse du ObjectId(...) côté repository."""
+        return cls(
+            id=str(f["_id"]),
+            user_email=f.get("user_email", ""),
+            user_name=f.get("user_name", ""),
+            message=f.get("message", ""),
+            rating=f.get("rating"),
+            status=f.get("status", "pending"),
+            created_at=f.get("created_at", ""),
+        )
 
 
 class FeedbackActionRequest(BaseModel):

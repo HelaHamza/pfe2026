@@ -1,14 +1,26 @@
-# fusion_router.py
-# core/fusion_router.py
-#
-# RÔLE ACTUEL : génération des explications LLM
+# =============================================================================
+# FUSION ROUTER — v9 (adapté au modèle AE V9, signaux comportementaux)
+# =============================================================================
+# RÔLE : génération des explications LLM.
 #   - process_dataframe()    → explications AE   (appelé par ML/autoencodeur.py)
-#   - process_sigma_alerts() → explications Sigma (appelé par sigma_engine.py main())
+#   - process_sigma_alerts() → explications Sigma (appelé par sigma_engine.py)
 #
-# NOTE : la corrélation AE↔Sigma du DASHBOARD n'est PAS faite ici — elle est
-#        calculée par intersection d'IDs dans analyse_controller._run_fusion.
-#        Les méthodes _check_ae_correlation / _cross_check_sigma ci-dessous
-#        ne servent qu'aux pipelines standalone (entraînement / Sigma CLI).
+# CHANGEMENTS v9 (flux AE uniquement) :
+#   1. Le tri LLM vs template ne se base PLUS sur composite_score / MIN_SCORE_LLM
+#      (ces scores dépendaient des flags-verdict supprimés en V9).
+#      → On trie sur le PERCENTILE du MSE PAR SOURCE : les LLM_TOP_PCT % de MSE
+#        les plus élevés (dans leur propre source) partent au LLM, le reste au
+#        template auto. Le MSE est le signal d'anomalie en V9.
+#   2. detection_source forcé à "ae_only" dans le flux AE : il n'y a plus de
+#      corrélation Sigma↔flags dans ce pipeline (la corrélation dashboard est
+#      faite ailleurs, par intersection d'IDs).
+#   3. Plus aucun appel à knowledge_base dans le flux AE : l'explication
+#      repose sur ae_behavioral_signals (géré côté rag_explainer).
+#
+# CONSERVÉ tel quel :
+#   - process_sigma_alerts() et ses helpers (_check_ae_correlation,
+#     _cross_check_sigma) : utilisés par le pipeline Sigma standalone.
+#   - _make_es_client / _update_es.
 
 import os, sys, ssl, json, base64, urllib.request
 from datetime import datetime, timezone
@@ -31,15 +43,18 @@ ES_PASS       = os.getenv("ELASTIC_PWD", "pfe2026")
 ALERT_INDEX   = "sigma-alerts"
 AE_INDEX      = "ml-autoencoder-scores"
 
-MIN_SCORE_LLM  = 6
-MIN_SCORE_AUTO = 1
+# --- Tri du flux AE (V9) ---
+# Fraction (par source) des anomalies envoyées au LLM, triées par MSE décroissant.
+# Le reste reçoit l'explication template (sans token Groq).
+LLM_TOP_PCT   = 0.10        # top 10% MSE par source -> LLM
+LLM_MAX_CALLS = 20          # plafond dur d'appels LLM (garde-fou tokens/rate-limit)
 
 
 class FusionRouter:
     """
     Génère les explications LLM pour les anomalies AE et les alertes Sigma.
-    Conserve une corrélation heuristique (source + fenêtre) utilisée
-    uniquement par les pipelines standalone.
+    Flux AE (V9) : tri par percentile MSE par source.
+    Flux Sigma : inchangé (corrélation heuristique standalone).
     """
 
     def __init__(self, ae_threshold: float = 0.75):
@@ -49,52 +64,97 @@ class FusionRouter:
     # ── Pipeline AE : appelé depuis ML/autoencodeur.py ─────────────
     def process_dataframe(self, df_result: pd.DataFrame, thresholds: dict):
         """
-        Génère les explications LLM (haute priorité) ou template auto
-        (priorité moyenne) pour les anomalies AE, puis met à jour ES.
-        Cross-check chaque anomalie AE avec le cache Sigma.
+        Génère les explications pour les anomalies AE :
+          - top LLM_TOP_PCT % de MSE PAR SOURCE → explication LLM,
+          - le reste → explication template auto (comportementale).
+        Puis met à jour ES. detection_source = "ae_only" (pas de Sigma ici).
         """
+        if df_result is None or len(df_result) == 0:
+            print("  [FUSION] Rien à expliquer (df vide).")
+            return
+
         try:
             grok = make_grok_client()
         except ValueError as e:
             print(f"  [FUSION] LLM Skipped — {e}")
             return
 
-        scores    = pd.to_numeric(
-            df_result.get("composite_score", 0), errors="coerce").fillna(0)
-        anomalies = df_result.get("ae_is_anomaly", 0)
-        has_es_id = df_result.get(
+        df = df_result.copy()
+
+        # On ne traite que les vraies anomalies adressables dans ES.
+        anomalies = pd.to_numeric(
+            df.get("ae_is_anomaly", 0), errors="coerce").fillna(0).astype(int)
+        has_es_id = df.get(
             "_es_write_id",
-            pd.Series([None] * len(df_result), index=df_result.index)
+            pd.Series([None] * len(df), index=df.index)
         ).notna()
 
-        mask_llm  = (anomalies == 1) & (scores >= MIN_SCORE_LLM) & has_es_id
-        mask_auto = (anomalies == 1) & (scores >= MIN_SCORE_AUTO) \
-                  & (scores < MIN_SCORE_LLM) & has_es_id
+        mse = pd.to_numeric(df.get("ae_mse_error", 0), errors="coerce").fillna(0.0)
 
-        print(f"\n  [FUSION] {mask_llm.sum()} anomalies AE → LLM | "
-              f"{mask_auto.sum()} → template auto")
+        eligible = (anomalies == 1) & has_es_id
+        if eligible.sum() == 0:
+            print("  [FUSION] Aucune anomalie adressable (ae_is_anomaly==1 "
+                  "& _es_write_id présent).")
+            return
+
+        # --- Tri par percentile de MSE PAR SOURCE ---
+        # rank(pct=True) donne le rang relatif dans [0,1] au sein du groupe.
+        # On garde au LLM les MSE dont le rang >= (1 - LLM_TOP_PCT).
+        df["_mse_for_rank"] = mse.where(eligible, other=np.nan)
+        src_series = df.get("log_source",
+                            pd.Series(["?"] * len(df), index=df.index)).astype(str)
+
+        pct_rank = (df.groupby(src_series)["_mse_for_rank"]
+                      .rank(pct=True, method="average"))
+        df["_mse_pct_in_source"] = pct_rank
+
+        mask_llm  = eligible & (pct_rank >= (1.0 - LLM_TOP_PCT))
+        mask_auto = eligible & ~mask_llm
+
+        n_llm_total = int(mask_llm.sum())
+        print(f"\n  [FUSION] V9 tri par MSE/source (top {LLM_TOP_PCT*100:.0f}%) : "
+              f"{n_llm_total} → LLM (plafond {LLM_MAX_CALLS}) | "
+              f"{int(mask_auto.sum())} → template auto")
 
         ctx_ssl, headers = self._make_es_client()
 
-        for idx, row in df_result[mask_llm].head(20).iterrows():
-            anomaly_doc      = row.to_dict()
-            detection_source = self._cross_check_sigma(anomaly_doc)
+        # --- LLM : les plus hauts MSE d'abord, plafonnés ---
+        df_llm = (df[mask_llm]
+                  .sort_values("_mse_for_rank", ascending=False)
+                  .head(LLM_MAX_CALLS))
+
+        for idx, row in df_llm.iterrows():
+            anomaly_doc = row.to_dict()
             result = explain_anomaly(
                 anomaly_doc, es=None, grok_client=grok,
-                detection_source=detection_source
+                detection_source="ae_only"          # V9 : pas de Sigma ici
             )
             self._update_es(AE_INDEX, str(row.get("_es_write_id", "")),
                             result, ctx_ssl, headers)
-            print(f"  [FUSION-LLM] ✓ {row.get('log_source','?'):8s} | "
-                  f"source={detection_source} | "
-                  f"sev={result.get('kb_severity','?')}")
+            pct = row.get("_mse_pct_in_source", float("nan"))
+            print(f"  [FUSION-LLM] ✓ {str(row.get('log_source','?')):8s} | "
+                  f"MSE={row.get('ae_mse_error','?')} | "
+                  f"pct_source={pct:.3f} | sev={result.get('kb_severity','?')}")
 
-        for idx, row in df_result[mask_auto].iterrows():
+        # --- Les anomalies LLM au-delà du plafond retombent en template ---
+        overflow_idx = df[mask_llm].index.difference(df_llm.index)
+        if len(overflow_idx) > 0:
+            print(f"  [FUSION] {len(overflow_idx)} anomalies LLM au-delà du "
+                  f"plafond → template auto")
+
+        # --- Template auto : reste + overflow ---
+        auto_idx = df[mask_auto].index.union(overflow_idx)
+        for idx in auto_idx:
+            row = df.loc[idx]
             result = generate_auto_explanation(row.to_dict())
             self._update_es(AE_INDEX, str(row.get("_es_write_id", "")),
                             result, ctx_ssl, headers)
 
+        print(f"  [FUSION] Terminé — {len(df_llm)} LLM | "
+              f"{len(auto_idx)} template.")
+
     # ── Pipeline Sigma : appelé depuis sigma_engine.py main() ──────
+    # (INCHANGÉ — utilisé par le pipeline Sigma standalone)
     def process_sigma_alerts(self, alerts: list):
         """
         Enrichit chaque alerte Sigma avec ae_correlated + detection_source,
@@ -105,7 +165,7 @@ class FusionRouter:
                                '..', 'sigma', 'detect')
         if _sigma not in _sys.path:
             _sys.path.insert(0, _sigma)
-        from sigma_engine import explain_sigma_alerts   # ← corrigé (était: main)
+        from sigma_engine import explain_sigma_alerts
 
         self._sigma_alerts_cache = alerts
 
@@ -130,6 +190,7 @@ class FusionRouter:
         explain_sigma_alerts(enriched)
 
     # ── Helpers corrélation (standalone uniquement) ────────────────
+    # (INCHANGÉS — utilisés par process_sigma_alerts)
     def _cross_check_sigma(self, anomaly_doc: dict) -> str:
         """Retourne 'both' | 'ae_only' selon présence d'une alerte Sigma même source."""
         src = anomaly_doc.get("log_source", "")

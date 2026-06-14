@@ -1,0 +1,16 @@
+@timestamp,log_source,host_name,user_name,source_ip,process_name,event_type,mse,threshold,is_alert,confidence,confidence_level,role
+2026-05-06 09:17:06.108000+00:00,syslog,ASUS-X415JA,,,gsd-screensaver,desktop,32.34903,16.396050334930436,1,1.973,medium,correlation
+2026-05-06 09:17:06.108000+00:00,syslog,ASUS-X415JA,,,gsd-a11y-settin,desktop,32.346817,16.396050334930436,1,1.973,medium,correlation
+2026-05-06 09:17:06.109000+00:00,syslog,ASUS-X415JA,,,gsd-datetime,desktop,32.347466,16.396050334930436,1,1.973,medium,correlation
+2026-05-06 09:17:06.109000+00:00,syslog,ASUS-X415JA,,,gsd-color,desktop,32.348118,16.396050334930436,1,1.973,medium,correlation
+2026-05-06 09:35:22.470000+00:00,syslog,ASUS-X415JA,,,gnome-control-c,desktop,32.50942,16.396050334930436,1,1.983,medium,correlation
+2026-05-06 09:36:30.817000+00:00,syslog,ASUS-X415JA,,,evince,other,32.539177,16.396050334930436,1,1.985,medium,correlation
+2026-05-06 10:32:59.767000+00:00,syslog,ASUS-X415JA,,,gsd-power,desktop,32.46108,16.396050334930436,1,1.98,medium,correlation
+2026-05-07 12:10:56.850000+00:00,syslog,ASUS-X415JA,,,gsd-housekeepin,desktop,32.356903,16.396050334930436,1,1.973,medium,correlation
+2026-05-07 12:10:56.855000+00:00,syslog,ASUS-X415JA,,,gsd-sound,desktop,32.359077,16.396050334930436,1,1.974,medium,correlation
+2026-05-07 16:26:09.006000+00:00,syslog,ASUS-X415JA,,,dnsmasq-dhcp,other,36.593773,16.396050334930436,1,2.232,medium,correlation
+2026-05-07 18:36:20.967000+00:00,syslog,ASUS-X415JA,,,snapd,package,20.738382,16.396050334930436,1,1.265,low,correlation
+2026-05-07 18:36:20.977000+00:00,syslog,ASUS-X415JA,,,snapd,package,20.667297,16.396050334930436,1,1.261,low,correlation
+2026-05-09 10:27:37.216000+00:00,syslog,ASUS-X415JA,,,adduser,other,32.36179,16.396050334930436,1,1.974,medium,correlation
+2026-05-10 00:13:28.815000+00:00,syslog,ASUS-X415JA,,,eog,other,32.42314,16.396050334930436,1,1.977,medium,correlation
+2026-05-16 23:00:02.430000+00:00,syslog,ASUS-X415JA,,,rsyslogd,logging,17.77517,16.396050334930436,1,1.084,low,correlation

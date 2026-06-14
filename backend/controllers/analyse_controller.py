@@ -33,8 +33,8 @@ for _p in [_CORE, _ROOT]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from models.ae_model      import AEModel
-from models.sigma_model   import SigmaModel
+from ml.ae_model      import AEModel
+from ml.sigma_model   import SigmaModel
 from models.es_repository import ESRepository, _derive_source
 
 # ── Configuration ─────────────────────────────────────────────────────────────

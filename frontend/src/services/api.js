@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/api',   // ← toutes les requêtes deviennent /api/dashboard, /api/auth/login, etc.
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 api.interceptors.request.use((config) => {
@@ -11,9 +11,14 @@ api.interceptors.request.use((config) => {
 })
 
 export const authService = {
-  login:       (email, password) => api.post('/auth/login',        { email, password }).then(r => r.data),
-  signup:      (data)            => api.post('/auth/signup',       data).then(r => r.data),
-  createAdmin: ()                => api.post('/auth/create-admin').then(r => r.data),
+  login:     (email, password) => api.post('/auth/login',      { email, password }).then(r => r.data),
+  verifyOtp: (email, code)     => api.post('/auth/verify-otp', { email, code }).then(r => r.data), // ← nouveau
+  signup:    (data)            => api.post('/auth/signup',     data).then(r => r.data),
+
+  requestPasswordReset: (email) =>
+    api.post('/auth/forgot-password', { email }).then(r => r.data),
+  confirmPasswordReset: (token, newPassword) =>
+    api.post('/auth/reset-password', { token, new_password: newPassword }).then(r => r.data),
 }
 
 export const profileService = {
@@ -41,10 +46,10 @@ export const dashboardService = {
   launchAnalysis:  ()             => api.post('/run/analyse').then(r => r.data),
 }
 
-
 export const aiDashboardService = {
   getVersions: ()          => api.get('/ai-dashboard/versions').then(r => r.data),
   getOverview: (version)   => api.get('/ai-dashboard/overview', { params: version ? { version } : {} }).then(r => r.data),
   compare:     (versions)  => api.get('/ai-dashboard/compare',  { params: versions ? { versions } : {} }).then(r => r.data),
 }
+
 export default api

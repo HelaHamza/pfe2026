@@ -211,3 +211,48 @@ def send_feedback_rejected(user_email: str, user_name: str) -> None:
         </div>
         """,
     )
+
+
+
+
+
+from config import RESET_TOKEN_TTL_MINUTES
+
+def send_password_reset(to_email: str, reset_link: str) -> None:
+    subject = "Réinitialisation de votre mot de passe"
+    html = f"""
+    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f5f2eb;border-radius:12px">
+      <div style="background:#1a1a2e;border-radius:8px;padding:20px 24px;margin-bottom:24px">
+        <h2 style="color:#c9a96e;margin:0;font-size:18px">PFE 2026 · Réinitialisation</h2>
+      </div>
+      <p style="color:#4a4a6a">Vous avez demandé la réinitialisation de votre mot de passe.</p>
+      <p style="color:#4a4a6a">Ce lien est valable <strong>{RESET_TOKEN_TTL_MINUTES} minutes</strong>.</p>
+      <div style="margin:28px 0;text-align:center">
+        <a href="{reset_link}"
+           style="background:#1a1a2e;color:#e8e4d9;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:500;font-size:14px">
+          Réinitialiser mon mot de passe →
+        </a>
+      </div>
+      <p style="color:#8a8aaa;font-size:13px">Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+    </div>
+    """
+    _send(to=to_email, subject=subject, html=html)   # ← body= remplacé par html=
+
+
+def send_otp(email: str, code: str) -> None:
+    subject = "Votre code de vérification"
+    html = f"""
+    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px;background:#f5f2eb;border-radius:12px">
+      <div style="background:#1a1a2e;border-radius:8px;padding:20px 24px;margin-bottom:24px">
+        <h2 style="color:#c9a96e;margin:0;font-size:18px">PFE 2026 · Code de vérification</h2>
+      </div>
+      <p style="color:#4a4a6a">Votre code de connexion est :</p>
+      <div style="text-align:center;margin:28px 0">
+        <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1a1a2e;background:#fff;padding:16px 28px;border-radius:8px;border:2px solid #c9a96e">
+          {code}
+        </span>
+      </div>
+      <p style="color:#8a8aaa;font-size:13px;text-align:center">Ce code expire dans <strong>10 minutes</strong>.</p>
+    </div>
+    """
+    _send(to=email, subject=subject, html=html)      # ← body= remplacé par html=

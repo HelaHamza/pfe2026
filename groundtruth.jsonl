@@ -1,60 +1,16 @@
-{"source": "syslog", "prog": "cron", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 62174 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.38 port 58591 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 53825 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.22 port 52504 ssh2", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.16 port 51029 ssh2", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.30 port 51954 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.34 port 48743 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.17 port 62433 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.10 port 63661 ssh2", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "GET /api/health 200 39ms", "sigma": null}
-{"source": "syslog", "prog": "cron", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.26 port 56171 ssh2", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "syslog", "prog": "firewall", "msg": "OUTBOUND curl -> 45.155.205.233:443 bytes=8356886", "sigma": "suspicious_outbound"}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.17 port 41051 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.16 port 61960 ssh2", "sigma": null}
-{"source": "syslog", "prog": "firewall", "msg": "OUTBOUND nc -> 45.155.205.233:443 bytes=37868828", "sigma": "suspicious_outbound"}
-{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.35 port 62298 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 64132 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 42848 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "syslog", "prog": "nginx", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.37 port 43592 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 64270 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 59349 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
-{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/bin/systemctl restart nginx", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.28 port 58150 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.28 port 55488 ssh2", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "Started Daily apt download activities.", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for alice from 10.0.0.29 port 60806 ssh2", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "GET /api/health 200 26ms", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.38 port 50076 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.24 port 56959 ssh2", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "GET /api/health 200 39ms", "sigma": null}
-{"source": "auth", "prog": "sudo", "msg": "alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/bin/systemctl restart nginx", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.27 port 57378 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 43358 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.27 port 48609 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.10 port 42326 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.16 port 57669 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for bob from 10.0.0.15 port 55147 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.22 port 61064 ssh2", "sigma": null}
-{"source": "syslog", "prog": "systemd", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "auth", "prog": "sudo", "msg": "alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Failed password for root from 185.220.101.45 port 57870 ssh2", "sigma": "ssh_bruteforce"}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for deploy from 10.0.0.13 port 51763 ssh2", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for www-data from 10.0.0.38 port 63524 ssh2", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "syslog", "prog": "nginx", "msg": "Reached target Multi-User System.", "sigma": null}
-{"source": "auth", "prog": "sudo", "msg": "root : TTY=pts/0 ; PWD=/home/root ; USER=root ; COMMAND=/usr/bin/apt update", "sigma": null}
-{"source": "auth", "prog": "sshd", "msg": "Accepted password for carol from 10.0.0.36 port 60599 ssh2", "sigma": null}
+{"start": "2026-05-02T22:27:13Z", "end": "2026-05-02T22:37:59Z", "attack_type": "brute_force_ssh", "host": "ASUS-X415JA", "description": "brute_force_ssh \u2014 5 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-02T22:39:28Z", "end": "2026-05-02T22:52:52Z", "attack_type": "brute_force_ssh", "host": "ASUS-X415JA", "description": "brute_force_ssh \u2014 17 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-08T01:10:31Z", "end": "2026-05-08T01:24:05Z", "attack_type": "defense_evasion", "host": "srv-app-02", "description": "defense_evasion \u2014 15 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-08T02:33:15Z", "end": "2026-05-08T02:48:02Z", "attack_type": "brute_force_ssh", "host": "srv-db-01", "description": "brute_force_ssh \u2014 50 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-08T05:09:44Z", "end": "2026-05-08T05:23:03Z", "attack_type": "credential_dumping", "host": "srv-db-01", "description": "credential_dumping \u2014 8 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-19T22:28:46Z", "end": "2026-05-19T22:38:46Z", "attack_type": "persistence_cron", "host": "ASUS-X415JA", "description": "persistence_cron \u2014 1 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-19T23:05:25Z", "end": "2026-05-19T23:15:25Z", "attack_type": "persistence_cron", "host": "ASUS-X415JA", "description": "persistence_cron \u2014 3 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-20T12:50:34Z", "end": "2026-05-20T13:00:34Z", "attack_type": "persistence_cron", "host": "ASUS-X415JA", "description": "persistence_cron \u2014 3 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-20T13:01:17Z", "end": "2026-05-20T13:11:17Z", "attack_type": "persistence_cron", "host": "ASUS-X415JA", "description": "persistence_cron \u2014 3 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-21T00:04:56Z", "end": "2026-05-21T00:16:58Z", "attack_type": "initial_access_ssh", "host": "ASUS-X415JA", "description": "initial_access_ssh \u2014 2 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-21T00:45:11Z", "end": "2026-05-21T01:08:51Z", "attack_type": "initial_access_ssh", "host": "ASUS-X415JA", "description": "initial_access_ssh \u2014 5 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-21T01:12:09Z", "end": "2026-05-21T01:27:00Z", "attack_type": "initial_access_ssh", "host": "ASUS-X415JA", "description": "initial_access_ssh \u2014 2 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-21T02:20:41Z", "end": "2026-05-21T02:32:36Z", "attack_type": "initial_access_ssh", "host": "ASUS-X415JA", "description": "initial_access_ssh \u2014 2 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-21T04:28:19Z", "end": "2026-05-21T04:41:28Z", "attack_type": "initial_access_ssh", "host": "ASUS-X415JA", "description": "initial_access_ssh \u2014 2 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-29T05:14:39Z", "end": "2026-05-29T05:24:39Z", "attack_type": "privilege_escalation", "host": "asus-x415ja", "description": "privilege_escalation \u2014 8 events d\u00e9tect\u00e9s"}
+{"start": "2026-05-29T08:03:40Z", "end": "2026-05-29T08:13:40Z", "attack_type": "privilege_escalation", "host": "asus-x415ja", "description": "privilege_escalation \u2014 8 events d\u00e9tect\u00e9s"}

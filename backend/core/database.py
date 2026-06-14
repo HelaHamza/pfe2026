@@ -1,12 +1,8 @@
+# établit la connexion à MongoDB Atlas et expose la base de données "pfe2026" pour les repositories.
+
 from pymongo import MongoClient
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-
-MONGO_URI = os.getenv("MONGO_URI")
+from config import MONGO_URI, MONGO_DB
 
 client = MongoClient(MONGO_URI)
-db = client["pfe2026"]
+db = client[MONGO_DB]
 
-users_collection = db["users"]
