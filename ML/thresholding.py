@@ -105,3 +105,25 @@ def get_threshold(thresholds, src):
     if t is None:
         return float("inf")
     return float(t["threshold"]) if isinstance(t, dict) else float(t)
+
+
+
+
+def realized_alert_rate(model, df, feats_by_src, scalers, keep_by_src,
+                        thresholds, device):
+    """QA : taux d'alerte REELLEMENT realise par source sur un df donne.
+    Sert a verifier que le seuil tient sa cible (calib) et a detecter la
+    derive temporelle ou les attaques (test >> calib)."""
+    import torch
+    rates = {}
+    for s in C.SOURCES:
+        if s not in scalers:
+            continue
+        d = df[df["log_source"] == s].reset_index(drop=True)
+        if len(d) == 0:
+            continue
+        X = PP.transform(d, feats_by_src[s], scalers[s], keep_by_src[s])
+        mse = model.reconstruction_error(torch.FloatTensor(X).to(device), s)
+        thr = get_threshold(thresholds, s)
+        rates[s] = float((mse > thr).mean())
+    return rates

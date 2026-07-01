@@ -83,13 +83,13 @@ def _add_ip_external(df):
 def _shannon_entropy(s: str) -> float:
     if not s:
         return 0.0
-    counts = {}
+    counts = {} 
     for ch in s:
         counts[ch] = counts.get(ch, 0) + 1
     n = len(s)
     ent = 0.0
     for c in counts.values():
-        p = c / n
+        p = c / n 
         ent -= p * math.log2(p)
     return ent
 
@@ -108,6 +108,8 @@ def _add_auditd(df):
         cmdline.str.split().map(len)).astype(int)
     df["cmd_entropy"] = cmd.map(_shannon_entropy).round(4)
     return df
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +141,7 @@ _SYSLOG_PREFIX_CAT = [
 ]
 
 
-def _syslog_category(prog):
+def _syslog_category(prog): # categorise un message syslog par le PREFIXE de son process_name (robuste a la troncature 15 car. et aux variantes) 
     p = str(prog).lower()
     for prefixes, cat in _SYSLOG_PREFIX_CAT:
         if p.startswith(prefixes):
@@ -147,7 +149,7 @@ def _syslog_category(prog):
     return "other"
 
 
-_SYSCALL_CAT = {
+_SYSCALL_CAT = { # categorisation des syscalls d'auditd par famille d'action (inspiree de strace)
     "execve": "exec", "execveat": "exec",
     "open": "file", "openat": "file", "openat2": "file", "read": "file",
     "write": "file", "unlink": "file", "unlinkat": "file", "rename": "file",
@@ -227,6 +229,34 @@ def _proc_identifier(df):
     ident = name.where(name != "", exe_base)
     return ident.map(_canonical_proc)
 
+def _resolve_parent_via_pid(df, max_age_s=3600):
+    """Reconstruit parent_executable par jointure causale sur le PID.
+    Auditbeat ne resout pas process.parent.executable (timing du cache), mais
+    process.pid et process.parent.pid sont presents. On retrouve, pour chaque
+    pid_parent, le dernier processus ayant porte ce PID comme PID PROPRE -> le
+    parent. 100% causal (passe seul), borne par max_age_s contre le recyclage
+    des PID par l'OS."""
+    df = df.sort_values("_dt", kind="stable")
+    host = df["host_name"].fillna("unknown").astype(str).to_numpy()
+    own_pid = (df.get("process_pid", pd.Series("", index=df.index))
+               .fillna("").astype(str).str.strip().to_numpy())
+    par_pid = (df.get("parent_pid", pd.Series("", index=df.index))
+               .fillna("").astype(str).str.strip().to_numpy())
+    pname = _proc_identifier(df).astype(str).to_numpy()
+    ts = df["_dt"].to_numpy()
+
+    last = {}                          # (hote|pid) -> (nom, timestamp)
+    out = np.empty(len(df), dtype=object)
+    for i in range(len(df)):
+        hit = last.get(host[i] + "|" + par_pid[i]) if par_pid[i] else None
+        if hit is not None and (ts[i] - hit[1]) / np.timedelta64(1, "s") <= max_age_s:
+            out[i] = hit[0]
+        else:
+            out[i] = ""                # parent inconnu ou trop vieux (PID recycle ?)
+        if own_pid[i]:
+            last[host[i] + "|" + own_pid[i]] = (pname[i], ts[i])
+    df["parent_executable"] = out.astype(object)
+    return df
 
 def _add_novelty(df, novelty_state=None):
     """Si novelty_state est fourni (inference live), on prefixe les compteurs
@@ -422,10 +452,9 @@ def build_features(df_raw, novelty_state=None):
     df = _add_message(df)
     df = _add_auditd(df)
     df = _add_event_type(df)
-    df = _add_novelty(df, novelty_state=novelty_state)
+    df = _resolve_parent_via_pid(df)        # <-- reconstruit parent_executable par PID
     df = _add_novelty(df, novelty_state=novelty_state)
     df = df.reset_index(drop=True)          # <-- assure un index unique
-    df = _add_windows_and_sequence(df)
     df = _add_windows_and_sequence(df)
 
     # On garde @timestamp pour les splits temporels en aval.

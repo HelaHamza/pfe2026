@@ -1,419 +1,217 @@
+#!/usr/bin/env python3
 """
-regen_groundtruth_full.py
-Dérive les fenêtres d'attaque depuis les vrais patterns dans ES.
-Couvre tous les types : brute_force_ssh, brute_force_sudo,
-credential_dumping, defense_evasion, persistence_cron,
-port_scan, initial_access_ssh, privilege_escalation.
+groundtruth.py
+==============
+Harnais d'injection RED-TEAM restreint aux anomalies DETECTABLES PAR L'AUTOENCODEUR
+SEUL, c.-a-d. a SIGNATURE STATISTIQUE (volume, frequence, deviation, entropie).
+
+Volontairement EXCLUS (domaine SIGMA, pas AE) :
+  * lecture /etc/shadow (T1003.008)  -> signature de chemin sensible
+  * service/cron malveillant (T1543) -> signature semantique, evenement bien
+    forme ; la seule prise AE serait proc_is_new/et_bigram_new, MORTES au test
+    (vocabulaire sature) -> non fiable.
+Les inclure plomberait artificiellement le recall de l'AE. Ils relevent de la
+couche Sigma et doivent etre evalues separement.
+
+Regles (inchangees) :
+  * groundtruth.jsonl = JUGE EXTERNE d'evaluation UNIQUEMENT, jamais
+    utilise pour l'entrainement (pipeline non supervise).
+  * Injection MAINTENANT -> fenetres dans le split TEST (futur).
+  * Charges BENIGNES (reproduction de la signature, pas de l'effet) + nettoyage.
+
+Couverture (anomalies statistiques uniquement) :
+  AUTH    T1110.001  brute-force SSH        -> auth_fail_count_5m, fail_ratio, dev
+  AUTH    T1136.001  creation utilisateur   -> evenement rare (MSE elevee)
+  AUDITD  T1059.004  exec base64            -> cmd_entropy
+  SYSLOG  --         rafale volumetrique    -> event_count_5m / event_count_5m_dev
+
+Prerequis :
+  * sudo (useradd, journald).  * Fenetres alignees sur juin (DATA_START_BY_SOURCE).
+  * ES_TIME_LTE FIGE (pas "now") pour la reproductibilite.
+
+Usage :
+    sudo python3 groundtruth.py
+    sudo python3 groundtruth.py --source auth
+    sudo python3 groundtruth.py --bf-count 60 --burst-count 300
 """
+from __future__ import annotations
+import os
+import sys
 import json
-from datetime import timedelta
-import pandas as pd
-from autoencodeur import make_es_client, es_request, ES_INDEX_TRAIN
+import time
+import socket
+import base64
+import argparse
+import subprocess
+from datetime import datetime, timezone
 
-# --- Paramètres globaux ---
-GAP_MIN   = 5    # minutes max entre deux events pour rester dans la même rafale
-PAD_SEC   = 300   # marge avant/après chaque fenêtre
-MIN_EVENTS = 3   # minimum d'events pour qualifier une rafale
+_HOME = os.path.expanduser("~" + os.environ.get("SUDO_USER", ""))
+ML_DIR = os.path.join(_HOME, "pfe-backend-2026", "ML")
+GROUNDTRUTH_PATH = os.path.join(ML_DIR, "groundtruth.jsonl")
+HOST = socket.gethostname()
+TEST_USER = "testintrus"
 
 
+def _now_iso():
+    return datetime.now(timezone.utc).isoformat()
 
 
-def fetch(query, fields, max_docs=5000):
-    """Récupère les docs ES sans scroll (plus robuste pour petits volumes)."""
-    ctx, headers = make_es_client()
-    q = {
-        "size": max_docs,
-        "sort": [{"@timestamp": {"order": "asc"}}],
-        "query": query,
-        "_source": ["@timestamp", "host.name"] + fields,
-    }
+def _append_groundtruth(entry):
+    entry = {**entry, "host": HOST, "injected_at": _now_iso()}
+    with open(GROUNDTRUTH_PATH, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+    print(f"  [GT] {entry['name']:24s} [{entry['start']} -> {entry['end']}]")
+
+
+def _run(cmd, quiet=False):
+    if not quiet:
+        print(f"    $ {' '.join(cmd)}")
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+# ===========================================================================
+# AUTH
+# ===========================================================================
+def inject_ssh_bruteforce(count=60):
+    """Echecs SSH en rafale sur localhost (utilisateurs invalides) -> pilote
+    auth_fail_count_5m, auth_fail_ratio, event_count_5m_dev. BatchMode=yes ->
+    echec immediat, aucun mot de passe reel tente, aucune session etablie."""
+    print(f"\n[AUTH] T1110.001 brute-force SSH ({count} echecs)")
+    start = _now_iso()
+    opts = ["-o", "BatchMode=yes", "-o", "PubkeyAuthentication=no",
+            "-o", "PreferredAuthentications=password,keyboard-interactive",
+            "-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=2"]
+    for i in range(1, count + 1):
+        _run(["ssh", *opts, f"invaliduser{i}@127.0.0.1", "true"], quiet=True)
+    time.sleep(3)
+    _append_groundtruth({
+        "name": "auth_ssh_bruteforce", "technique": "T1110.001", "source": "auth",
+        "start": start, "end": _now_iso(),
+        "note": f"{count} echecs SSH invaliduser sur 127.0.0.1.",
+    })
+
+
+def inject_user_creation():
+    """Creation puis suppression d'un utilisateur -> evenement rare (MSE elevee).
+    Nettoyage garanti."""
+    print(f"\n[AUTH] T1136.001 creation utilisateur ({TEST_USER})")
+    start = _now_iso()
     try:
-        r = es_request(f"/{ES_INDEX_TRAIN}/_search", q, ctx=ctx, headers=headers)
-    except Exception as e:
-        print(f"    ERREUR fetch: {e}")
-        return pd.DataFrame(columns=["ts", "host"])
-
-    rows = []
-    for h in r.get("hits", {}).get("hits", []):
-        s = h["_source"]
-        row = {
-            "ts":   pd.to_datetime(s.get("@timestamp"), utc=True),
-            "host": (s.get("host") or {}).get("name", "ASUS-X415JA"),
-        }
-        for f in fields:
-            parts = f.split(".")
-            val = s
-            for p in parts:
-                val = (val or {}).get(p)
-            row[f.replace(".", "_")] = val
-        rows.append(row)
-
-    if not rows:
-        return pd.DataFrame(columns=["ts", "host"])
-
-    return pd.DataFrame(rows).sort_values("ts").reset_index(drop=True)
+        _run(["userdel", "-r", TEST_USER])           # purge reliquat eventuel
+        _run(["useradd", "-m", TEST_USER])
+        time.sleep(2)
+    finally:
+        _run(["userdel", "-r", TEST_USER])            # cleanup
+    _append_groundtruth({
+        "name": "auth_user_creation", "technique": "T1136.001", "source": "auth",
+        "start": start, "end": _now_iso(),
+        "note": f"useradd {TEST_USER} puis userdel (cleanup).",
+    })
 
 
-
-def build_windows(df, attack_type, min_events=MIN_EVENTS):
-    """Groupe les events en rafales et renvoie les fenêtres."""
-    wins = []
-    if df.empty:
-        return wins
-    gap   = timedelta(minutes=GAP_MIN)
-    pad   = timedelta(seconds=PAD_SEC)
-    start = prev = df.iloc[0]["ts"]
-    host  = df.iloc[0]["host"]
-    count = 1
-
-    for i in range(1, len(df)):
-        t = df.iloc[i]["ts"]
-        if t - prev <= gap:
-            count += 1
-            prev = t
-        else:
-            if count >= min_events:
-                wins.append({
-                    "start":       (start - pad).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "end":         (prev  + pad).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "attack_type": attack_type,
-                    "host":        host,
-                    "description": f"{attack_type} — {count} events détectés",
-                })
-            start = prev = t
-            host  = df.iloc[i]["host"]
-            count = 1
-
-    if count >= min_events:
-        wins.append({
-            "start":       (start - pad).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "end":         (prev  + pad).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "attack_type": attack_type,
-            "host":        host,
-            "description": f"{attack_type} — {count} events détectés",
-        })
-    return wins
+# ===========================================================================
+# AUDITD
+# ===========================================================================
+def inject_base64_exec():
+    """Commande encodee base64 (charge BENIGNE : echo) -> ligne de commande a
+    HAUTE ENTROPIE dans auditd (pilote cmd_entropy)."""
+    print("\n[AUDITD] T1059.004 exec commande base64")
+    start = _now_iso()
+    payload = base64.b64encode(b"echo sentinel-benign-payload").decode()
+    _run(["bash", "-c", f"echo {payload} | base64 -d | bash"])
+    time.sleep(2)
+    _append_groundtruth({
+        "name": "auditd_base64_exec", "technique": "T1059.004", "source": "auditd",
+        "start": start, "end": _now_iso(),
+        "note": "Commande base64 (charge benigne echo). Cible : cmd_entropy.",
+    })
 
 
-# =============================================================================
-# Détecteurs par type d'attaque
-# =============================================================================
+# ===========================================================================
+# SYSLOG
+# ===========================================================================
+def inject_volumetric_burst(count=300):
+    """Rafale de `count` messages syslog en quelques secondes -> pic de
+    event_count_1m/5m. Sonde DIRECTE de la feature volumetrique."""
+    print(f"\n[SYSLOG] rafale volumetrique ({count} messages)")
+    start = _now_iso()
+    t0 = time.time()
+    for i in range(count):
+        _run(["logger", "-t", "sentinel-burst",
+              f"red-team volumetric probe {i+1}/{count}"], quiet=True)
+    dur = time.time() - t0
+    time.sleep(3)
+    print(f"    {count} messages en {dur:.1f}s (~{count/max(dur,1e-3):.0f} msg/s)")
+    _append_groundtruth({
+        "name": "syslog_volumetric_burst", "technique": None, "source": "syslog",
+        "start": start, "end": _now_iso(),
+        "note": f"{count} messages logger en {dur:.1f}s. Cible : event_count_5m.",
+    })
 
-def detect_brute_force_ssh():
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "auth"}}],  # sans .keyword
-        "should": [
-            {"match_phrase": {"message": "Failed password"}},
-            {"match_phrase": {"message": "Invalid user"}},
-            {"match_phrase": {"message": "authentication failure"}},
-        ], "minimum_should_match": 1
-    }}
-    df = fetch(q, ["message"])
-    wins = build_windows(df, "brute_force_ssh", min_events=5)
-    print(f"  brute_force_ssh      : {len(df):5,} échecs -> {len(wins)} fenêtres")
-    return wins
+def inject_arg_heavy_exec(nargs=150):
+    """Exec a nombre d'arguments anormalement eleve -> pic arg_count +
+    cmd_length_log cote auditd. Proxy d'obfuscation / command stuffing.
+    Charge 100% benigne (echo). Signal AE dedie (arg_count monte rarement
+    en usage normal, contrairement a event_count sature par les builds)."""
+    print(f"\n[AUDITD] exec a arg_count anormal ({nargs} args)")
+    start = _now_iso()
+    args = [f"a{i}" for i in range(nargs)]
+    _run(["/bin/echo", *args], quiet=True)
+    time.sleep(2)
+    _append_groundtruth({
+        "name": "auditd_arg_heavy_exec", "technique": "T1059.004", "source": "auditd",
+        "start": start, "end": _now_iso(),
+        "note": f"echo {nargs} args. Cible : arg_count / cmd_length_log.",
+    })
+# ===========================================================================
+# Orchestration
+# ===========================================================================
+SCENARIOS = {
+    "auth":   [inject_ssh_bruteforce, inject_user_creation],
+    "auditd": [inject_base64_exec,inject_arg_heavy_exec],
+    "syslog": [inject_volumetric_burst],
+}
 
-
-def detect_brute_force_sudo():
-    # Cherche séparément sudo + échec
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "auth"}}],
-        "should": [
-            {"match_phrase": {"message": "incorrect password attempt"}},
-            {"match_phrase": {"message": "3 incorrect password attempts"}},
-            {"bool": {"must": [
-                {"match_phrase": {"message": "sudo"}},
-                {"match_phrase": {"message": "authentication failure"}}
-            ]}},
-        ], "minimum_should_match": 1
-    }}
-    df = fetch(q, ["message"])
-    wins = build_windows(df, "brute_force_sudo", min_events=3)
-    print(f"  brute_force_sudo     : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-def detect_initial_access_ssh():
-    """SSH réussi hors-horaires APRÈS des échecs = vrai accès suspect."""
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "auth"}}],
-        "should": [
-            {"match_phrase": {"message": "Accepted password"}},
-            {"match_phrase": {"message": "Accepted publickey"}},
-        ], "minimum_should_match": 1
-    }}
-    df = fetch(q, ["message"])
-    if not df.empty:
-        df["hour"] = df["ts"].dt.hour
-        df["dow"]  = df["ts"].dt.dayofweek
-        # Nuit profonde uniquement (0h-6h) ET pas weekend (trop de bruit)
-        mask = ((df["hour"] < 6) & (df["dow"] < 5))
-        df = df[mask].reset_index(drop=True)
-    # Rafales de ≥2 connexions réussies en 5min = vrai accès, pas une session normale
-    wins = build_windows(df, "initial_access_ssh", min_events=2)
-    print(f"  initial_access_ssh   : {len(df):5,} succès nuit -> "
-          f"{len(wins)} fenêtres")
-    return wins
-
-
-def detect_credential_dumping():
-    """Accès aux fichiers de credentials, détecté par le NOM DU FICHIER
-    (observable), pas par le verdict ml.aud_credential_access."""
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "auditd"}}],
-        "should": [
-            {"match_phrase": {"message": "/etc/shadow"}},
-            {"match_phrase": {"message": "/etc/gshadow"}},
-            {"match_phrase": {"message": "/.ssh/id_rsa"}},
-            {"match_phrase": {"message": "/.ssh/id_ed25519"}},
-            {"match_phrase": {"message": ".aws/credentials"}},
-            {"match_phrase": {"message": "/proc/"}},  # avec memdump
-            {"match_phrase": {"process.name": "mimikatz"}},
-            {"match_phrase": {"process.name": "pypykatz"}},
-        ],
-        "minimum_should_match": 1,
-        "must_not": [
-            # Exclure les lectures système normales
-            {"match_phrase": {"process.name": "pam_unix"}},
-            {"match_phrase": {"process.name": "sshd"}},  # sshd lit id_rsa légitimement
-        ]
-    }}
-    df = fetch(q, ["message", "process.name"])
-    wins = build_windows(df, "credential_dumping", min_events=1)
-    print(f"  credential_dumping   : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-def detect_defense_evasion():
-    """
-    Cherche directement dans les messages plutôt que sur les features ML
-    (plus fiable si les features sont à 0 dans les données historiques).
-    """
-    q = {"bool": {
-        "should": [
-            # Suppression de logs via auditd
-            {"bool": {"filter": [
-                {"term": {"ml.log_source": "auditd"}},
-                {"bool": {"should": [
-                    {"match_phrase": {"message": "auth.log"}},
-                    {"match_phrase": {"message": "/var/log"}},
-                    {"match_phrase": {"message": "wtmp"}},
-                    {"match_phrase": {"message": "btmp"}},
-                ], "minimum_should_match": 1}},
-                {"bool": {"should": [
-                    {"term": {"auditd.data.syscall": "unlink"}},
-                    {"term": {"auditd.data.syscall": "truncate"}},
-                    {"term": {"auditd.data.syscall": "rename"}},
-                ], "minimum_should_match": 1}}
-            ]}},
-            # history -c ou HISTFILE dans auditd
-            {"bool": {"filter": [
-                {"term": {"ml.log_source": "auditd"}},
-                {"bool": {"should": [
-                    {"match_phrase": {"message": "HISTFILE"}},
-                    {"match_phrase": {"message": "history -c"}},
-                    {"match_phrase": {"message": "unset HIST"}},
-                ], "minimum_should_match": 1}}
-            ]}},
-            # kill auditd/rsyslog depuis syslog
-            {"bool": {"filter": [
-                {"term": {"ml.log_source": "syslog"}},
-                {"bool": {"should": [
-                    {"match_phrase": {"message": "rsyslog"}},
-                    {"match_phrase": {"message": "auditd"}},
-                ], "minimum_should_match": 1}},
-                {"bool": {"should": [
-                    {"match_phrase": {"message": "stopped"}},
-                    {"match_phrase": {"message": "killed"}},
-                    {"match_phrase": {"message": "failed"}},
-                ], "minimum_should_match": 1}}
-            ]}},
-        ], "minimum_should_match": 1
-    }}
-    df = fetch(q, ["message"])
-    wins = build_windows(df, "defense_evasion", min_events=1)
-    print(f"  defense_evasion      : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-def detect_persistence_cron():
-    """Cron suspect = création/modification uniquement, pas exécution normale."""
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "syslog"}}],
-        "should": [
-            {"match_phrase": {"message": "new job"}},
-            {"match_phrase": {"message": "crontab"}},
-            {"bool": {"must": [
-                {"match_phrase": {"message": "systemd"}},
-                {"match_phrase": {"message": "created symlink"}}
-            ]}},
-        ], "minimum_should_match": 1,
-        "must_not": [
-            {"match_phrase": {"message": "CMD ("}},
-            {"match_phrase": {"message": "session opened for user"}},
-            {"match_phrase": {"message": "session closed for user"}},
-            {"match_phrase": {"message": "pam_unix(cron"}},
-            {"match_phrase": {"message": "CRON["}},
-        ]
-    }}
-    df = fetch(q, ["message"])
-
-    # Affiche quelques messages pour diagnostic
-    if not df.empty and "message" in df.columns:
-        print(f"    Exemples persistence_cron :")
-        for msg in df["message"].dropna().head(5):
-            print(f"      {str(msg)[:100]}")
-
-    wins = build_windows(df, "persistence_cron", min_events=1)
-    print(f"  persistence_cron     : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-
-
-def detect_port_scan():
-    """Un scan = beaucoup d'events réseau différents en peu de temps,
-    indépendamment des règles Logstash."""
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "auditd"}}],
-        "should": [
-            # Process classiques de scan, détectés par leur NOM, pas par un flag
-            {"match_phrase": {"process.name": "nmap"}},
-            {"match_phrase": {"process.name": "masscan"}},
-            {"match_phrase": {"process.name": "zmap"}},
-            {"match_phrase": {"process.name": "rustscan"}},
-            {"match_phrase": {"process.name": "nc"}},
-            # Ou : exécutable nmap dans args
-            {"match_phrase": {"message": "nmap"}},
-        ],
-        "minimum_should_match": 1
-    }}
-    df = fetch(q, ["message", "process.name"])
-    wins = build_windows(df, "port_scan", min_events=3)
-    print(f"  port_scan            : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-def detect_privilege_escalation():
-    """Escalade détectée par les actions observables : chmod suid, exécution
-    de binaires GTFOBins, sudo réussi par un user normal."""
-    q = {"bool": {"should": [
-        # SUID/SGID bit ajouté (texte brut, pas le flag Logstash)
-        {"bool": {
-            "filter": [{"term": {"ml.log_source": "auditd"}}],
-            "must": [
-                {"bool": {"should": [
-                    {"match_phrase": {"process.name": "chmod"}},
-                    {"match_phrase": {"message": "chmod"}},
-                ], "minimum_should_match": 1}},
-                {"bool": {"should": [
-                    {"match_phrase": {"message": "u+s"}},
-                    {"match_phrase": {"message": "4755"}},
-                    {"match_phrase": {"message": "4777"}},
-                    {"match_phrase": {"message": "g+s"}},
-                ], "minimum_should_match": 1}},
-            ]
-        }},
-        # LD_PRELOAD set
-        {"bool": {"filter": [
-            {"term": {"ml.log_source": "auditd"}},
-            {"match_phrase": {"message": "LD_PRELOAD"}}
-        ]}},
-        # Binaires GTFOBins lancés par non-root (escalade classique)
-        {"bool": {"filter": [
-            {"term": {"ml.log_source": "auditd"}},
-            {"bool": {"should": [
-                {"match_phrase": {"process.name": "pkexec"}},
-                {"match_phrase": {"process.name": "doas"}},
-            ], "minimum_should_match": 1}}
-        ]}},
-    ], "minimum_should_match": 1}}
-    df = fetch(q, ["message", "process.name"])
-    wins = build_windows(df, "privilege_escalation", min_events=1)
-    print(f"  privilege_escalation : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-def detect_data_exfiltration():
-    """curl/wget vers IP externe depuis syslog."""
-    q = {"bool": {
-        "filter": [{"term": {"ml.log_source": "syslog"}}],
-        "should": [
-            {"match_phrase": {"message": "curl"}},
-            {"match_phrase": {"message": "wget"}},
-        ], "minimum_should_match": 1,
-        "must_not": [
-            {"match_phrase": {"message": "apt"}},
-            {"match_phrase": {"message": "update"}},
-            {"match_phrase": {"message": "upgrade"}},
-        ]
-    }}
-    df = fetch(q, ["message"])
-    if not df.empty:
-        df["hour"] = df["ts"].dt.hour
-        mask = (df["hour"] < 7) | (df["hour"] > 21)
-        df = df[mask].reset_index(drop=True)
-    wins = build_windows(df, "data_exfiltration", min_events=1)
-    print(f"  data_exfiltration    : {len(df):5,} events -> {len(wins)} fenêtres")
-    return wins
-
-
-# def detect_privilege_escalation_syslog():
-#     """sudo + su dans syslog hors heures ouvrables."""
-#     q = {"bool": {
-#         "filter": [{"term": {"ml.log_source": "syslog"}}],
-#         "should": [
-#             {"match_phrase": {"message": "sudo"}},
-#             {"match_phrase": {"message": "su root"}},
-#             {"match_phrase": {"message": "COMMAND"}},
-#         ], "minimum_should_match": 1,
-#         "must_not": [{"match_phrase": {"message": "session"}}]
-#     }}
-#     df = fetch(q, ["message"])
-#     if not df.empty:
-#         df["hour"] = df["ts"].dt.hour
-#         mask = (df["hour"] < 7) | (df["hour"] > 21)
-#         df = df[mask].reset_index(drop=True)
-#     wins = build_windows(df, "privilege_escalation", min_events=2)
-#     print(f"  privilege_esc syslog : {len(df):5,} events -> {len(wins)} fenêtres")
-#     return wins
-
-
-# =============================================================================
-# MAIN
-# =============================================================================
 
 def main():
-    print("=== Génération groundtruth depuis patterns réels ES ===\n")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--source", choices=["auth", "auditd", "syslog", "all"],
+                    default="all")
+    ap.add_argument("--bf-count", type=int, default=60)
+    ap.add_argument("--burst-count", type=int, default=300)
+    args = ap.parse_args()
 
-    all_wins = []
-    all_wins += detect_brute_force_ssh()
-    all_wins += detect_brute_force_sudo()
-    all_wins += detect_initial_access_ssh()
-    all_wins += detect_credential_dumping()
-    all_wins += detect_defense_evasion()
-    all_wins += detect_persistence_cron()
-    all_wins += detect_port_scan()
-    all_wins += detect_privilege_escalation()
+    if os.geteuid() != 0:
+        print("ERREUR : lancer avec sudo (useradd, journald).")
+        sys.exit(1)
+    if not os.path.isdir(ML_DIR):
+        print(f"ERREUR : repertoire ML introuvable : {ML_DIR} (adapter ML_DIR).")
+        sys.exit(1)
 
-    # Trie par date de début
-    all_wins.sort(key=lambda w: w["start"])
+    print("=" * 64)
+    print(f"  RED-TEAM GROUNDTRUTH (AE-only) | host={HOST} | {_now_iso()}")
+    print(f"  source={args.source}")
+    print("=" * 64)
 
-    output = "groundtruth.jsonl"
-    with open(output, "w") as f:
-        for w in all_wins:
-            f.write(json.dumps(w) + "\n")
+    sources = ["auth", "auditd", "syslog"] if args.source == "all" else [args.source]
+    for src in sources:
+        for fn in SCENARIOS[src]:
+            if fn is inject_ssh_bruteforce:
+                fn(args.bf_count)
+            elif fn is inject_volumetric_burst:
+                fn(args.burst_count)
+            else:
+                fn()
 
-    print(f"\n=== {len(all_wins)} fenêtres totales -> {output} ===")
-    print("\nRécapitulatif par type :")
-    from collections import Counter
-    counts = Counter(w["attack_type"] for w in all_wins)
-    for atk, n in sorted(counts.items()):
-        print(f"  {atk:25s} : {n}")
-
-    # Aperçu des 5 premières
-    print("\nPremières fenêtres :")
-    for w in all_wins[:5]:
-        print(f"  {w['attack_type']:25s} | {w['start']} -> {w['end']}")
+    print("\n" + "=" * 64)
+    print("  Injection terminee. Etapes suivantes :")
+    print("  1. Attendre ~2-3 min l'ingestion ES.")
+    print("  2. cd ~/pfe-backend-2026/ML")
+    print("  3. rm dataset_snapshot.parquet && python training.py && python inference.py")
+    print("  4. Recall AE : croiser groundtruth.jsonl (fenetres) avec")
+    print("     alerts_episodes.csv -- une fenetre est DETECTEE si un episode la recouvre.")
+    print("  Verif cleanup : 'id testintrus' doit etre introuvable.")
+    print("=" * 64)
 
 
 if __name__ == "__main__":

@@ -42,6 +42,7 @@ _SOURCE_FIELDS = [
     "container.name",
     # auditd
     "auditd.data.syscall", "auditd.data.cmdline",
+    "process.pid", "process.parent.pid",
 ]
 
 # Colonnes normalisees en sortie (noms plats).
@@ -50,7 +51,7 @@ RAW_COLUMNS = [
     "process_name", "process_executable", "process_args", "parent_executable",
     "file_path", "message", "log_level", "event_outcome", "event_action",
     "event_dataset", "event_module", "agent_type", "container_name",
-    "syscall", "cmdline", "log_source",
+    "syscall", "cmdline", "log_source","process_pid", "parent_pid",
 ]
 
 
@@ -102,7 +103,7 @@ def _derive_log_source(event_dataset, agent_type, event_module):
     return "unknown"
 
 
-def _flatten_hit(src):
+def _flatten_hit(src): 
     def _scalar(dotted):
         v = _dig(src, dotted)
         if v is None:
@@ -138,6 +139,8 @@ def _flatten_hit(src):
         "container_name":     _scalar("container.name"),
         "syscall":            _scalar("auditd.data.syscall"),
         "cmdline":            _scalar("auditd.data.cmdline"),
+        "process_pid":         _scalar("process.pid"),
+        "parent_pid":          _scalar("process.parent.pid"),
     }
     row["log_source"] = _derive_log_source(
         row["event_dataset"], row["agent_type"], row["event_module"])
@@ -263,10 +266,10 @@ def filter_host_only(df):
 
 def filter_auditd_infra(df):
     """Bruit d'infra auditd qui ECHAPPE a filter_host_only :
-      * runtime conteneur (runc/containerd/dockerd) : sur l'hote, pas de
-        container.name -> passe le filtre host-only. Bruit Docker pur.
+      * runtime conteneur (runc/containerd/dockerd) : pas de container.name sur
+        l'hote -> passe host-only. Bruit Docker pur.
       * process_name purement numerique ('6','9') : artefact de parsing.
-    N'affecte QUE auditd (auth/syslog intacts)."""
+    N'affecte QUE auditd."""
     if "log_source" not in df.columns or "process_name" not in df.columns:
         return df
     aud  = df["log_source"] == "auditd"

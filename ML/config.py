@@ -36,15 +36,17 @@ SOURCES = ["auth", "syslog", "auditd"]
 # --- Blocs de features ------------------------------------------------------
 # Temps + identite : pertinent pour TOUTES les sources.
 _TIME = ["hour_sin", "hour_cos", "is_night", "is_weekend", "is_root"]
+_IDENT = ["is_root"]
+
 # Forme du message : pertinent UNIQUEMENT pour auth/syslog (auditd n'a souvent
 # pas de message lisible -> ces colonnes seraient quasi-constantes => retirees
 # d'auditd pour ne pas gaspiller de dimensions).
-_MSG = ["msg_length_log", "msg_word_count",
+_MSG = ["msg_length_log",
         "msg_has_ip", "msg_has_url", "msg_has_pipe"]
 
 # Features par source (UNIQUEMENT numeriques, toutes calculees en Python).
 FEATURES = {
-    "auth": _TIME + _MSG + [
+    "auth": _IDENT + _MSG + [
         "ip_is_external", "geo_is_new", "user_is_new",   # nouveaute (ponctuel)
         "auth_fail_count_5m", "auth_ok_count_5m",        # fenetre
         "auth_fail_ratio", "event_count_5m_ip",          # fenetre
@@ -52,18 +54,19 @@ FEATURES = {
         "et_bigram_new",                                 # sequence (collectif)
         "auth_fail_then_success",                         # sequence (collectif)
     ],
-    "syslog": _TIME + _MSG + [
-        "proc_is_new", "proc_rarity",                    # nouveaute (ponctuel)
+    "syslog": _IDENT + _MSG + [
+        "proc_rarity",                    # nouveaute (ponctuel)
         "event_count_1m_ip", "event_count_5m_ip",        # fenetre
         "event_count_5m_dev",                            # deviation (contextuel)
         "et_bigram_new",                                 # sequence (collectif)
     ],
-    "auditd": _TIME + [                                  # PAS de _MSG ici
+    "auditd": _IDENT + [                                  # PAS de _MSG ici
         "cmd_entropy", "cmd_length_log", "arg_count",    # forme commande (ponctuel)
-        "proc_is_new", "proc_rarity", "user_is_new",     # nouveaute (ponctuel)
+     "proc_rarity", "user_is_new",     # nouveaute (ponctuel)
         "event_count_5m_ip", "event_count_5m_dev",       # fenetre + deviation
         "et_bigram_new",                                 # sequence (collectif)
-        "parent_child_new"
+        "parent_child_new",
+
     ],
 }
 
@@ -88,7 +91,7 @@ COUNT_FEATURES = {
 WHITELIST_FEATURES = {
     "auth_fail_count_5m", "auth_fail_ratio", "auth_ok_count_5m",
     "event_count_1m_ip", "event_count_5m_ip", "event_count_5m_dev",
-    "et_bigram_new", "proc_is_new", "user_is_new", "geo_is_new",
+    "et_bigram_new",  "user_is_new", "geo_is_new",
     # ip_is_external : constant durant l'entrainement (avril, activite locale)
     # mais discriminant au test (IP externes en mai) -> ne JAMAIS le retirer.
     "ip_is_external",
@@ -111,16 +114,27 @@ PATIENCE_BY_SOURCE     = {"auth": 40,  "syslog": 30,  "auditd": 25}
 LR_BY_SOURCE           = {"auth": 5e-4, "syslog": 1e-3, "auditd": 1e-3}
 WEIGHT_DECAY_BY_SOURCE = {"auth": 1e-4, "syslog": 1e-5, "auditd": 1e-5}
 DROPOUT                = 0.10
+SCORE_AGG  = "topk"   # "max" (anomalie la plus forte) ou "topk" (robuste au bruit)
+SCORE_TOPK = 3   
+
+# --- Denoising autoencoder --------------------------------------------------
+# A l'entrainement on masque aleatoirement cette fraction de features (mises a
+# 0 = moyenne en espace scale) et on reconstruit vers l'entree PROPRE. Force le
+# modele a apprendre la STRUCTURE du normal -> erreur plus discriminante.
+DENOISE_MASK_FRAC = 0.10   # 0 = desactive
 
 # Pertes : choix EXPLICITE. Train robuste (Huber), score sensible (MSE).
 TRAIN_LOSS  = "huber"   # delta=0.5
 SCORE_LOSS  = "mse"
 HUBER_DELTA = 0.5
 
+
+FEATURE_Z_CAP = 50.0
+
 SOURCE_ROLE = {
     "auth":   "alert",        # alerte primaire
     "auditd": "alert",        # alerte primaire (process execution)
-    "syslog": "correlation",  # contexte Sigma, pas alerte autonome
+    "syslog": "alert",  # contexte Sigma, pas alerte autonome
 }
 
 # --- Decoupage (NON SUPERVISE : aucun label) --------------------------------
@@ -128,21 +142,8 @@ SOURCE_ROLE = {
 SPLIT_RATIOS = (0.60, 0.20, 0.20)   # (pool, calib, test)
 VAL_RATIO    = 0.20                  # validation interne au pool (chronologique)
 
-# --- Nettoyage robuste (MAD sur log(mse) + HDBSCAN latent) ------------------
-CLEAN_N_SIGMA = 3.0
-CLEAN_MAX_CUT_FRAC_BY_SOURCE = {"auth": 0.05, "syslog": 0.12, "auditd": 0.15}
-N_CLEAN_ITERS      = 3
-MAX_TOTAL_CUT_FRAC = 0.20            # cumul max retire du train (anti sur-nettoyage)
-HDBSCAN_MIN_CLUSTER = 25            # taille mini de cluster latent
-USE_HDBSCAN_CLEAN   = False         # DESACTIVE : sur donnees reelles, HDBSCAN
-                                    # etiquetait ~46% des points en bruit sans
-                                    # rien discriminer -> l'intersection
-                                    # haute_erreur ET bruit = haute_erreur seul.
-                                    # On garde MAD(log mse) seul (identique en
-                                    # resultat, sans le cout de calcul).
-
 # --- Seuil GPD-POT (NON SUPERVISE) ------------------------------------------
-POT_TARGET_RATE_BY_SOURCE = {"auth": 0.005, "syslog": 0.001, "auditd": 0.005}
+POT_TARGET_RATE_BY_SOURCE = {"auth": 0.005, "syslog": 0.001, "auditd": 0.005}   # taux d'exceedance cible (1/200 = 0.5%) 
 POT_TARGET_RATE = 0.005   # repli si une source manque au dict ci-dessus
 
 POT_INIT_Q      = 0.98    # quantile de depart pour le seuil d'exces u (releve :
@@ -158,6 +159,12 @@ EXCLUDE_CONTAINER_EVENTS = True   # ecarte tout evenement portant container.name
 # --- Bruit d'infra auditd qui ECHAPPE a filter_host_only --------------------
 # runc/containerd/dockerd tournent sur l'HOTE (pas de container.name) -> ils
 # passent le filtre host-only alors que c'est de l'infra Docker pure.
+
+# CONTAINER_RUNTIME_PROCS = {
+#      "Chrome_ChildIOT", "Chrome_DevTools", "Chrome_IOThread", "chrome",
+#     "code", "code-tunnel", "libuv-worker", "cpuUsage.sh","runc", "containerd", "containerd-shim", "containerd-shim-runc-v2",
+#     "dockerd", "docker", "docker-proxy", "ctr",
+# }
 CONTAINER_RUNTIME_PROCS = {
     "runc", "containerd", "containerd-shim", "containerd-shim-runc-v2",
     "dockerd", "docker", "docker-proxy", "ctr",
@@ -170,15 +177,15 @@ EXCLUDE_NUMERIC_PROC = True
 # syslog & auth : collecte inchangee -> on garde tout l'historique (None).
 # NB transitoire : harmoniser les 3 sources sur une meme fenetre apres ~3 jours.
 DATA_START_BY_SOURCE = {
-    "auditd": "2026-06-07T21:30:00Z",   # 22:30 heure locale CET = 21:30 UTC
-    "syslog": None,
+    "auditd": "2026-06-15T21:30:00Z",   # 22:30 heure locale CET = 21:30 UTC
+    "syslog": "2026-06-06T00:00:00Z",   # <-- au lieu de None : fenêtre récente, alignée
     "auth":   None,
 }
 DATA_END_BY_SOURCE = {"auditd": None, "syslog": None, "auth": None}
 
 # Plafond PAR SOURCE : empeche syslog (350k) d'epuiser le budget avant que le
 # scroll n'atteigne les auditd de juin. Aligne sur la logique per-source.
-MAX_DOCS_BY_SOURCE = {"syslog": 200000, "auth": 50000, "auditd": 100000}
+MAX_DOCS_BY_SOURCE = {"syslog": 200000, "auth": 50000, "auditd": 600000}
 
 
 # --- Garde-fou d'effectif minimal par source --------------------------------

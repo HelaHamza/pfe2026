@@ -326,151 +326,76 @@ def clean_training_set(model, data_train, input_dims, total_cut):
 def main():
     print("=" * 64)
     print(f"  AUTOENCODEUR NON SUPERVISE | Device={DEVICE}")
-    _hb = "oui" if (_HAS_HDBSCAN and C.USE_HDBSCAN_CLEAN) else "non"
-    print(f"  Pertes : train={C.TRAIN_LOSS}  score={C.SCORE_LOSS}  "
-          f"| HDBSCAN={_hb}")
-
+    print(f"  Perte train={C.TRAIN_LOSS} | score=zscore-feature cap={C.FEATURE_Z_CAP}")
     for s in C.SOURCES:
         print(f"  {s:8s}: {C.INPUT_DIMS[s]} features (avant filtre variance)")
-
     print("=" * 64)
 
     print("\n[1] Chargement...")
     df_raw = DL.load_dataset()
     if len(df_raw) == 0:
-        print("ERREUR : aucune donnee.")
-        return
+        print("ERREUR : aucune donnee."); return
 
     print("\n[2] Feature engineering (causal, sans ml.*)...")
     df = FE.build_features(df_raw)
     FE.validate_feature_coverage(df)
 
-    print("\n[3] Etat de nouveaute (vocabulaires vus) -> sauvegarde...")
-    novelty_state = FE.build_novelty_state(df_raw)
-    joblib.dump(novelty_state, C.NOVELTY_PATH)
-
-    print("\n[4] Split temporel (pool / calib / test)...")
+    print("\n[3] Split temporel (pool / calib / test)...")
     df_pool, df_calib, df_test = temporal_split(df)
     print(f"  pool={len(df_pool):,} | calib={len(df_calib):,} | test={len(df_test):,}")
+
+    print("\n[4] Etat de nouveaute -> POOL uniquement (anti-fuite live)...")
+    novelty_state = FE.build_novelty_state(df_pool)   # <-- POOL, pas df_raw complet
+    joblib.dump(novelty_state, C.NOVELTY_PATH)
 
     print("\n[5] Preparation par source...")
     feats_by_src, keep_by_src, scalers, data_train, data_val, input_dims = \
         prepare_sources(df_pool)
-
     if not data_train:
-        print("ERREUR : aucune source exploitable.")
-        return
+        print("ERREUR : aucune source exploitable."); return
 
-    print("\n[6] Entrainement iteratif (train -> nettoyage -> re-train)...")
+    print("\n[6] Entrainement (train unique)...")
+    model = PerSourceAutoencoder(input_dims, C.LATENT_DIM_BY_SOURCE).to(DEVICE)
+    model, train_hist, val_hist, dur, best_val = train_model(
+        model, data_train, data_val, input_dims)
 
-    cleaning_stats, total_cut = {}, {}
-
-    dt = data_train          # SEUL le train est nettoye iterativement
-    dv_fixe = data_val       # val FIXE et BRUT -> best_val comparable
-
-    model = None
-    train_hist = None
-    val_hist = None
-    dur = None
-
-    best_overall_val = {s: float("inf") for s in input_dims}
-    best_overall_state = {s: None for s in input_dims}
-
-    for it in range(C.N_CLEAN_ITERS):
-
-        print(f"\n  --- Iteration {it + 1}/{C.N_CLEAN_ITERS} ---")
-
-        model = PerSourceAutoencoder(
-            input_dims,
-            C.LATENT_DIM_BY_SOURCE
-        ).to(DEVICE)
-
-        model, train_hist, val_hist, dur, best_val = train_model(
-            model,
-            dt,
-            dv_fixe,
-            input_dims
-        )
-
-        sd = model.state_dict()
-
-        for s in input_dims:
-            if best_val.get(s, float("inf")) < best_overall_val[s] - 1e-9:
-                best_overall_val[s] = best_val[s]
-                best_overall_state[s] = {
-                    k: t.clone()
-                    for k, t in sd.items()
-                    if k.startswith(
-                        (f"encoders.{s}.", f"decoders.{s}.")
-                    )
-                }
-
-        if it < C.N_CLEAN_ITERS - 1:
-            dt, cleaning_stats = clean_training_set(
-                model,
-                dt,
-                input_dims,
-                total_cut
-            )
-
-    # Assemblage du modele final : meilleur etat par source
-    final_sd = model.state_dict()
-
+    print("\n[6b] Normalisation de l'erreur par feature (sur TRAIN brut)...")
     for s in input_dims:
-        if best_overall_state[s]:
-            final_sd.update(best_overall_state[s])
-
-    model.load_state_dict(final_sd)
-
-    print("\n  Modele final = meilleur etat par source sur toutes iterations :")
-
-    for s in input_dims:
-        print(f"    {s:8s}: best_val={best_overall_val[s]:.6f}")
+        model.fit_error_norm(torch.FloatTensor(data_train[s]).to(DEVICE), s)
+        em = getattr(model, f"err_mean_{s}")
+        print(f"    {s:8s}: err_mean moyen={float(em.mean()):.4e} "
+              f"| {len(data_train[s]):,} echantillons")
 
     print("\n[7] Sauvegarde modele + scalers...")
-
     torch.save(model.state_dict(), C.MODEL_PATH)
-
-    joblib.dump(
-        {
-            "scalers": scalers,
-            "keep": keep_by_src,
-            "feats": feats_by_src,
-            "input_dims": input_dims,
-        },
-        C.SCALERS_PATH,
-    )
-
+    joblib.dump({"scalers": scalers, "keep": keep_by_src,
+                 "feats": feats_by_src, "input_dims": input_dims}, C.SCALERS_PATH)
     print(f"  -> {C.MODEL_PATH} | {C.SCALERS_PATH}")
 
-    print("\n[8] Calibration du seuil GPD-POT (non supervise, sur CALIB BRUTE)...")
-
-    # Le seuil se calibre sur la CALIBRATION BRUTE (df_calib)
+    print("\n[8] Calibration GPD-POT (non supervise, sur CALIB BRUTE)...")
     thresholds = TH.compute_thresholds_from_df(
-        model,
-        df_calib,
-        feats_by_src,
-        scalers,
-        keep_by_src,
-        DEVICE,
-    )
-
+        model, df_calib, feats_by_src, scalers, keep_by_src, DEVICE)
     joblib.dump(thresholds, C.THRESH_PATH)
-
     print(f"  -> {C.THRESH_PATH}")
 
-    print("\n  Artifacts prets. Lancer l'inference : python inference.py")
+    print("\n[9] QA calibration : taux realise vs cible...")
+    r_calib = TH.realized_alert_rate(model, df_calib, feats_by_src, scalers,
+                                     keep_by_src, thresholds, DEVICE)
+    r_test  = TH.realized_alert_rate(model, df_test, feats_by_src, scalers,
+                                     keep_by_src, thresholds, DEVICE)
+    for s in r_calib:
+        target = C.POT_TARGET_RATE_BY_SOURCE.get(s, C.POT_TARGET_RATE)
+        flag = "  <-- calib > 2x cible" if r_calib[s] > 2 * target else ""
+        print(f"    {s:8s}: cible={target*100:.2f}% | calib={r_calib[s]*100:.2f}% "
+              f"| test={r_test[s]*100:.2f}%{flag}")
+        if r_test[s] > 3 * max(r_calib[s], target):
+            print(f"             /!\\ test >> calib ({s}) : derive temporelle "
+                  f"ou attaques injectees")
+
+    print("\n  Artifacts prets. Lancer : python inference.py")
     print("=" * 64)
+    return model, scalers, keep_by_src, feats_by_src, thresholds, df_test
 
-    return (
-        model,
-        scalers,
-        keep_by_src,
-        feats_by_src,
-        thresholds,
-        df_test,
-    )
-
-
+    
 if __name__ == "__main__":
     main()
