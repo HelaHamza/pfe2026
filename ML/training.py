@@ -5,17 +5,20 @@ Entrainement NON SUPERVISE de bout en bout (AUCUN label, AUCUN ground truth).
 
 Pipeline :
   load_dataset -> build_features -> validate_feature_coverage
-  -> split temporel (pool / calib / test)
+  -> split temporel (pool / calib / test)          [splitting.temporal_split]
   -> preparation par source (filtre variance + scaler, fit TRAIN seul)
-  -> entrainement iteratif :  train -> nettoyage (MAD(log mse) + HDBSCAN latent,
-     plafonne) -> re-train
+  -> entrainement (train unique, early stopping independant par source)
+  -> normalisation de l'erreur par feature (sur TRAIN brut)
   -> calibration du seuil GPD-POT (thresholding.py, non supervise)
   -> sauvegarde modele / scalers / seuils / etat de nouveaute.
 
 Lancer :  python training.py
+
+NOTE REFACTOR : le decoupage temporel n'est PLUS defini ici. Il vit dans
+splitting.temporal_split, importe aussi par inference.py -> une seule
+definition du split pour tout le projet (plus de risque de desynchronisation).
 """
 from __future__ import annotations
-import os
 import time
 import math
 import random
@@ -34,6 +37,7 @@ import feature_engineering as FE
 import preprocessing as PP
 from autoencoder import PerSourceAutoencoder
 import thresholding as TH
+from splitting import temporal_split          # <-- SOURCE UNIQUE DE VERITE du split
 
 warnings.filterwarnings("ignore")
 
@@ -47,12 +51,6 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-try:
-    from hdbscan import HDBSCAN
-    _HAS_HDBSCAN = True
-except Exception:
-    _HAS_HDBSCAN = False
-
 
 def seed_worker(_wid):
     s = torch.initial_seed() % 2 ** 32
@@ -61,45 +59,32 @@ def seed_worker(_wid):
 
 
 # ---------------------------------------------------------------------------
-# Split temporel (anti-fuite) : train=passe, calib=present, test=futur
-# ---------------------------------------------------------------------------
-def temporal_split(df, ratios=C.SPLIT_RATIOS):
-    """Split chronologique PAR SOURCE. Anti-fuite preserve (passe->present->futur
-    AU SEIN de chaque source), mais chaque source alimente pool/calib/test."""
-    pools, calibs, tests = [], [], []
-    for s in df["log_source"].unique():
-        d = df[df["log_source"] == s].copy()
-        d["_ts"] = pd.to_datetime(d["@timestamp"], utc=True, errors="coerce")
-        d = d.sort_values("_ts").drop(columns="_ts").reset_index(drop=True)
-        n = len(d); i1 = int(n*ratios[0]); i2 = int(n*(ratios[0]+ratios[1]))
-        pools.append(d.iloc[:i1]); calibs.append(d.iloc[i1:i2]); tests.append(d.iloc[i2:])
-    cat = lambda xs: pd.concat(xs, ignore_index=True) if xs else df.iloc[:0].copy()
-    return cat(pools), cat(calibs), cat(tests)
-
-# ---------------------------------------------------------------------------
-# Preparation par source
+# Preparation par source (filtre variance + scaler, fit TRAIN seul)
 # ---------------------------------------------------------------------------
 def prepare_sources(df_pool):
+    """A partir du POOL (bloc d'entrainement), fabrique par source :
+      * la liste de features gardees (filtre de variance, fit TRAIN seul),
+      * le StandardScaler (fit TRAIN seul -> aucune fuite calib/test),
+      * les matrices X train / X val (le pool est re-decoupe via VAL_RATIO).
+    """
     feats_by_src, keep_by_src, scalers = {}, {}, {}
     data_train, data_val, input_dims = {}, {}, {}
     for s in C.SOURCES:
         d = df_pool[df_pool["log_source"] == s].reset_index(drop=True)
         n = len(d)
+        # Re-decoupe INTERNE du pool : train (poids) / val (early stopping).
         cut = int(n * (1 - C.VAL_RATIO))
-        n_train = cut
-        if n_train < C.MIN_SOURCE_SAMPLES:
-            print(f"  {s:8s}: DONNEES INSUFFISANTES ({n_train} train "
-                  f"< {C.MIN_SOURCE_SAMPLES}) -- source ignoree "
-                  f"(ni entrainee, ni calibree, ni alertee)")
+        if cut < C.MIN_SOURCE_SAMPLES:
+            print(f"  {s:8s}: DONNEES INSUFFISANTES ({cut} train "
+                  f"< {C.MIN_SOURCE_SAMPLES}) -- source ignoree")
             continue
         feats = C.FEATURES[s]
-        # Split train/val CHRONOLOGIQUE interne au pool (derniers % = val).
         d_tr = d.iloc[:cut].reset_index(drop=True)
         d_va = d.iloc[cut:].reset_index(drop=True)
 
-        # Filtre de variance + scaler : TRAIN UNIQUEMENT.
+        # Filtre de variance + scaler : APPRIS SUR LE TRAIN UNIQUEMENT.
         X_tr_raw = PP._raw_matrix(d_tr, feats)
-        keep, kept_feats = PP.fit_feature_filter(X_tr_raw, feats)
+        keep, _ = PP.fit_feature_filter(X_tr_raw, feats)
         scaler = PP.fit_scaler(d_tr, feats, keep)
         X_tr = PP.transform(d_tr, feats, scaler, keep)
         X_va = PP.transform(d_va, feats, scaler, keep) if len(d_va) else \
@@ -121,6 +106,8 @@ def train_model(model, data_train, data_val, input_dims):
     idx_to_src = {i: s for i, s in enumerate(C.SOURCES)}
 
     def build_loader(data_dict, shuffle):
+        # Toutes les sources sont empilees dans un meme loader, chaque ligne
+        # etiquetee par son index de source (padding a MAX_INPUT_DIM).
         all_x, all_idx = [], []
         for s in C.SOURCES:
             X = data_dict.get(s)
@@ -144,6 +131,7 @@ def train_model(model, data_train, data_val, input_dims):
     if train_loader is None:
         raise RuntimeError("Aucune donnee d'entrainement.")
 
+    # Un groupe d'optimisation PAR SOURCE (lr / weight_decay propres).
     active = [s for s in C.SOURCES if s in input_dims]
     groups = [{"params": (list(model.encoders[s].parameters())
                           + list(model.decoders[s].parameters())),
@@ -153,10 +141,13 @@ def train_model(model, data_train, data_val, input_dims):
     optimizer = torch.optim.AdamW(groups)
 
     def cosine_lr(epoch, s):
+        # Recuit cosinus par source (redemarrage tous les t0 epochs).
         t0 = max(C.EPOCHS_BY_SOURCE[s] // 4, 25)
         return 1e-5 + (C.LR_BY_SOURCE[s] - 1e-5) * 0.5 * (
             1 + math.cos(math.pi * (epoch % t0) / t0))
 
+    # Etat d'early stopping INDEPENDANT par source (chaque source gele quand
+    # sa propre val stagne, sans attendre les autres).
     best_val = {s: float("inf") for s in active}
     best_state = {s: None for s in active}
     pat = {s: 0 for s in active}
@@ -172,6 +163,7 @@ def train_model(model, data_train, data_val, input_dims):
         for g in optimizer.param_groups:
             g["lr"] = cosine_lr(epoch, g["name"])
 
+        # --- passe d'entrainement ---
         model.train()
         tot, nb = 0.0, 0
         for x_pad, s_idx in train_loader:
@@ -179,7 +171,7 @@ def train_model(model, data_train, data_val, input_dims):
             bl = torch.tensor(0.0, device=DEVICE)
             used = False
             for sid, sname in idx_to_src.items():
-                if frozen.get(sname, True):
+                if frozen.get(sname, True):          # source gelee -> on saute
                     continue
                 m = (s_idx == sid)
                 if m.sum() < 2:
@@ -194,6 +186,7 @@ def train_model(model, data_train, data_val, input_dims):
             optimizer.step()
             tot += float(bl.item()); nb += 1
 
+        # --- passe de validation ---
         model.eval()
         vbs = {}
         with torch.no_grad():
@@ -209,12 +202,14 @@ def train_model(model, data_train, data_val, input_dims):
         train_hist.append(tot / max(nb, 1))
         val_hist.append(sum(vbs.values()) / max(len(vbs), 1))
 
+        # --- early stopping par source ---
         for s in active:
             if frozen[s]:
                 continue
             v = vbs.get(s, float("inf"))
             if v < best_val[s] - 1e-5:
                 best_val[s] = v
+                # On sauvegarde SEULEMENT les poids de cette source.
                 best_state[s] = {k: t.clone()
                                  for k, t in model.state_dict().items()
                                  if k.startswith((f"encoders.{s}.",
@@ -234,6 +229,7 @@ def train_model(model, data_train, data_val, input_dims):
             print(f"  Epoch {epoch + 1:3d}/{epochs_g} | "
                   f"train={train_hist[-1]:.6f} | val={val_hist[-1]:.6f}")
 
+    # Restaure le meilleur etat de chaque source.
     final = model.state_dict()
     for s in active:
         if best_state[s]:
@@ -244,80 +240,6 @@ def train_model(model, data_train, data_val, input_dims):
     for s in active:
         print(f"  {s:8s}: best_val={best_val[s]:.6f} frozen={frozen[s]}")
     return model, train_hist, val_hist, dur, best_val
-
-
-# ---------------------------------------------------------------------------
-# Nettoyage robuste : MAD sur log(mse)  +  HDBSCAN latent  (plafonne)
-# ---------------------------------------------------------------------------
-def _mad_log_high_error(mse, n_sigma, max_cut):
-    """Masque des points a HAUTE erreur via MAD sur log(mse) (re-symetrise la
-    queue lourde). Borne par un quantile pour ne pas exploser."""
-    lm = np.log(mse + 1e-12)
-    med = float(np.median(lm))
-    mad = max(float(np.median(np.abs(lm - med))), 1e-6)
-    thr_log = max(med + n_sigma * 1.4826 * mad,
-                  float(np.quantile(lm, 1.0 - max_cut)))
-    high = lm > thr_log
-    return high, math.exp(thr_log)
-
-
-def _hdbscan_noise(Z):
-    """Points etiquetes bruit (-1) par HDBSCAN dans l'espace latent.
-    Les clusters denses (meme rares) ne sont PAS bruit -> on les conserve."""
-    if not (_HAS_HDBSCAN and C.USE_HDBSCAN_CLEAN) or len(Z) < C.HDBSCAN_MIN_CLUSTER * 2:
-        return np.zeros(len(Z), dtype=bool)
-    try:
-        labels = HDBSCAN(min_cluster_size=C.HDBSCAN_MIN_CLUSTER,
-                         core_dist_n_jobs=1).fit_predict(Z)
-        return labels == -1
-    except Exception as e:
-        print(f"      HDBSCAN indisponible ({e}) -> ignore")
-        return np.zeros(len(Z), dtype=bool)
-
-
-def clean_training_set(model, data_train, input_dims, total_cut):
-    """Coupe un point SI (haute erreur MAD-log) [ET bruit HDBSCAN latent].
-    NE TOUCHE PLUS au val set : il reste FIXE et BRUT sur toutes les
-    iterations -> best_val devient comparable d'une iteration a l'autre."""
-    dt, stats = {}, {}
-    print(f"\n  Nettoyage (MAD log-mse, n_sigma={C.CLEAN_N_SIGMA}) :")
-    for s in C.SOURCES:
-        if s not in data_train:
-            continue
-        X = data_train[s]
-        xt = torch.FloatTensor(X).to(DEVICE)
-        mse = model.reconstruction_error(xt, s)
-        Z = model.latent(xt, s)
-        max_cut = C.CLEAN_MAX_CUT_FRAC_BY_SOURCE.get(s, 0.10)
-        high, thr = _mad_log_high_error(mse, C.CLEAN_N_SIGMA, max_cut)
-        noise = _hdbscan_noise(Z)
-        cut_mask = high & noise if noise.any() else high
-        keep = ~cut_mask
-
-        already = total_cut.get(s, 0.0)
-        proposed = float((~keep).sum()) / max(len(X), 1)
-        if already + proposed > C.MAX_TOTAL_CUT_FRAC:
-            allowed = max(C.MAX_TOTAL_CUT_FRAC - already, 0.0)
-            k = int(allowed * len(X))
-            keep = np.ones(len(X), dtype=bool)
-            if k > 0:
-                worst = np.argsort(mse)[::-1][:k]
-                keep[worst] = False
-            print(f"      [{s}] plafond cumule atteint ({already*100:.1f}%) "
-                  f"-> coupe limitee a {k}")
-            proposed = float((~keep).sum()) / max(len(X), 1)
-
-        total_cut[s] = already + proposed
-        dt[s] = X[keep]
-        cut_pct = (~keep).sum() / max(len(X), 1) * 100
-        stats[s] = {"after": int(keep.sum()), "cut_pct": round(float(cut_pct), 2),
-                    "cumul_cut_pct": round(total_cut[s] * 100, 2),
-                    "n_high_error": int(high.sum()), "n_noise": int(noise.sum()),
-                    "threshold_mse": round(float(thr), 6)}
-        print(f"  {s:8s}: {len(X):,} -> {int(keep.sum()):,} "
-              f"(coupe {cut_pct:.2f}%, cumul {total_cut[s]*100:.1f}%, "
-              f"haute_err={int(high.sum())}, bruit={int(noise.sum())})")
-    return dt, stats
 
 
 # ---------------------------------------------------------------------------
@@ -341,11 +263,14 @@ def main():
     FE.validate_feature_coverage(df)
 
     print("\n[3] Split temporel (pool / calib / test)...")
+    # pool -> entrainement | calib -> seuil GPD-POT | test -> QA (etape 9).
     df_pool, df_calib, df_test = temporal_split(df)
     print(f"  pool={len(df_pool):,} | calib={len(df_calib):,} | test={len(df_test):,}")
 
     print("\n[4] Etat de nouveaute -> POOL uniquement (anti-fuite live)...")
-    novelty_state = FE.build_novelty_state(df_pool)   # <-- POOL, pas df_raw complet
+    # Les vocabulaires de rarete sont appris sur le POOL seul : en live, un
+    # terme jamais vu au train reste "nouveau".
+    novelty_state = FE.build_novelty_state(df_pool)
     joblib.dump(novelty_state, C.NOVELTY_PATH)
 
     print("\n[5] Preparation par source...")
@@ -354,14 +279,18 @@ def main():
     if not data_train:
         print("ERREUR : aucune source exploitable."); return
 
-    print("\n[6] Entrainement (train unique)...")
+    print("\n[6] Entrainement...")
     model = PerSourceAutoencoder(input_dims, C.LATENT_DIM_BY_SOURCE).to(DEVICE)
     model, train_hist, val_hist, dur, best_val = train_model(
         model, data_train, data_val, input_dims)
 
-    print("\n[6b] Normalisation de l'erreur par feature (sur TRAIN brut)...")
+    print("\n[6b] Normalisation |residu| par feature (sur CALIB held-out)...")
     for s in input_dims:
-        model.fit_error_norm(torch.FloatTensor(data_train[s]).to(DEVICE), s)
+        d = df_calib[df_calib["log_source"] == s].reset_index(drop=True)
+        Xn = PP.transform(d, feats_by_src[s], scalers[s], keep_by_src[s]) \
+             if len(d) else data_train[s]                    # repli si calib vide
+        model.fit_error_norm(torch.FloatTensor(Xn).to(DEVICE), s)
+
         em = getattr(model, f"err_mean_{s}")
         print(f"    {s:8s}: err_mean moyen={float(em.mean()):.4e} "
               f"| {len(data_train[s]):,} echantillons")
@@ -373,12 +302,14 @@ def main():
     print(f"  -> {C.MODEL_PATH} | {C.SCALERS_PATH}")
 
     print("\n[8] Calibration GPD-POT (non supervise, sur CALIB BRUTE)...")
+    # Le seuil est cale sur la CALIB (present), jamais sur le train ni le test.
     thresholds = TH.compute_thresholds_from_df(
         model, df_calib, feats_by_src, scalers, keep_by_src, DEVICE)
     joblib.dump(thresholds, C.THRESH_PATH)
     print(f"  -> {C.THRESH_PATH}")
 
     print("\n[9] QA calibration : taux realise vs cible...")
+    # Le TEST ne sert ici QU'A verifier la tenue du seuil (derive / attaques).
     r_calib = TH.realized_alert_rate(model, df_calib, feats_by_src, scalers,
                                      keep_by_src, thresholds, DEVICE)
     r_test  = TH.realized_alert_rate(model, df_test, feats_by_src, scalers,
@@ -396,6 +327,6 @@ def main():
     print("=" * 64)
     return model, scalers, keep_by_src, feats_by_src, thresholds, df_test
 
-    
+
 if __name__ == "__main__":
     main()

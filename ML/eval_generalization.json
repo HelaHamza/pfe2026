@@ -1,0 +1,23 @@
+{
+  "auth": {
+    "huber_train": 0.014595,
+    "huber_val": 0.001369,
+    "gap_relatif_pct": -90.62,
+    "n_train": 13279,
+    "n_val": 3320
+  },
+  "syslog": {
+    "huber_train": 0.015064,
+    "huber_val": 0.006815,
+    "gap_relatif_pct": -54.76,
+    "n_train": 96000,
+    "n_val": 24000
+  },
+  "auditd": {
+    "huber_train": 0.031234,
+    "huber_val": 0.018779,
+    "gap_relatif_pct": -39.88,
+    "n_train": 189676,
+    "n_val": 47420
+  }
+}

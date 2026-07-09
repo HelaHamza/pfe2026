@@ -1,73 +1,53 @@
-from dotenv import load_dotenv
-import os, ssl, json, base64, urllib.request
+import json, numpy as np, pandas as pd, torch
+from sklearn.metrics import roc_auc_score, average_precision_score
+import config as C, data_loader as DL, feature_engineering as FE
+import preprocessing as PP
+from training import temporal_split
+from inference import load_artifacts, DEVICE
 
-load_dotenv("/home/hala-hamza/pfe-backend-2026/.env")
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-token = base64.b64encode(f"elastic:{os.getenv('ELASTIC_PWD')}".encode()).decode()
-headers = {"Content-Type": "application/json", "Authorization": f"Basic {token}"}
+TOL = pd.Timedelta("2min")
 
-def req_json(path, body=None):
-    url = f"https://localhost:9200{path}"
-    data = json.dumps(body).encode() if body else None
-    r = urllib.request.Request(url, data=data or b"",
-                               headers=headers,
-                               method="POST" if body else "GET")
-    return json.loads(urllib.request.urlopen(r, context=ctx).read())
+def load_gt(path="groundtruth.jsonl"):
+    rows = []
+    for l in open(path):
+        l = l.strip()
+        if l:
+            try: rows.append(json.loads(l))
+            except json.JSONDecodeError: pass
+    gt = pd.DataFrame(rows)
+    for c in ("start", "end"):
+        gt[c] = pd.to_datetime(gt[c], utc=True, errors="coerce")
+    return gt.dropna(subset=["start", "end"])
 
-# 1. Tous les syscalls distincts présents dans ES
-print("=== SYSCALLS PRÉSENTS DANS ES ===")
-r = req_json("/auditbeat-*/_search", {
-    "size": 0,
-    "aggs": {
-        "syscalls": {
-            "terms": {"field": "auditd.data.syscall.keyword",
-                      "size": 20}
-        }
-    }
-})
-for b in r.get("aggregations", {}).get("syscalls", {}).get("buckets", []):
-    print(f"  {b['key']:20s} : {b['doc_count']:,}")
+def label_events(d, gt, src):
+    """1 si l'evenement tombe dans une fenetre d'injection de sa source (+/-2min)."""
+    ts = pd.to_datetime(d["@timestamp"], utc=True, errors="coerce")
+    y = np.zeros(len(d), dtype=int)
+    for _, w in gt[gt["source"] == src].iterrows():
+        y |= ((ts >= w["start"] - TOL) & (ts <= w["end"] + TOL)).to_numpy().astype(int)
+    return y
 
-# 2. event.dataset distincts
-print("\n=== EVENT.DATASET PRÉSENTS ===")
-r = req_json("/auditbeat-*/_search", {
-    "size": 0,
-    "aggs": {
-        "datasets": {
-            "terms": {"field": "event.dataset.keyword", "size": 20}
-        }
-    }
-})
-for b in r.get("aggregations", {}).get("datasets", {}).get("buckets", []):
-    print(f"  {b['key']:30s} : {b['doc_count']:,}")
+model, scalers, keep, feats, _, _, _ = load_artifacts()
+df = FE.build_features(DL.load_dataset(), novelty_state=None)
+pool, calib, test = temporal_split(df)
+gt = load_gt()
 
-# 3. Cherche execve SANS filtre dataset
-print("\n=== DOCS execve (sans filtre dataset) ===")
-r = req_json("/auditbeat-*/_search", {
-    "size": 2,
-    "query": {
-        "term": {"auditd.data.syscall.keyword": "execve"}
-    },
-    "_source": ["@timestamp", "auditd.data.syscall",
-                "auditd.data.a0", "auditd.data.a1",
-                "process.args", "process.executable",
-                "ml.log_source", "ml.aud_cmd_entropy"]
-})
-hits = r["hits"]["hits"]
-print(f"Trouvés : {r['hits']['total']['value']}")
-for h in hits:
-    print(json.dumps(h["_source"], indent=2))
-    print("---")
+for s in scalers:
+    xs = torch.FloatTensor(PP.transform(pool[pool.log_source == s],
+                                        feats[s], scalers[s], keep[s])).to(DEVICE)
+    model.fit_error_norm(xs, s); model.fit_error_ecdf(xs, s)
 
-# 4. Dernier doc auditbeat toutes sources confondues
-print("\n=== DERNIER DOC AUDITBEAT (tous types) ===")
-r = req_json("/auditbeat-*/_search", {
-    "size": 1,
-    "sort": [{"@timestamp": {"order": "desc"}}],
-    "query": {"match_all": {}}
-})
-hits = r["hits"]["hits"]
-if hits:
-    print(json.dumps(hits[0]["_source"], indent=2))
+print(f"{'source':8s} {'mode':7s} {'AUC-ROC':>8s} {'AUPRC':>8s} {'n_pos':>6s} {'n':>7s}")
+for s in scalers:
+    d = test[test.log_source == s].reset_index(drop=True)
+    y = label_events(d, gt, s)
+    if y.sum() == 0 or y.sum() == len(y):
+        print(f"{s:8s}  (pas d'evenement d'attaque dans le test -> AUC indefinie)")
+        continue
+    X = torch.FloatTensor(PP.transform(d, feats[s], scalers[s], keep[s])).to(DEVICE)
+    for mode in ("zscore", "rank"):
+        C.SCORE_MODE = mode
+        score = model.reconstruction_error(X, s)          # AUCUN seuil ici
+        auc = roc_auc_score(y, score)
+        ap  = average_precision_score(y, score)
+        print(f"{s:8s} {mode:7s} {auc:8.4f} {ap:8.4f} {int(y.sum()):6d} {len(y):7d}")

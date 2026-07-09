@@ -1,84 +1,104 @@
 {
   "thresholds": {
     "auth": {
-      "threshold": 1.8669928312301636,
+      "threshold": 3.6295780445355463,
       "info": {
         "method": "gpd_pot",
-        "u": 0.7316107749938965,
-        "xi": -0.85029008483147,
-        "scale": 1.2414637586542747,
-        "n_excess": 107,
-        "gpd_level": 1.7361103985597384,
-        "emp": 1.8669928312301636,
-        "floored": true
+        "u": 1.3718642902374178,
+        "xi": -0.4529637091985623,
+        "scale": 2.1896134238987766,
+        "n_excess": 111,
+        "gpd_level": 3.6295780445355463,
+        "emp": 3.3119445705413826,
+        "finite_endpoint": true,
+        "floored": false
       }
     },
     "syslog": {
-      "threshold": 12.821206981658928,
+      "threshold": 10.391451568601875,
       "info": {
         "method": "gpd_pot",
-        "u": 2.4955569314956647,
-        "xi": 0.7882350228948712,
-        "scale": 0.4689758212803251,
+        "u": 1.688730359077446,
+        "xi": 0.6198212092028362,
+        "scale": 0.9773686256203964,
         "n_excess": 800,
-        "gpd_level": 8.210337127833968,
-        "emp": 12.821206981658928,
+        "gpd_level": 10.20900458291316,
+        "emp": 10.391451568601875,
+        "finite_endpoint": false,
         "floored": true
       }
     },
     "auditd": {
-      "threshold": 3.8421175924655566,
+      "threshold": 5.728155383841889,
       "info": {
         "method": "gpd_pot",
-        "u": 1.9632984662055875,
-        "xi": 0.3638123969483767,
-        "scale": 1.042120192057563,
-        "n_excess": 1265,
-        "gpd_level": 3.8421175924655566,
-        "emp": 3.2575629293918444,
+        "u": 2.4925893211364816,
+        "xi": 0.7848897512265005,
+        "scale": 1.2896915421155086,
+        "n_excess": 1581,
+        "gpd_level": 5.728155383841889,
+        "emp": 5.1580910038948655,
+        "finite_endpoint": false,
         "floored": false
       }
     }
   },
+  "test_window_by_source": {
+    "auth": {
+      "start": "2026-06-16 16:02:43.963000+00:00",
+      "end": "2026-07-02 12:10:01.179000+00:00",
+      "n": 5534
+    },
+    "syslog": {
+      "start": "2026-06-19 22:42:26.754000+00:00",
+      "end": "2026-06-27 09:16:25.230000+00:00",
+      "n": 40000
+    },
+    "auditd": {
+      "start": "2026-07-01 08:12:24.854000+00:00",
+      "end": "2026-07-02 12:12:16.519000+00:00",
+      "n": 79032
+    }
+  },
   "unsupervised_diagnostics": {
     "auth": {
-      "n": 5440,
-      "alert_rate_pct": 8.952,
-      "mse_median": 0.0,
-      "mse_p99": 8.340724,
-      "mse_skewness": 3.752,
-      "mse_kurtosis": 14.923,
-      "latent_var_min": 0.298016,
-      "latent_var_mean": 1.486799,
+      "n": 5534,
+      "alert_rate_pct": 6.288,
+      "mse_median": 0.060326,
+      "mse_p99": 18.203264,
+      "mse_skewness": 4.578,
+      "mse_kurtosis": 23.326,
+      "latent_var_min": 0.451501,
+      "latent_var_mean": 0.614409,
       "latent_dead_dims": 0
     },
     "syslog": {
       "n": 40000,
-      "alert_rate_pct": 0.08,
-      "mse_median": 0.0,
-      "mse_p99": 3.112253,
-      "mse_skewness": 7.527,
-      "mse_kurtosis": 93.695,
-      "latent_var_min": 0.234443,
-      "latent_var_mean": 0.464471,
+      "alert_rate_pct": 0.18,
+      "mse_median": 0.086584,
+      "mse_p99": 2.886108,
+      "mse_skewness": 22.799,
+      "mse_kurtosis": 697.13,
+      "latent_var_min": 0.437315,
+      "latent_var_mean": 2.515723,
       "latent_dead_dims": 0
     },
     "auditd": {
-      "n": 63250,
-      "alert_rate_pct": 0.212,
-      "mse_median": 0.0,
-      "mse_p99": 2.568948,
-      "mse_skewness": 8.703,
-      "mse_kurtosis": 194.501,
-      "latent_var_min": 0.924764,
-      "latent_var_mean": 3.147212,
+      "n": 79032,
+      "alert_rate_pct": 0.81,
+      "mse_median": 0.198184,
+      "mse_p99": 4.214389,
+      "mse_skewness": 14.81,
+      "mse_kurtosis": 248.316,
+      "latent_var_min": 0.572667,
+      "latent_var_mean": 7.448664,
       "latent_dead_dims": 0
     }
   },
-  "n_scored": 108690,
-  "n_alerts_primary": 653,
+  "n_scored": 124566,
+  "n_alerts_primary": 1060,
   "n_alerts_context": 0,
-  "n_alert_episodes": 40,
+  "n_alert_episodes": 111,
   "source_roles": {
     "auth": "alert",
     "auditd": "alert",

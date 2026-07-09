@@ -1,16 +1,27 @@
 """
 inference.py
 ============
-Scoring NON SUPERVISE de nouveaux logs avec les artifacts entraines, et
-diagnostics de sante du modele (Phase 5 : AUCUNE metrique supervisee).
+Scoring NON SUPERVISE du SPLIT TEST uniquement, avec les artifacts entraines,
+et diagnostics de sante du modele (Phase 5 : AUCUNE metrique supervisee).
+
+Ce module est EXCLUSIVEMENT dedie a l'EVALUATION : il ne score que le TEST
+(dernier bloc chronologique = futur non vu), jamais le train ni la calib, et
+n'expose PLUS de chemin "live" / production. Toutes les alertes produites
+portent donc la provenance split="test".
 
 Usage :
-  python inference.py                 # score le snapshot en cache (futur du split)
+  python inference.py                 # score le TEST du snapshot (futur du split)
   -> ecrit evaluation_report.json + alerts.csv
 
-API programmatique :
-  from inference import score_dataframe
-  alerts, scores = score_dataframe(df_raw)
+NOTE : le "test" n'est pas recalcule localement. On importe
+splitting.temporal_split -> le TEST evalue ici est LITTERALEMENT celui defini a
+l'entrainement (source unique de verite, aucune formule dupliquee).
+
+ATTRIBUTION (nouveau) : chaque alerte porte desormais les 2-3 features qui ONT
+produit son score (top-k des z |residu| par feature = composantes exactes du
+score, SCORE_TOPK=2). Objectif double : debugger les faux positifs (ex.
+distinguer un FP sudo d'un vrai brute-force) et donner a la couche Sigma/LLM le
+"pourquoi" statistique dont elle a besoin pour trier rare-benin vs rare-malveillant.
 """
 from __future__ import annotations
 import os
@@ -27,12 +38,14 @@ import feature_engineering as FE
 import preprocessing as PP
 from autoencoder import PerSourceAutoencoder
 import thresholding as TH
+from splitting import temporal_split          # <-- meme split que training.py
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # ---------------------------------------------------------------------------
 def load_artifacts():
+    """Recharge modele + scalers + seuils + etat de nouveaute (tout gele)."""
     bundle = joblib.load(C.SCALERS_PATH)
     scalers, keep = bundle["scalers"], bundle["keep"]
     feats, input_dims = bundle["feats"], bundle["input_dims"]
@@ -45,9 +58,41 @@ def load_artifacts():
 
 
 # ---------------------------------------------------------------------------
-def score_features(model, df_feat, feats, scalers, keep, thresholds):
+def _attribution(Z, feat_names, topn=3):
+    """A partir de la matrice de z par feature (N, F), renvoie :
+      * top_features : chaine 'feat=z' des `topn` features dominantes (z desc),
+      * top_feat     : nom de la feature #1 (pour l'agregation episode).
+
+    Les 2 premieres features SONT les composantes du score (SCORE_TOPK=2) ; la
+    3e est fournie en contexte. On n'affiche que les z > 0 (une feature au z=0
+    est mieux reconstruite que d'habitude, donc pas une raison d'alerte).
+    """
+    n, f = Z.shape
+    if f == 0:
+        empty = np.array([""] * n, dtype=object)
+        return empty, empty.copy()
+    k = min(topn, f)
+    names = np.asarray(feat_names, dtype=object)
+    idx = np.argsort(-Z, axis=1)[:, :k]              # k plus grands z par ligne
+
+    # feature #1 : nom seulement si son z > 0 (sinon "" -> ignoree a l'agregation).
+    z1 = Z[np.arange(n), idx[:, 0]]
+    top_feat = np.where(z1 > 0, names[idx[:, 0]], "")
+
+    top_features = np.empty(n, dtype=object)
+    for i in range(n):
+        top_features[i] = ", ".join(
+            f"{names[j]}={Z[i, j]:.1f}" for j in idx[i] if Z[i, j] > 0)
+    return top_features, top_feat
+
+
+# ---------------------------------------------------------------------------
+def score_features(model, df_feat, feats, scalers, keep, thresholds, topn=3):
     """Score un df DEJA enrichi (sortie de build_features). Renvoie un df
-    par-evenement : log_source, mse, threshold, is_alert + colonnes de contexte."""
+    par-evenement : log_source, mse, threshold, is_alert + contexte + ATTRIBUTION.
+
+    Provenance figee a split="test" : ce module ne score que l'evaluation.
+    """
     parts = []
     for s in C.SOURCES:
         if s not in scalers:
@@ -56,7 +101,14 @@ def score_features(model, df_feat, feats, scalers, keep, thresholds):
         if len(d) == 0:
             continue
         X = PP.transform(d, feats[s], scalers[s], keep[s])
-        mse = model.reconstruction_error(torch.FloatTensor(X).to(DEVICE), s)
+        xt = torch.FloatTensor(X).to(DEVICE)
+        mse = model.reconstruction_error(xt, s)
+        Z = model.per_feature_zscore(xt, s)          # (N, F) z |residu| par feature
+
+        # Noms des features GARDEES : ordre = colonnes de Z (apres keep-mask).
+        feats_kept = [f for f, k in zip(feats[s], keep[s]) if k]
+        top_features, top_feat = _attribution(Z, feats_kept, topn)
+
         thr = TH.get_threshold(thresholds, s)
         confidence = np.clip(mse / thr, 0.0, None)   # 1.0 = pile au seuil
         d_out = pd.DataFrame({
@@ -70,33 +122,29 @@ def score_features(model, df_feat, feats, scalers, keep, thresholds):
             "mse": mse,
             "threshold": thr,
             "is_alert": (mse > thr).astype(int),
-            "confidence": confidence.round(3),        # <-- niveau de confiance
+            "confidence": confidence.round(3),        # niveau de confiance = mse/seuil
             "confidence_level": pd.cut(
                 confidence, bins=[0, 1.5, 3.0, np.inf],
                 labels=["low", "medium", "high"]).astype(str),
-
+            "top_features": top_features,             # attribution lisible (analyste + LLM)
+            "top_feat": top_feat,                     # feature #1 (agregation episode)
         })
         parts.append(d_out)
         print(f"  {s:8s}: {int((mse > thr).sum()):5d} alertes / {len(d):,} "
               f"({(mse > thr).mean() * 100:.2f}%) | seuil={thr:.6f}")
     if not parts:
         return pd.DataFrame()
-    return pd.concat(parts, ignore_index=True)
-
-
-def score_dataframe(df_raw):
-    """De bout en bout depuis des logs bruts (memes colonnes que data_loader)."""
-    model, scalers, keep, feats, _, thresholds, novelty = load_artifacts()
-    df_feat = FE.build_features(df_raw, novelty_state=novelty)
-    scored = score_features(model, df_feat, feats, scalers, keep, thresholds)
-    alerts = scored[scored["is_alert"] == 1].copy() if len(scored) else scored
-    return alerts, scored
+    scored = pd.concat(parts, ignore_index=True)
+    scored["split"] = "test"          # module d'evaluation : toujours le TEST
+    return scored
 
 
 # ---------------------------------------------------------------------------
 # Diagnostics NON SUPERVISES (Phase 5)
 # ---------------------------------------------------------------------------
 def unsupervised_diagnostics(model, df_feat, feats, scalers, keep, thresholds):
+    """Sante du modele SANS labels : forme de la distribution des scores
+    (skew/kurtosis = queue lourde ?) et vie de l'espace latent (dims mortes)."""
     diag = {}
     print("\n  [DIAGNOSTICS NON SUPERVISES]")
     for s in C.SOURCES:
@@ -152,6 +200,17 @@ def aggregate_alerts(alerts, gap_seconds=None):
                                         sort=False):
         procs = g["process_name"].fillna("").astype(str)
         top = procs[procs != ""].value_counts().head(3).index.tolist()
+
+        # Features dominantes de l'episode : driver #1 le plus frequent.
+        # C'est le "pourquoi" statistique agrege -> tri Sigma/LLM et debug FP.
+        if "top_feat" in g.columns:
+            tf = g["top_feat"].fillna("").astype(str)
+            tf = tf[tf != ""]
+            dom = ", ".join(f"{name} ({cnt})"
+                            for name, cnt in tf.value_counts().head(3).items())
+        else:
+            dom = ""
+
         rows.append({
             "log_source": src, "host_name": host,
             "start": g["_ts"].min(), "end": g["_ts"].max(),
@@ -159,6 +218,7 @@ def aggregate_alerts(alerts, gap_seconds=None):
             "n_alerts": len(g),
             "n_distinct_proc": int(procs[procs != ""].nunique()),
             "top_processes": ", ".join(top),
+            "dominant_features": dom,           # <-- attribution au niveau episode
             "mse_max": round(float(g["mse"].max()), 4),
             "mse_mean": round(float(g["mse"].mean()), 4),
         })
@@ -167,23 +227,9 @@ def aggregate_alerts(alerts, gap_seconds=None):
 
 
 # ---------------------------------------------------------------------------
-def _test_split(df, ratios=C.SPLIT_RATIOS):
-    """Dernier bloc chronologique PAR SOURCE, aligne sur temporal_split."""
-    import pandas as pd
-    parts = []
-    for s in df["log_source"].unique():
-        d = df[df["log_source"] == s].copy()
-        d["_ts"] = pd.to_datetime(d["@timestamp"], utc=True, errors="coerce")
-        d = d.sort_values("_ts").drop(columns="_ts").reset_index(drop=True)
-        i2 = int(len(d) * (ratios[0] + ratios[1]))
-        parts.append(d.iloc[i2:])
-    return pd.concat(parts, ignore_index=True) if parts else df.iloc[:0].copy()
-
-
-# ---------------------------------------------------------------------------
 def main():
     print("=" * 64)
-    print("  INFERENCE + DIAGNOSTICS NON SUPERVISES")
+    print("  INFERENCE + DIAGNOSTICS NON SUPERVISES (TEST ONLY)")
     print("=" * 64)
     if not os.path.exists(C.MODEL_PATH):
         print("ERREUR : modele introuvable. Lancer training.py d'abord.")
@@ -194,19 +240,30 @@ def main():
     df_raw = DL.load_dataset()
     df_feat = FE.build_features(df_raw, novelty_state=None)
 
-    # Pour une EVALUATION honnete, on score le meme split que le deploiement
-    # reel : le TEST (futur), pas le snapshot entier (qui contient le train et
-    # les contaminants retires -> sur-alerte mecanique). Memes ratios que
-    # training.temporal_split.
-    df_eval = _test_split(df_feat, C.SPLIT_RATIOS)
+    # EVALUATION HONNETE : on ne score QUE le TEST (futur), pas le snapshot
+    # entier (qui contient le train + les contaminants retires -> sur-alerte
+    # mecanique). temporal_split renvoie (pool, calib, test) : on jette
+    # explicitement pool et calib.
+    _, _, df_eval = temporal_split(df_feat)
     print(f"  snapshot={len(df_feat):,} -> evaluation sur le TEST={len(df_eval):,}")
+
+    # Borne temporelle du TEST par source (preuve d'audit : rien avant n'est
+    # score -> les alertes ne portent QUE sur le futur non vu).
+    test_bounds = {}
+    for s in df_eval["log_source"].unique():
+        ts = pd.to_datetime(df_eval[df_eval["log_source"] == s]["@timestamp"],
+                            utc=True, errors="coerce")
+        test_bounds[s] = {"start": str(ts.min()), "end": str(ts.max()),
+                          "n": int(len(ts))}
+        print(f"    {s:8s}: test depuis {test_bounds[s]['start']}  "
+              f"({test_bounds[s]['n']:,} logs)")
 
     print("\n[2] Scoring (split test)...")
     scored = score_features(model, df_eval, feats, scalers, keep, thresholds)
 
-    # --- Separation alertes PRIMAIRES (analyste) / CONTEXTE (corrélation Sigma)
-    # syslog est demote en source de corrélation (rareté bénigne dominante) :
-    # il reste score et disponible pour Sigma, mais ne pollue pas la file analyste.
+    # --- Separation alertes PRIMAIRES (analyste) / CONTEXTE (correlation Sigma)
+    # Une source demote en "correlation" (SOURCE_ROLE) reste scoree et dispo
+    # pour Sigma, mais ne pollue pas la file analyste.
     if len(scored):
         scored["role"] = scored["log_source"].map(C.SOURCE_ROLE).fillna("alert")
         fired   = scored[scored["is_alert"] == 1]
@@ -222,6 +279,7 @@ def main():
 
     report = {
         "thresholds": {s: thresholds[s] for s in thresholds},
+        "test_window_by_source": test_bounds,     # preuve : evaluation test-only
         "unsupervised_diagnostics": diag,
         "n_scored": int(len(scored)),
         "n_alerts_primary": int(len(primary)),

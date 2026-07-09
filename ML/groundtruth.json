@@ -1,0 +1,924 @@
+{
+  "scenarios": [
+    {
+      "id": "b64_exec_01",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-16T17:52:24.132000+00:00",
+      "end": "2026-06-16T17:52:24.138000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_02",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-19T16:14:38.226000+00:00",
+      "end": "2026-06-19T16:14:38.226000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_03",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-20T11:12:04.676000+00:00",
+      "end": "2026-06-20T11:12:04.676000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_04",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-22T12:50:19.554000+00:00",
+      "end": "2026-06-22T12:50:19.559000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_05",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-22T13:38:32.184000+00:00",
+      "end": "2026-06-22T13:38:32.184000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_06",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-22T13:45:41.661000+00:00",
+      "end": "2026-06-22T13:45:41.665000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_07",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-23T09:38:25.582000+00:00",
+      "end": "2026-06-23T09:38:25.582000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_08",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-23T12:36:34.631000+00:00",
+      "end": "2026-06-23T12:36:34.635000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_09",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-24T15:39:51.267000+00:00",
+      "end": "2026-06-24T15:39:51.267000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_10",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-25T10:09:03.094000+00:00",
+      "end": "2026-06-25T10:09:03.094000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_11",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-27T09:21:26.802000+00:00",
+      "end": "2026-06-27T09:21:26.802000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_12",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-28T12:38:41.602000+00:00",
+      "end": "2026-06-28T12:38:41.602000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_13",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-28T13:31:06.273000+00:00",
+      "end": "2026-06-28T13:31:06.278000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_14",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-28T16:28:17.932000+00:00",
+      "end": "2026-06-28T16:28:17.936000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_15",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-30T07:37:26.142000+00:00",
+      "end": "2026-06-30T07:37:26.142000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_16",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-30T15:52:31.022000+00:00",
+      "end": "2026-06-30T15:52:31.026000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_17",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T07:38:07.991000+00:00",
+      "end": "2026-07-01T07:38:07.991000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_18",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T08:51:55.260000+00:00",
+      "end": "2026-07-01T08:51:55.263000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_19",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T09:30:05.517000+00:00",
+      "end": "2026-07-01T09:30:05.519000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_20",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T11:38:50.329000+00:00",
+      "end": "2026-07-01T11:38:50.332000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "b64_exec_21",
+      "scenario": "b64_exec",
+      "mitre": "T1059.004",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-02T06:21:33.319000+00:00",
+      "end": "2026-07-02T06:21:33.319000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "ssh_bruteforce_01",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T20:30:01.273000+00:00",
+      "end": "2026-04-26T20:31:06.998000+00:00",
+      "duration_s": 65.7
+    },
+    {
+      "id": "ssh_bruteforce_02",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T20:37:26.503000+00:00",
+      "end": "2026-04-26T20:39:41.532000+00:00",
+      "duration_s": 135.0
+    },
+    {
+      "id": "ssh_bruteforce_03",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T21:24:40.101000+00:00",
+      "end": "2026-04-26T21:25:09.011000+00:00",
+      "duration_s": 28.9
+    },
+    {
+      "id": "ssh_bruteforce_04",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T22:00:55.137000+00:00",
+      "end": "2026-04-26T22:01:20.730000+00:00",
+      "duration_s": 25.6
+    },
+    {
+      "id": "ssh_bruteforce_05",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T22:18:45.067000+00:00",
+      "end": "2026-04-26T22:24:30.874000+00:00",
+      "duration_s": 345.8
+    },
+    {
+      "id": "ssh_bruteforce_06",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-26T22:50:27.725000+00:00",
+      "end": "2026-04-26T22:51:00.243000+00:00",
+      "duration_s": 32.5
+    },
+    {
+      "id": "ssh_bruteforce_07",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-04-29T12:04:01.578000+00:00",
+      "end": "2026-04-29T12:04:15.867000+00:00",
+      "duration_s": 14.3
+    },
+    {
+      "id": "ssh_bruteforce_08",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-02T22:44:23.264000+00:00",
+      "end": "2026-05-02T22:47:49.709000+00:00",
+      "duration_s": 206.4
+    },
+    {
+      "id": "ssh_bruteforce_09",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "srv-db-01",
+      "start": "2026-05-08T02:38:15.352751+00:00",
+      "end": "2026-05-08T02:43:02.352751+00:00",
+      "duration_s": 287.0
+    },
+    {
+      "id": "ssh_bruteforce_10",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-19T22:33:38.127000+00:00",
+      "end": "2026-05-19T22:33:45.882000+00:00",
+      "duration_s": 7.8
+    },
+    {
+      "id": "ssh_bruteforce_11",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-19T23:10:18.349000+00:00",
+      "end": "2026-05-19T23:10:24.430000+00:00",
+      "duration_s": 6.1
+    },
+    {
+      "id": "ssh_bruteforce_12",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-20T12:55:30.735000+00:00",
+      "end": "2026-05-20T12:55:33.938000+00:00",
+      "duration_s": 3.2
+    },
+    {
+      "id": "ssh_bruteforce_13",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-20T13:06:13.482000+00:00",
+      "end": "2026-05-20T13:06:16.983000+00:00",
+      "duration_s": 3.5
+    },
+    {
+      "id": "ssh_bruteforce_14",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-23T21:00:20.991000+00:00",
+      "end": "2026-05-23T21:04:26.210000+00:00",
+      "duration_s": 245.2
+    },
+    {
+      "id": "ssh_bruteforce_15",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-23T22:57:33.643000+00:00",
+      "end": "2026-05-23T22:57:33.677000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "ssh_bruteforce_16",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-23T23:11:36.816000+00:00",
+      "end": "2026-05-23T23:11:36.869000+00:00",
+      "duration_s": 0.1
+    },
+    {
+      "id": "ssh_bruteforce_17",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-22T12:49:50.730000+00:00",
+      "end": "2026-06-22T12:50:14.505000+00:00",
+      "duration_s": 23.8
+    },
+    {
+      "id": "ssh_bruteforce_18",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-22T13:40:11.078000+00:00",
+      "end": "2026-06-22T13:40:41.598000+00:00",
+      "duration_s": 30.5
+    },
+    {
+      "id": "ssh_bruteforce_19",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-28T16:27:55.230000+00:00",
+      "end": "2026-06-28T16:28:12.712000+00:00",
+      "duration_s": 17.5
+    },
+    {
+      "id": "ssh_bruteforce_20",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-07-01T09:29:50.088000+00:00",
+      "end": "2026-07-01T09:30:00.378000+00:00",
+      "duration_s": 10.3
+    },
+    {
+      "id": "ssh_bruteforce_21",
+      "scenario": "ssh_bruteforce",
+      "mitre": "T1110.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-07-01T11:38:29.973000+00:00",
+      "end": "2026-07-01T11:38:45.121000+00:00",
+      "duration_s": 15.1
+    },
+    {
+      "id": "syslog_burst_01",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-06T06:51:12.963000+00:00",
+      "end": "2026-06-06T06:52:25.816000+00:00",
+      "duration_s": 72.9
+    },
+    {
+      "id": "syslog_burst_02",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-06T16:41:28.433000+00:00",
+      "end": "2026-06-06T16:42:41.144000+00:00",
+      "duration_s": 72.7
+    },
+    {
+      "id": "syslog_burst_03",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-07T06:44:47.708000+00:00",
+      "end": "2026-06-07T06:45:59.401000+00:00",
+      "duration_s": 71.7
+    },
+    {
+      "id": "syslog_burst_04",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-07T20:43:08.522000+00:00",
+      "end": "2026-06-07T20:44:19.440000+00:00",
+      "duration_s": 70.9
+    },
+    {
+      "id": "syslog_burst_05",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-08T22:03:03.405000+00:00",
+      "end": "2026-06-08T22:04:15.416000+00:00",
+      "duration_s": 72.0
+    },
+    {
+      "id": "syslog_burst_06",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-09T06:24:43.414000+00:00",
+      "end": "2026-06-09T06:25:57.598000+00:00",
+      "duration_s": 74.2
+    },
+    {
+      "id": "syslog_burst_07",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-09T12:31:58.576000+00:00",
+      "end": "2026-06-09T12:36:55.058000+00:00",
+      "duration_s": 296.5
+    },
+    {
+      "id": "syslog_burst_08",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-09T21:31:31.819000+00:00",
+      "end": "2026-06-09T21:33:03.844000+00:00",
+      "duration_s": 92.0
+    },
+    {
+      "id": "syslog_burst_09",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-09T21:55:34.404000+00:00",
+      "end": "2026-06-09T21:56:51.060000+00:00",
+      "duration_s": 76.7
+    },
+    {
+      "id": "syslog_burst_10",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-10T06:06:13.072000+00:00",
+      "end": "2026-06-10T06:07:10.722000+00:00",
+      "duration_s": 57.6
+    },
+    {
+      "id": "syslog_burst_11",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-10T06:34:49.605000+00:00",
+      "end": "2026-06-10T06:36:11.035000+00:00",
+      "duration_s": 81.4
+    },
+    {
+      "id": "syslog_burst_12",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-10T09:19:14.740000+00:00",
+      "end": "2026-06-10T09:20:20.021000+00:00",
+      "duration_s": 65.3
+    },
+    {
+      "id": "syslog_burst_13",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-10T18:15:57.397000+00:00",
+      "end": "2026-06-10T18:17:02.034000+00:00",
+      "duration_s": 64.6
+    },
+    {
+      "id": "syslog_burst_14",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-11T06:18:49.822000+00:00",
+      "end": "2026-06-11T06:20:10.695000+00:00",
+      "duration_s": 80.9
+    },
+    {
+      "id": "syslog_burst_15",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-12T05:26:56.498000+00:00",
+      "end": "2026-06-12T05:28:01.031000+00:00",
+      "duration_s": 64.5
+    },
+    {
+      "id": "syslog_burst_16",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-12T15:32:12.838000+00:00",
+      "end": "2026-06-12T15:33:21.084000+00:00",
+      "duration_s": 68.2
+    },
+    {
+      "id": "syslog_burst_17",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-13T07:55:17.658000+00:00",
+      "end": "2026-06-13T07:56:29.288000+00:00",
+      "duration_s": 71.6
+    },
+    {
+      "id": "syslog_burst_18",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-14T06:23:27.015000+00:00",
+      "end": "2026-06-14T06:28:33.580000+00:00",
+      "duration_s": 306.6
+    },
+    {
+      "id": "syslog_burst_19",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-14T16:32:38.493000+00:00",
+      "end": "2026-06-14T16:33:44.288000+00:00",
+      "duration_s": 65.8
+    },
+    {
+      "id": "syslog_burst_20",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-14T21:19:57.853000+00:00",
+      "end": "2026-06-14T21:21:10.626000+00:00",
+      "duration_s": 72.8
+    },
+    {
+      "id": "syslog_burst_21",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-15T22:05:59.491000+00:00",
+      "end": "2026-06-15T22:07:13.047000+00:00",
+      "duration_s": 73.6
+    },
+    {
+      "id": "syslog_burst_22",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-16T10:56:24.493000+00:00",
+      "end": "2026-06-16T10:57:35.366000+00:00",
+      "duration_s": 70.9
+    },
+    {
+      "id": "syslog_burst_23",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-16T17:21:46.615000+00:00",
+      "end": "2026-06-16T17:23:11.043000+00:00",
+      "duration_s": 84.4
+    },
+    {
+      "id": "syslog_burst_24",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-17T09:31:13.502000+00:00",
+      "end": "2026-06-17T09:34:38.545000+00:00",
+      "duration_s": 205.0
+    },
+    {
+      "id": "syslog_burst_25",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-18T11:14:32.459000+00:00",
+      "end": "2026-06-18T11:15:44.398000+00:00",
+      "duration_s": 71.9
+    },
+    {
+      "id": "syslog_burst_26",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-18T13:59:44.544000+00:00",
+      "end": "2026-06-18T14:01:36.835000+00:00",
+      "duration_s": 112.3
+    },
+    {
+      "id": "syslog_burst_27",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-19T12:31:23.490000+00:00",
+      "end": "2026-06-19T12:32:35.921000+00:00",
+      "duration_s": 72.4
+    },
+    {
+      "id": "syslog_burst_28",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-19T14:47:10.756000+00:00",
+      "end": "2026-06-19T14:49:15.537000+00:00",
+      "duration_s": 124.8
+    },
+    {
+      "id": "syslog_burst_29",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-20T11:07:04.862000+00:00",
+      "end": "2026-06-20T11:08:13.467000+00:00",
+      "duration_s": 68.6
+    },
+    {
+      "id": "syslog_burst_30",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-21T09:45:26.477000+00:00",
+      "end": "2026-06-21T09:46:37.393000+00:00",
+      "duration_s": 70.9
+    },
+    {
+      "id": "syslog_burst_31",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-22T12:26:31.756000+00:00",
+      "end": "2026-06-22T12:29:11.820000+00:00",
+      "duration_s": 160.1
+    },
+    {
+      "id": "syslog_burst_32",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-23T07:36:34.520000+00:00",
+      "end": "2026-06-23T07:40:21.077000+00:00",
+      "duration_s": 226.6
+    },
+    {
+      "id": "syslog_burst_33",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-24T13:34:51.422000+00:00",
+      "end": "2026-06-24T13:38:14.856000+00:00",
+      "duration_s": 203.4
+    },
+    {
+      "id": "syslog_burst_34",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-25T06:41:19.550000+00:00",
+      "end": "2026-06-25T06:42:20.046000+00:00",
+      "duration_s": 60.5
+    },
+    {
+      "id": "syslog_burst_35",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-25T06:59:30.694000+00:00",
+      "end": "2026-06-25T07:00:39.223000+00:00",
+      "duration_s": 68.5
+    },
+    {
+      "id": "syslog_burst_36",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-25T10:04:02.802000+00:00",
+      "end": "2026-06-25T10:05:12.956000+00:00",
+      "duration_s": 70.2
+    },
+    {
+      "id": "syslog_burst_37",
+      "scenario": "syslog_burst",
+      "mitre": "",
+      "log_source": "syslog",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-27T07:06:01.465000+00:00",
+      "end": "2026-06-27T07:07:06.027000+00:00",
+      "duration_s": 64.6
+    },
+    {
+      "id": "user_creation_01",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-02T22:33:51.826000+00:00",
+      "end": "2026-05-02T22:33:51.896000+00:00",
+      "duration_s": 0.1
+    },
+    {
+      "id": "user_creation_02",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-05-09T10:27:37.288000+00:00",
+      "end": "2026-05-09T10:27:37.288000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "id": "user_creation_03",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-22T12:50:35.008000+00:00",
+      "end": "2026-06-22T12:50:35.308000+00:00",
+      "duration_s": 0.3
+    },
+    {
+      "id": "user_creation_04",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-22T12:50:35.084000+00:00",
+      "end": "2026-06-22T12:50:35.262000+00:00",
+      "duration_s": 0.2
+    },
+    {
+      "id": "user_creation_05",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-22T13:57:10.651000+00:00",
+      "end": "2026-06-22T13:57:10.852000+00:00",
+      "duration_s": 0.2
+    },
+    {
+      "id": "user_creation_06",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-22T13:57:10.700000+00:00",
+      "end": "2026-06-22T13:57:10.811000+00:00",
+      "duration_s": 0.1
+    },
+    {
+      "id": "user_creation_07",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-06-28T16:28:15.715000+00:00",
+      "end": "2026-06-28T16:28:17.930000+00:00",
+      "duration_s": 2.2
+    },
+    {
+      "id": "user_creation_08",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-06-28T16:28:15.759000+00:00",
+      "end": "2026-06-28T16:28:17.890000+00:00",
+      "duration_s": 2.1
+    },
+    {
+      "id": "user_creation_09",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T09:30:03.378000+00:00",
+      "end": "2026-07-01T09:30:05.516000+00:00",
+      "duration_s": 2.1
+    },
+    {
+      "id": "user_creation_10",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-07-01T09:30:03.407000+00:00",
+      "end": "2026-07-01T09:30:05.480000+00:00",
+      "duration_s": 2.1
+    },
+    {
+      "id": "user_creation_11",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-01T11:38:48.125000+00:00",
+      "end": "2026-07-01T11:38:50.326000+00:00",
+      "duration_s": 2.2
+    },
+    {
+      "id": "user_creation_12",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auth",
+      "host_name": "ASUS-X415JA",
+      "start": "2026-07-01T11:38:48.160000+00:00",
+      "end": "2026-07-01T11:38:50.273000+00:00",
+      "duration_s": 2.1
+    },
+    {
+      "id": "user_creation_13",
+      "scenario": "user_creation",
+      "mitre": "T1136.001",
+      "log_source": "auditd",
+      "host_name": "asus-x415ja",
+      "start": "2026-07-02T06:26:27.408000+00:00",
+      "end": "2026-07-02T06:27:13.536000+00:00",
+      "duration_s": 46.1
+    }
+  ]
+}
