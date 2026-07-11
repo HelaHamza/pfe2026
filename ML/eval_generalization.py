@@ -121,3 +121,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+# ce que ça mesure, et pourquoi c'est utile
+# Le principe est le fondement classique de la détection de surapprentissage : un modèle qui a mémorisé son train reconstruit parfaitement le train mais mal des données qu'il n'a pas servi à ajuster. L'écart train/val quantifie ça.
+
+# Écart faible (val ≈ train) → le modèle a appris la structure du normal, pas des points par cœur → il généralise → une déviation au test sera un vrai signal, pas un artefact de mémorisation.
+# Écart large (val ≫ train) → surapprentissage → le modèle « connaît » son train et criera anomalie sur tout le reste → tes alertes seraient du bruit.

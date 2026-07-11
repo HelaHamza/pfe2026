@@ -1,29 +1,4 @@
-"""
-groundtruth.py
-==============
-AXE 4 (etape 1/2) -- Etiquetage NON CIRCULAIRE des attaques injectees.
 
-PRINCIPE ANTI-CIRCULARITE : les episodes sont etiquetes a partir de SIGNATURES
-OBSERVABLES sur les champs ECS BRUTS (chaine de commande, outcome d'auth,
-volume brut) -- JAMAIS a partir du score de l'autoencodeur. Le modele ne voit
-jamais ces labels ; ils ne servent qu'a l'evaluation. Ainsi "l'AE detecte
-l'attaque" n'est pas tautologique.
-
-4 scenarios (identiques au pipeline) :
-  1. ssh_bruteforce   T1110.001  (auth)    rafale d'echecs sshd depuis 1 IP
-  2. user_creation    T1136.001  (auditd/auth)  useradd / userdel
-  3. b64_exec         T1059.004  (auditd)  payload base64 decode -> exec
-  4. syslog_burst     --         (syslog)  pic volumetrique
-
-Sortie : groundtruth.json -> liste d'episodes {scenario, mitre, log_source,
-host_name, start, end}. On labelle sur TOUT le snapshot ; c'est l'evaluateur
-(etape 2) qui restreint au TEST et signale les episodes hors-test.
-
-NUANCE HONNETE : pour les scenarios VOLUMETRIQUES (brute-force, burst), la
-signature (compte brut) recoupe une entree du modele -> le label le plus fiable
-reste l'HEURE D'INJECTION CONNUE. Renseigne-la dans MANUAL_EPISODES : elle
-prime et desactive l'auto-detection du scenario concerne.
-"""
 from __future__ import annotations
 import json
 import re

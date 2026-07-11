@@ -1,0 +1,88 @@
+{
+  "config": {
+    "groundtruth_source": "file:groundtruth.jsonl",
+    "tolerance_s": 120,
+    "n_windows": 5,
+    "n_test_events": 124566,
+    "n_attack_events": 4670,
+    "attack_prevalence": 0.03749,
+    "has_labels": true
+  },
+  "event_level": {
+    "per_source": {
+      "auth": {
+        "precision": 0.181,
+        "recall": 0.4846,
+        "f1": 0.2636,
+        "tp": 63,
+        "fp": 285,
+        "tn": 5119,
+        "fn": 67,
+        "n": 5534,
+        "n_attack": 130,
+        "roc_auc": 0.9118388088595343,
+        "pr_auc": 0.21342138159909238
+      },
+      "syslog": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "tp": 0,
+        "fp": 72,
+        "tn": 39928,
+        "fn": 0,
+        "n": 40000,
+        "n_attack": 0,
+        "roc_auc": null,
+        "pr_auc": null
+      },
+      "auditd": {
+        "precision": 0.0359,
+        "recall": 0.0051,
+        "f1": 0.0089,
+        "tp": 23,
+        "fp": 618,
+        "tn": 73874,
+        "fn": 4517,
+        "n": 79032,
+        "n_attack": 4540,
+        "roc_auc": 0.6133269935736233,
+        "pr_auc": 0.07943479072174703
+      }
+    },
+    "global": {
+      "precision": 0.0811,
+      "recall": 0.0184,
+      "f1": 0.03,
+      "tp": 86,
+      "fp": 975,
+      "tn": 118921,
+      "fn": 4584,
+      "n": 124566,
+      "n_attack": 4670,
+      "roc_auc": 0.6929803742115401,
+      "pr_auc": 0.07091022506125481
+    }
+  },
+  "episode_level": {
+    "n_episodes": 111,
+    "n_attack_episodes": 2,
+    "episode_precision": 0.018,
+    "n_windows": 5,
+    "n_windows_detected": 4,
+    "window_detection_recall": 0.8,
+    "episode_roc_auc": 0.8050458715596329,
+    "episode_pr_auc": 0.12439024390243902
+  },
+  "score_inversion": {
+    "n_episodes": 111,
+    "score_max_observed": 46.417,
+    "score_ceiling_hint": 50.0,
+    "attack_mean_rank": 23.0,
+    "attack_top_rank": 5,
+    "attack_worst_rank": 41,
+    "attack_score_median": 34.801,
+    "benign_above_attack_median": 23,
+    "benign_above_attack_median_frac": 0.211
+  }
+}

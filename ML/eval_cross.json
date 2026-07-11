@@ -1,0 +1,26 @@
+{
+  "attack_recall": 0.9333,
+  "attack_recall_count": "14/15",
+  "per_scenario": {
+    "ssh_bruteforce": "5/5",
+    "user_creation": "6/6",
+    "b64_exec": "3/4"
+  },
+  "false_negatives": [
+    {
+      "scenario": "b64_exec",
+      "ids": [
+        "b64_exec_21"
+      ],
+      "start": "2026-07-02 06:21:33.319000+00:00"
+    }
+  ],
+  "burst_recall": "8/9",
+  "n_detected_episodes": 111,
+  "det_cover_attack": 10,
+  "det_cover_burst": 8,
+  "det_false_positive": 93,
+  "attack_precision": 0.0901,
+  "attack_f1": 0.1643,
+  "fp_novelty_driven": 41
+}

@@ -15,29 +15,29 @@
       }
     },
     "syslog": {
-      "threshold": 10.391451568601875,
+      "threshold": 10.390730563162117,
       "info": {
         "method": "gpd_pot",
-        "u": 1.688730359077446,
-        "xi": 0.6198212092028362,
-        "scale": 0.9773686256203964,
+        "u": 1.6887298727035447,
+        "xi": 0.6197417564704657,
+        "scale": 0.9773484864872435,
         "n_excess": 800,
-        "gpd_level": 10.20900458291316,
-        "emp": 10.391451568601875,
+        "gpd_level": 10.2075175517857,
+        "emp": 10.390730563162117,
         "finite_endpoint": false,
         "floored": true
       }
     },
     "auditd": {
-      "threshold": 5.728155383841889,
+      "threshold": 5.727688642450246,
       "info": {
         "method": "gpd_pot",
-        "u": 2.4925893211364816,
-        "xi": 0.7848897512265005,
-        "scale": 1.2896915421155086,
+        "u": 2.492566399574286,
+        "xi": 0.7850693726286175,
+        "scale": 1.2893255049485162,
         "n_excess": 1581,
-        "gpd_level": 5.728155383841889,
-        "emp": 5.1580910038948655,
+        "gpd_level": 5.727688642450246,
+        "emp": 5.157031230926572,
         "finite_endpoint": false,
         "floored": false
       }
@@ -77,26 +77,26 @@
       "alert_rate_pct": 0.18,
       "mse_median": 0.086584,
       "mse_p99": 2.886108,
-      "mse_skewness": 22.799,
-      "mse_kurtosis": 697.13,
+      "mse_skewness": 22.798,
+      "mse_kurtosis": 697.102,
       "latent_var_min": 0.437315,
       "latent_var_mean": 2.515723,
       "latent_dead_dims": 0
     },
     "auditd": {
       "n": 79032,
-      "alert_rate_pct": 0.81,
+      "alert_rate_pct": 0.811,
       "mse_median": 0.198184,
-      "mse_p99": 4.214389,
-      "mse_skewness": 14.81,
-      "mse_kurtosis": 248.316,
+      "mse_p99": 4.214332,
+      "mse_skewness": 14.809,
+      "mse_kurtosis": 248.27,
       "latent_var_min": 0.572667,
       "latent_var_mean": 7.448664,
       "latent_dead_dims": 0
     }
   },
   "n_scored": 124566,
-  "n_alerts_primary": 1060,
+  "n_alerts_primary": 1061,
   "n_alerts_context": 0,
   "n_alert_episodes": 111,
   "source_roles": {

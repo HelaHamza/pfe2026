@@ -17,11 +17,6 @@ Choix d'architecture (suite a l'audit) :
 
 CHANGEMENT (audit v2) : le SCORE est desormais base sur l'ERREUR ABSOLUE
 |residu| standardisee par feature, et NON sur residu**2.
-  * residu**2 ~ sigma**2 * chi2(1) est lourd a droite PAR CONSTRUCTION, meme
-    sur du normal pur -> kurtosis artificielle (108/163 observes), queue GPD
-    plus difficile a ajuster.
-  * |residu| ~ demi-normale : echelle quasi-lineaire, queue mieux comportee,
-    et COHERENT avec la perte d'entrainement Huber (L1 en regime large).
 Les buffers err_mean_/err_std_ stockent donc mean/std de |residu| (le nom
 generique "err" est conserve).
 """
@@ -129,18 +124,6 @@ class PerSourceAutoencoder(nn.Module):
                 getattr(self, f"cap_hits_{src}").add_(hits)
                 getattr(self, f"cap_total_{src}").add_(z_raw.shape[0])
         return z_raw.clamp_max(cap)
-     
-    # def _aggregate(self, z):
-    #     """Agrege le z par feature en un score scalaire.
-    #     top-k (SCORE_TOPK=2) : moyenne des 2 features les plus deviantes ->
-    #     robuste (une seule feature ne suffit pas a alerter) sans diluer comme
-    #     la moyenne complete."""
-    #     mode = getattr(C, "SCORE_AGG", "topk")
-    #     if mode == "max":
-    #         return z.max(dim=1).values
-    #     k = min(int(getattr(C, "SCORE_TOPK", 3)), z.shape[1])
-    #     return z.topk(k, dim=1).values.mean(dim=1)
-
    
     def _aggregate(self, z):
         """Score scalaire = log-sum-exp (smooth-max) du z par feature."""

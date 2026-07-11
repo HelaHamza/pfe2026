@@ -17,11 +17,7 @@ NOTE : le "test" n'est pas recalcule localement. On importe
 splitting.temporal_split -> le TEST evalue ici est LITTERALEMENT celui defini a
 l'entrainement (source unique de verite, aucune formule dupliquee).
 
-ATTRIBUTION (nouveau) : chaque alerte porte desormais les 2-3 features qui ONT
-produit son score (top-k des z |residu| par feature = composantes exactes du
-score, SCORE_TOPK=2). Objectif double : debugger les faux positifs (ex.
-distinguer un FP sudo d'un vrai brute-force) et donner a la couche Sigma/LLM le
-"pourquoi" statistique dont elle a besoin pour trier rare-benin vs rare-malveillant.
+
 """
 from __future__ import annotations
 import os
