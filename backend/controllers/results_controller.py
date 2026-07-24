@@ -1,85 +1,52 @@
 """
-backend/controllers/results_controller.py
-==========================================
-Le tableau lit la MÊME fenêtre que les cartes du dashboard via
-ESRepository.get_last_window() (source unique de vérité, partagée
-avec StatsController — plus de duplication de la logique de fenêtre).
+controllers/results_controller.py
+=================================
+Table de résultats SOC : fusion CNN (true_positive) + Sigma du dernier run.
 
-TRI : alertes Sigma + anomalies corrélées (both) en premier, puis par
-sévérité, puis par date desc. Met en avant les vraies menaces.
+Le contrôleur ne connaît pas Mongo et ne connaît pas HTTP. Il orchestre
+repository → modèles, et applique la seule logique qui ne peut pas vivre
+dans Mongo : la fusion inter-collections.
 """
+import logging
 
-from models.es_repository import ESRepository
+from models.detection_models import ResultRow, ResultsResponse
+from repositories.report_repository import ReportRepository
 
-
-_SOURCE_RANK = {"both": 0, "sigma_only": 1, "ae_only": 2, "unknown": 3}
-_SEV_RANK    = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
+log = logging.getLogger(__name__)
 
 
 class ResultsController:
 
     @staticmethod
-    def _normalize(item: dict) -> dict:
-        is_anomaly = item.get("type") == "anomaly"
-        return {
-            "id":               item.get("id"),
-            "type":             item.get("type"),
-            "@timestamp":       item.get("@timestamp"),
-            "severity":         item.get("kb_severity") or item.get("level", "unknown"),
-            "detection_source": item.get("detection_source", "unknown"),
-            "title":            item.get("log_source", "Anomalie AE") if is_anomaly
-                                else item.get("title", "Alerte Sigma"),
-            "tactic":           item.get("tactic", ""),
-            "score":            item.get("ae_anomaly_score"),
-            "hits":             item.get("hits"),
-            "llm_explanation":  item.get("llm_explanation"),
-            "ae_correlated":    item.get("ae_correlated", False),
-        }
+    def get_results(level: str = None, source: str = None,
+                    limit: int = 500, skip: int = 0) -> ResultsResponse:
+        report = ReportRepository.get_last_report()
+        if not report:
+            return ResultsResponse(total=0, count=0, skip=skip, limit=limit)
 
-    @staticmethod
-    def _sort_key(r: dict):
-        src = (r.get("detection_source") or "unknown").lower()
-        sev = (r.get("kb_severity") or r.get("level") or "unknown").upper()
-        return (_SOURCE_RANK.get(src, 3), _SEV_RANK.get(sev, 4))
+        run_id = report["analysis_id"]
+        total = ReportRepository.count_results(run_id, level=level, source=source)
 
-    @staticmethod
-    def get_results(limit: int = 500, level: str = None, source: str = None) -> dict:
-        lo, hi = ESRepository.get_last_window()   # source unique de verite
+        # Pour une page [skip, skip+limit[ correcte après fusion, il faut
+        # les (skip+limit) premières lignes de CHAQUE source : la page finale
+        # peut provenir intégralement de l'une ou de l'autre.
+        need = skip + limit
+        docs = ReportRepository.get_results(run_id, level=level,
+                                            source=source, limit=need)
 
-        if source in ("ae_only", "both"):
-            anomalies = ESRepository.get_anomalies_window(lo, hi, limit)
-            alerts    = []
-        elif source == "sigma_only":
-            anomalies = []
-            alerts    = ESRepository.get_alerts_window(lo, hi, limit)
-        else:
-            anomalies = ESRepository.get_anomalies_window(lo, hi, limit)
-            alerts    = ESRepository.get_alerts_window(lo, hi, limit)
+        rows: list[ResultRow] = []
+        for d in docs:
+            try:
+                rows.append(ResultRow.from_cnn(d) if d.get("type") == "cnn"
+                            else ResultRow.from_sigma(d))
+            except Exception as e:
+                # Un document malformé ne doit pas vider tout le tableau.
+                log.error("Document %s non mappable : %s", d.get("_id"), e)
 
-        results = anomalies + alerts
+        # Tri global sur datetime (pas sur chaîne) : plus de dépendance au
+        # format de sérialisation de chaque branche.
+        rows.sort(key=lambda r: r.event_time, reverse=True)
+        page = rows[skip:skip + limit]
 
-        if source == "both":
-            results = [r for r in results if r.get("ae_correlated") or
-                       (r.get("detection_source") or "").lower() == "both"]
-
-        if level:
-            results = [
-                r for r in results
-                if (r.get("kb_severity") or r.get("level") or "").upper() == level.upper()
-            ]
-
-        results.sort(key=lambda x: (x.get("@timestamp") or ""), reverse=True)
-        results.sort(key=ResultsController._sort_key)
-
-        normalized = [ResultsController._normalize(r) for r in results[:limit]]
-        return {"total": len(normalized), "window": {"lo": lo, "hi": hi},
-                "results": normalized}
-
-    @staticmethod
-    def get_detail(doc_type: str, doc_id: str) -> dict:
-        if doc_type == "anomaly":
-            return ESRepository.get_anomaly_detail(doc_id)
-        elif doc_type == "alert":
-            return ESRepository.get_alert_detail(doc_id)
-        else:
-            raise ValueError(f"Type inconnu : {doc_type}")
+        return ResultsResponse(run_id=run_id, total=total, count=len(page),
+                               skip=skip, limit=limit, results=page)

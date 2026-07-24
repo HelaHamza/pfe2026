@@ -1,0 +1,7 @@
+# Couche 3 (LLM + RAG) - branche CNN
+groq>=0.30.0
+python-dotenv
+pandas
+numpy
+scikit-learn                # repli TF-IDF du retriever
+sentence-transformers       # optionnel : embeddings locaux (recommande)

@@ -1,0 +1,12 @@
+{
+  "until": "2026-07-23T14:16:24.660067+00:00",
+  "since": "2026-07-23T10:50:52.001569+00:00",
+  "watermark": "2026-07-23T14:11:24.660067+00:00",
+  "next_cursor": "2026-07-23T14:11:24.660067+00:00",
+  "episode_gap_seconds": 300,
+  "seed_seconds": 21600,
+  "n_logs_scored": 89537,
+  "n_episodes_window": 18,
+  "n_episodes_emitted": 6,
+  "n_episodes_held": 0
+}

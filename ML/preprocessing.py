@@ -1,7 +1,13 @@
 """
 preprocessing.py
 ================
-Construction des matrices X par source.
+Construction des matrices X par source -- branche MLP UNIQUEMENT.
+
+Ce module depend de config.py (l'ancien config MLP), qui seul definit
+COUNT_FEATURES, VARIANCE_THRESHOLD, WHITELIST_FEATURES et SCALE_CLIP au sens
+"filtre de variance". La branche CNN a une architecture a features FIXES par
+source et NE DOIT PAS importer ce module (voir config_cnn.py) : elle utilise
+sa propre implementation autonome, cnn_features.raw_matrix.
 
 Points cles :
   * log1p sur les comptages (COUNT_FEATURES) -> ecrase les queues lourdes.
@@ -15,7 +21,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-import config as C
+import config_cnn as C
 
 
 def _raw_matrix(df_src, feats):

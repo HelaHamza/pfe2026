@@ -1,0 +1,757 @@
+{
+  "alive": [
+    [
+      "SSH Login from Localhost",
+      305,
+      "auth/ssh/Login from Localhost.yml"
+    ],
+    [
+      "New or Unexpected User SSH Login",
+      89,
+      "auth/ssh/New User Login.yml"
+    ],
+    [
+      "SSH Login from Suspicious Country",
+      5414,
+      "auth/ssh/SSH Login from Suspicious Country.yml"
+    ],
+    [
+      "SSH Multiple Users from Same IP",
+      2001,
+      "auth/ssh/SSH Multiple Users from Same IP.yml"
+    ],
+    [
+      "SSH Rapid Connection Attempts",
+      2001,
+      "auth/ssh/SSH Rapid Connection Attempts.yml"
+    ],
+    [
+      "SSH Success After Multiple Failures",
+      118,
+      "auth/ssh/SSH Success After Failures.yml"
+    ],
+    [
+      "SSH User Enumeration",
+      2001,
+      "auth/ssh/SSH User Enumeration.yml"
+    ],
+    [
+      "Successful SSH Login",
+      118,
+      "auth/ssh/Successful SSH Login.yml"
+    ],
+    [
+      "Failed SSH Login as Root",
+      1342,
+      "auth/ssh/ssh Failed  Root.yml"
+    ],
+    [
+      "Reverse Shell Indicators",
+      8,
+      "auditd/syscall/lnx_auditd_reverse_shell.yml"
+    ],
+    [
+      "Cryptominer Execution",
+      20,
+      "auditd/execve/lnx_auditd_cryptominer.yml"
+    ],
+    [
+      "Kernel Module Loaded via Syslog",
+      3,
+      "syslog/kernel/lnx_syslog_kernel_module.yml"
+    ],
+    [
+      "Network Scan Detected via Syslog",
+      3392,
+      "syslog/network/lnx_syslog_network_scan.yml"
+    ],
+    [
+      "VPN Connection Established",
+      6,
+      "syslog/network/lnx_syslog_vpn_connection.yml"
+    ],
+    [
+      "OOM Killer Activated",
+      9,
+      "syslog/process/lnx_syslog_oom_killer.yml"
+    ]
+  ],
+  "dead": [
+    [
+      "PAM Authentication Failure",
+      0,
+      "auth/pam/PAM authentication Failure.yml"
+    ],
+    [
+      "SSH Session Closed",
+      0,
+      "auth/pam/Session Closed.yml"
+    ],
+    [
+      "New SSH Session Opened",
+      0,
+      "auth/pam/Session Opened.yml"
+    ],
+    [
+      "GDM Login Failure",
+      0,
+      "auth/local_login/GDM Login Failure.yml"
+    ],
+    [
+      "Local Console Login",
+      0,
+      "auth/local_login/Local Console Login.yml"
+    ],
+    [
+      "Root Local Login",
+      0,
+      "auth/local_login/Root Local Login.yml"
+    ],
+    [
+      "Failed Sudo Attempt",
+      0,
+      "auth/sudo/Failed Sudo Attempt.yml"
+    ],
+    [
+      "Privilege Escalation via Sudo",
+      0,
+      "auth/sudo/Privilege Escalation via sudo.yml"
+    ],
+    [
+      "Su to Root Account",
+      0,
+      "auth/sudo/Su to root Account.yml"
+    ],
+    [
+      "SSH Failed Password for Invalid User",
+      0,
+      "auth/ssh/Root Login Attempt.yml"
+    ],
+    [
+      "SSH Connection Closed Immediately",
+      0,
+      "auth/ssh/SSH Connection Closed Immediately.yml"
+    ],
+    [
+      "SSH Invalid Public Key",
+      0,
+      "auth/ssh/SSH Invalid Public Key.yml"
+    ],
+    [
+      "SSH Invalid User Login Attempt",
+      0,
+      "auth/ssh/SSH Invalid User Attempt.yml"
+    ],
+    [
+      "SSH Invalid User Scan",
+      0,
+      "auth/ssh/SSH Invalid User.yml"
+    ],
+    [
+      "SSH Login Outside Business Hours",
+      0,
+      "auth/ssh/SSH Login Outside Business Hours.yml"
+    ],
+    [
+      "SSH Non Standard Port Access",
+      0,
+      "auth/ssh/SSH Non Standard Port Access.yml"
+    ],
+    [
+      "SSH Public Key Login",
+      0,
+      "auth/ssh/SSH Public Key Login.yml"
+    ],
+    [
+      "SSH Scanning Activity",
+      0,
+      "auth/ssh/SSH Scanning Activity.yml"
+    ],
+    [
+      "SSH Too Many Authentication Failures",
+      0,
+      "auth/ssh/SSH Too Many Failures.yml"
+    ],
+    [
+      "SSH Brute Force Attack",
+      0,
+      "auth/ssh/ssh_brute_force.yml"
+    ],
+    [
+      "New User Account Created",
+      0,
+      "auth/user_mgmt/New User account Created.yml"
+    ],
+    [
+      "User Account Modified",
+      0,
+      "auth/user_mgmt/User Account Modified.yml"
+    ],
+    [
+      "User Added to Privileged Group",
+      0,
+      "auth/user_mgmt/User Added to Privileged Group.yml"
+    ],
+    [
+      "Audio Capture via arecord",
+      0,
+      "auditd/auditd_audio_capture.yml"
+    ],
+    [
+      "ASLR Protection Disabled",
+      0,
+      "auditd/auditd_disable_aslr.yml"
+    ],
+    [
+      "Keylogging via PAM",
+      0,
+      "auditd/auditd_keylogging_pam.yml"
+    ],
+    [
+      "System Information Discovery",
+      0,
+      "auditd/auditd_system_info_discovery.yml"
+    ],
+    [
+      "BPFDoor Backdoor Indicator",
+      0,
+      "auditd/path/auditd_bpfdoor.yml"
+    ],
+    [
+      "Auditing Configuration Changes on Linux Host",
+      0,
+      "auditd/path/auditd_config_change.yml"
+    ],
+    [
+      "Creation of Hidden Files and Directories",
+      0,
+      "auditd/path/auditd_hidden_files.yml"
+    ],
+    [
+      "Authentication Token Files Access",
+      0,
+      "auditd/path/lnx_auditd_auth_token_access.yml"
+    ],
+    [
+      "Bootloader Configuration Modified",
+      0,
+      "auditd/path/lnx_auditd_bootloader_modified.yml"
+    ],
+    [
+      "Cloud Configuration Files Access",
+      0,
+      "auditd/path/lnx_auditd_cloud_config_access.yml"
+    ],
+    [
+      "Crontab Modification",
+      0,
+      "auditd/path/lnx_auditd_crontab_modification.yml"
+    ],
+    [
+      "Database Files Direct Access",
+      0,
+      "auditd/path/lnx_auditd_database_files_access.yml"
+    ],
+    [
+      "/etc/passwd or /etc/shadow Modified",
+      0,
+      "auditd/path/lnx_auditd_etc_passwd_modified.yml"
+    ],
+    [
+      "Hosts File Modified",
+      0,
+      "auditd/path/lnx_auditd_hosts_file_modified.yml"
+    ],
+    [
+      "Kernel Module Files Modified",
+      0,
+      "auditd/path/lnx_auditd_kernel_module_modified.yml"
+    ],
+    [
+      "LD_PRELOAD Hijacking",
+      0,
+      "auditd/path/lnx_auditd_ld_preload.yml"
+    ],
+    [
+      "Network Interface Configuration Modified",
+      0,
+      "auditd/path/lnx_auditd_network_config_modified.yml"
+    ],
+    [
+      "PAM Configuration Modified",
+      0,
+      "auditd/path/lnx_auditd_pam_config_modified.yml"
+    ],
+    [
+      "Private Key File Access",
+      0,
+      "auditd/path/lnx_auditd_private_key_access.yml"
+    ],
+    [
+      "DNS Resolver Configuration Modified",
+      0,
+      "auditd/path/lnx_auditd_resolv_conf_modified.yml"
+    ],
+    [
+      "Shell Profile Files Modified",
+      0,
+      "auditd/path/lnx_auditd_shell_profile_modified.yml"
+    ],
+    [
+      "SSH Authorized Keys Modification",
+      0,
+      "auditd/path/lnx_auditd_ssh_authorized_keys.yml"
+    ],
+    [
+      "Startup Files Modified",
+      0,
+      "auditd/path/lnx_auditd_startup_files_modified.yml"
+    ],
+    [
+      "Sudoers File Modified",
+      0,
+      "auditd/path/lnx_auditd_sudoers_modified.yml"
+    ],
+    [
+      "System Binary Modified",
+      0,
+      "auditd/path/lnx_auditd_system_binary_modified.yml"
+    ],
+    [
+      "Sensitive File Access",
+      0,
+      "auditd/path/sensitive_file_access.yml"
+    ],
+    [
+      "Auditd Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_auditd_stopped.yml"
+    ],
+    [
+      "Backup Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_backup_stopped.yml"
+    ],
+    [
+      "Database Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_database_stopped.yml"
+    ],
+    [
+      "Firewall Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_firewall_stopped.yml"
+    ],
+    [
+      "Monitoring Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_monitoring_stopped.yml"
+    ],
+    [
+      "Security Tools Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_security_tools_stopped.yml"
+    ],
+    [
+      "SSH Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_ssh_stopped.yml"
+    ],
+    [
+      "Syslog Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_syslog_stopped.yml"
+    ],
+    [
+      "Web Server Service Stopped",
+      0,
+      "auditd/service_stop/lnx_auditd_webserver_stopped.yml"
+    ],
+    [
+      "Core Dump Disabled",
+      0,
+      "auditd/syscall/lnx_auditd_coredump_disabled.yml"
+    ],
+    [
+      "Dangerous Linux Capabilities Used",
+      0,
+      "auditd/syscall/lnx_auditd_dangerous_capabilities.yml"
+    ],
+    [
+      "ASLR Protection Disabled via Syscall",
+      0,
+      "auditd/syscall/lnx_auditd_disable_aslr.yml"
+    ],
+    [
+      "Fork Bomb or Resource Exhaustion",
+      0,
+      "auditd/syscall/lnx_auditd_fork_bomb.yml"
+    ],
+    [
+      "Immutable File Attribute Set",
+      0,
+      "auditd/syscall/lnx_auditd_immutable_files.yml"
+    ],
+    [
+      "Kernel Module Load via Syscall",
+      0,
+      "auditd/syscall/lnx_auditd_kernel_module_load.yml"
+    ],
+    [
+      "Keylogging via PAM Modification",
+      0,
+      "auditd/syscall/lnx_auditd_keylogging_pam.yml"
+    ],
+    [
+      "Linux Namespace Manipulation",
+      0,
+      "auditd/syscall/lnx_auditd_namespace_manipulation.yml"
+    ],
+    [
+      "Suspicious Network Connection via SOCKADDR",
+      0,
+      "auditd/syscall/lnx_auditd_network_connection.yml"
+    ],
+    [
+      "Process Manipulation via Syscall",
+      0,
+      "auditd/syscall/lnx_auditd_process_manipulation.yml"
+    ],
+    [
+      "Ptrace Syscall Detected",
+      0,
+      "auditd/syscall/lnx_auditd_ptrace_syscall.yml"
+    ],
+    [
+      "Ransomware Activity Indicators",
+      0,
+      "auditd/syscall/lnx_auditd_ransomware_indicators.yml"
+    ],
+    [
+      "Raw Socket Creation",
+      0,
+      "auditd/syscall/lnx_auditd_raw_socket.yml"
+    ],
+    [
+      "Suspicious Memory Access via mmap",
+      0,
+      "auditd/syscall/lnx_auditd_suspicious_memory_access.yml"
+    ],
+    [
+      "System Time Modified",
+      0,
+      "auditd/syscall/lnx_auditd_system_time_modified.yml"
+    ],
+    [
+      "Binary Padding via dd or truncate",
+      0,
+      "auditd/execve/auditd_binary_padding.yml"
+    ],
+    [
+      "Linux Capabilities Discovery",
+      0,
+      "auditd/execve/auditd_capabilities_discovery.yml"
+    ],
+    [
+      "Suspicious C2 Commands via Auditd",
+      0,
+      "auditd/execve/auditd_susp_c2_commands.yml"
+    ],
+    [
+      "Execution from Suspicious Folder",
+      0,
+      "auditd/execve/auditd_susp_exe_folders.yml"
+    ],
+    [
+      "User Discovery Commands",
+      0,
+      "auditd/execve/auditd_user_discovery.yml"
+    ],
+    [
+      "Suspicious Command Execution via Auditd",
+      0,
+      "auditd/execve/command_execution.yml"
+    ],
+    [
+      "ACL Manipulation",
+      0,
+      "auditd/execve/lnx_auditd_acl_manipulation.yml"
+    ],
+    [
+      "Audio Capture via arecord",
+      0,
+      "auditd/execve/lnx_auditd_audio_capture.yml"
+    ],
+    [
+      "Backdoor Creation Indicators",
+      0,
+      "auditd/execve/lnx_auditd_backdoor_creation.yml"
+    ],
+    [
+      "Base64 Encoded Command Execution",
+      0,
+      "auditd/execve/lnx_auditd_base64_execution.yml"
+    ],
+    [
+      "Suspicious chmod Usage",
+      0,
+      "auditd/execve/lnx_auditd_chmod_suspicious.yml"
+    ],
+    [
+      "Compiler Execution on Linux",
+      0,
+      "auditd/execve/lnx_auditd_compiler_execution.yml"
+    ],
+    [
+      "Crontab Command Execution",
+      0,
+      "auditd/execve/lnx_auditd_crontab_usage.yml"
+    ],
+    [
+      "Data Exfiltration via Command Line",
+      0,
+      "auditd/execve/lnx_auditd_data_exfiltration.yml"
+    ],
+    [
+      "Environment Variable Manipulation",
+      0,
+      "auditd/execve/lnx_auditd_env_manipulation.yml"
+    ],
+    [
+      "Execution from /proc Filesystem",
+      0,
+      "auditd/execve/lnx_auditd_exec_from_proc.yml"
+    ],
+    [
+      "Exploitation Framework Execution",
+      0,
+      "auditd/execve/lnx_auditd_exploitation_tools.yml"
+    ],
+    [
+      "File Download via Command Line",
+      0,
+      "auditd/execve/lnx_auditd_file_download.yml"
+    ],
+    [
+      "File System Discovery",
+      0,
+      "auditd/execve/lnx_auditd_file_system_discovery.yml"
+    ],
+    [
+      "Firewall Rules Manipulation",
+      0,
+      "auditd/execve/lnx_auditd_firewall_manipulation.yml"
+    ],
+    [
+      "Local System Reconnaissance",
+      0,
+      "auditd/execve/lnx_auditd_local_recon.yml"
+    ],
+    [
+      "System Log Files Deletion",
+      0,
+      "auditd/execve/lnx_auditd_log_deletion.yml"
+    ],
+    [
+      "Network Discovery Commands",
+      0,
+      "auditd/execve/lnx_auditd_network_discovery.yml"
+    ],
+    [
+      "Network Scanning Tools Execution",
+      0,
+      "auditd/execve/lnx_auditd_network_scan.yml"
+    ],
+    [
+      "Password Policy Discovery",
+      0,
+      "auditd/execve/lnx_auditd_password_policy_discovery.yml"
+    ],
+    [
+      "Password Discovery Tools",
+      0,
+      "auditd/execve/lnx_auditd_password_tools.yml"
+    ],
+    [
+      "PATH Variable Manipulation",
+      0,
+      "auditd/execve/lnx_auditd_path_manipulation.yml"
+    ],
+    [
+      "Post Exploitation Tools Detected",
+      0,
+      "auditd/execve/lnx_auditd_post_exploitation.yml"
+    ],
+    [
+      "Process Injection Indicators",
+      0,
+      "auditd/execve/lnx_auditd_process_injection.yml"
+    ],
+    [
+      "Process Masquerading",
+      0,
+      "auditd/execve/lnx_auditd_process_masquerading.yml"
+    ],
+    [
+      "Security Framework Disabled",
+      0,
+      "auditd/execve/lnx_auditd_security_disable.yml"
+    ],
+    [
+      "SetUID or SetGID Bit Set",
+      0,
+      "auditd/execve/lnx_auditd_setuid_setgid.yml"
+    ],
+    [
+      "Interactive Shell Spawned",
+      0,
+      "auditd/execve/lnx_auditd_shell_execution.yml"
+    ],
+    [
+      "Network Sniffing Tools Execution",
+      0,
+      "auditd/execve/lnx_auditd_sniffing_tools.yml"
+    ],
+    [
+      "Suspicious Script Execution",
+      0,
+      "auditd/execve/lnx_auditd_suspicious_scripts.yml"
+    ],
+    [
+      "System Information Discovery",
+      0,
+      "auditd/execve/lnx_auditd_system_info_discovery.yml"
+    ],
+    [
+      "Tunneling Tools Execution",
+      0,
+      "auditd/execve/lnx_auditd_tunneling_tools.yml"
+    ],
+    [
+      "System Service Manipulation",
+      0,
+      "syslog/service_manipulation.yml"
+    ],
+    [
+      "Suspicious Process Execution",
+      0,
+      "syslog/suspicious_process.yml"
+    ],
+    [
+      "ASLR Disabled in Kernel Logs",
+      0,
+      "syslog/kernel/lnx_syslog_aslr_disabled.yml"
+    ],
+    [
+      "Kernel Exploitation Indicators",
+      0,
+      "syslog/kernel/lnx_syslog_kernel_exploit.yml"
+    ],
+    [
+      "Kernel Panic Detected",
+      0,
+      "syslog/kernel/lnx_syslog_kernel_panic.yml"
+    ],
+    [
+      "Memory Hardware Error",
+      0,
+      "syslog/kernel/lnx_syslog_memory_error.yml"
+    ],
+    [
+      "Suspicious Cron Job Execution",
+      0,
+      "syslog/system/lnx_syslog_cron_job.yml"
+    ],
+    [
+      "Disk Full - Potential Log Deletion Attack",
+      0,
+      "syslog/system/lnx_syslog_disk_full.yml"
+    ],
+    [
+      "Suspicious Mount Activity",
+      0,
+      "syslog/system/lnx_syslog_mount_suspicious.yml"
+    ],
+    [
+      "Unexpected System Reboot or Shutdown",
+      0,
+      "syslog/system/lnx_syslog_reboot.yml"
+    ],
+    [
+      "System Service Manipulation",
+      0,
+      "syslog/system/lnx_syslog_service_manipulation.yml"
+    ],
+    [
+      "System Time Changed Suspiciously",
+      0,
+      "syslog/system/lnx_syslog_time_change.yml"
+    ],
+    [
+      "USB Device Connected",
+      0,
+      "syslog/system/lnx_syslog_usb_device.yml"
+    ],
+    [
+      "DHCP Anomaly Detected",
+      0,
+      "syslog/network/lnx_syslog_dhcp_anomaly.yml"
+    ],
+    [
+      "DNS Anomaly in Syslog",
+      0,
+      "syslog/network/lnx_syslog_dns_anomaly.yml"
+    ],
+    [
+      "Firewall Blocking Suspicious Traffic",
+      0,
+      "syslog/network/lnx_syslog_firewall_block.yml"
+    ],
+    [
+      "Critical Process Crash",
+      0,
+      "syslog/process/lnx_syslog_process_crash.yml"
+    ],
+    [
+      "Suspicious Parent Process",
+      0,
+      "syslog/process/lnx_syslog_susp_parent_process.yml"
+    ],
+    [
+      "Suspicious Process Execution via Syslog",
+      0,
+      "syslog/process/lnx_syslog_susp_process.yml"
+    ],
+    [
+      "Zombie Process Detected",
+      0,
+      "syslog/process/lnx_syslog_zombie_process.yml"
+    ],
+    [
+      "Avahi mDNS Anomaly",
+      0,
+      "syslog/application/lnx_syslog_avahi_anomaly.yml"
+    ],
+    [
+      "Database Authentication Error",
+      0,
+      "syslog/application/lnx_syslog_database_error.yml"
+    ],
+    [
+      "Docker Container Escape Indicators",
+      0,
+      "syslog/application/lnx_syslog_docker_escape.yml"
+    ],
+    [
+      "Mail Relay Abuse",
+      0,
+      "syslog/application/lnx_syslog_mail_relay.yml"
+    ],
+    [
+      "Web Application Exploitation",
+      0,
+      "syslog/application/lnx_syslog_web_exploit.yml"
+    ]
+  ],
+  "skipped": []
+}

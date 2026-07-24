@@ -3,3 +3,5 @@
 {"name": "auditd_base64_exec", "technique": "T1059.004", "source": "auditd", "start": "2026-07-01T11:38:50.329660+00:00", "end": "2026-07-01T11:38:52.337654+00:00", "note": "Commande base64 (charge benigne echo). Cible : cmd_entropy.", "host": "ASUS-X415JA", "injected_at": "2026-07-01T11:38:52.337696+00:00"}
 {"name": "auditd_arg_heavy_exec", "technique": "T1059.004", "source": "auditd", "start": "2026-07-01T11:38:52.338040+00:00", "end": "2026-07-01T11:38:54.340802+00:00", "note": "echo 150 args. Cible : arg_count / cmd_length_log.", "host": "ASUS-X415JA", "injected_at": "2026-07-01T11:38:54.340845+00:00"}
 {"name": "syslog_volumetric_burst", "technique": null, "source": "syslog", "start": "2026-07-01T11:38:54.341206+00:00", "end": "2026-07-01T11:38:58.424947+00:00", "note": "300 messages logger en 1.1s. Cible : event_count_5m.", "host": "ASUS-X415JA", "injected_at": "2026-07-01T11:38:58.424972+00:00"}
+
+{"name":"cron_persist_T1053","source":"auditd","host":"asus-x415ja","start":"2026-07-14T11:48:30.000000+00:00","end":"2026-07-14T11:50:00.000000+00:00"}

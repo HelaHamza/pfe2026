@@ -1,0 +1,18 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "provider": "groq",
+  "temperature": 0.0,
+  "rag_backend": "tfidf",
+  "n_kb_chunks": 13,
+  "n_episodes_reaggregated": 18,
+  "n_episodes_in": 6,
+  "n_alerts_in": 55,
+  "verdicts": {
+    "false_positive": 4,
+    "uncertain": 2
+  },
+  "n_fail_open": 2,
+  "n_episodes_to_analyst": 2,
+  "noise_reduction_pct": 66.7,
+  "elapsed_s": 170.3
+}

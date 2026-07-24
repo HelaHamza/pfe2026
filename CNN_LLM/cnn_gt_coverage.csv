@@ -1,0 +1,7 @@
+scenario,technique,log_source,start,n_episodes,n_conserves,verdicts,etat
+auth_ssh_bruteforce,T1110.001,auth,2026-07-01 11:38:29.747258+00:00,1,1,uncertain,conserve
+auth_user_creation,T1136.001,auth,2026-07-01 11:38:48.125955+00:00,1,1,uncertain,conserve
+auditd_base64_exec,T1059.004,auditd,2026-07-01 11:38:50.329660+00:00,0,0,,jamais_detecte
+auditd_arg_heavy_exec,T1059.004,auditd,2026-07-01 11:38:52.338040+00:00,0,0,,jamais_detecte
+syslog_volumetric_burst,,syslog,2026-07-01 11:38:54.341206+00:00,0,0,,jamais_detecte
+cron_persist_T1053,,auditd,2026-07-14 11:48:30+00:00,1,1,uncertain,conserve

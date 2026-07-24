@@ -1,0 +1,73 @@
+# /etc/systemd/system/sentinel-retrain.service
+#
+# Installation :
+#   sudo cp deploy/sentinel-retrain.* /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now sentinel-retrain.timer
+#
+# Declenchement manuel (utile pour une demonstration devant le jury) :
+#   sudo systemctl start sentinel-retrain.service
+#   journalctl -u sentinel-retrain -f
+#
+# ADAPTER : User, les trois chemins, et le chemin de l'interpreteur.
+
+[Unit]
+Description=Sentinel CNN - cycle mensuel de reentrainement
+Documentation=file:///home/la-hamza/pfe-backend-2026/ML/retraining/README.md
+# Le cycle interroge Elasticsearch et MongoDB Atlas : sans reseau, il echoue
+# au preflight. Autant attendre que la pile reseau soit reellement montee.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=la-hamza
+Group=la-hamza
+WorkingDirectory=/home/la-hamza/pfe-backend-2026/ML
+Environment="PYTHONPATH=/home/la-hamza/pfe-backend-2026/ML"
+Environment="PYTHONUNBUFFERED=1"
+# Les secrets (ELASTIC_PWD, MONGO_URI) restent dans le .env, hors du depot.
+EnvironmentFile=-/home/la-hamza/pfe-backend-2026/ML/.env
+ExecStart=/home/la-hamza/pfe-backend-2026/venv/bin/python -m retraining.retrain_cnn
+
+# --- Ressources -------------------------------------------------------------
+# MemoryMax fait echouer PROPREMENT le cycle plutot que de faire ramer toute la
+# machine puis declencher l'OOM-killer du noyau sur un processus arbitraire --
+# potentiellement un conteneur ELK. A ajuster selon la RAM disponible une fois
+# la stack ELK demarree.
+MemoryMax=3G
+MemorySwapMax=1G
+# Le reentrainement est du travail de fond : il ne doit jamais disputer le CPU
+# ou le disque a la detection en temps reel.
+Nice=10
+CPUSchedulingPolicy=batch
+IOSchedulingClass=idle
+
+# --- Duree ------------------------------------------------------------------
+# Entrainement CPU sur 6 mois de logs : compter large.
+TimeoutStartSec=6h
+
+# --- Codes de sortie --------------------------------------------------------
+# 2 = candidat refuse par le gate. C'est un fonctionnement NORMAL du systeme,
+# pas une panne : systemd ne doit pas marquer l'unite en echec.
+SuccessExitStatus=0 2
+
+# --- Durcissement -----------------------------------------------------------
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=false
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+# --- Portable : ne pas entrainer sur batterie -------------------------------
+# Un cycle de plusieurs heures a pleine charge CPU viderait la batterie et
+# serait interrompu en cours de route.
+ConditionACPower=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

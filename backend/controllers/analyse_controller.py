@@ -1,488 +1,217 @@
 """
-backend/controllers/analyse_controller.py
-==========================================
-CONTROLLER — Analyse principale.
+controllers/analyse_controller.py
+=================================
+ORCHESTRATEUR BATCH. Ne connaît ni le pipeline (→ adapters) ni Mongo
+(→ repository). Il ne fait qu'ordonner, et cet ordre est la garantie
+centrale du système :
 
-GARANTIES :
-  1. Verrou IN-PROCESS thread-safe (threading.Lock) — protège double-clic
-  2. AUTO-RESET si state bloqué > STALE_LOCK_MINUTES (crash / reload uvicorn)
-  3. reset_state() exposé pour /run/reset (déblocage manuel)
-  4. Verrou ES atomique (claim_cursor) — protège workers concurrents
-  5. Curseur strict : fenêtre fermée ]cursor, new_cursor]
-  6. NOUVEAU — Stats du snapshot calculées EN MÉMOIRE (df_result + sigma_alerts),
-     plus aucun re-query ES après l'analyse → chiffres 100% déterministes,
-     stables entre reloads. Plus de time.sleep(1.5).
-  7. NOUVEAU — Corrélation AE↔Sigma EXACTE par intersection d'IDs :
-     {source_id des anomalies AE} ∩ {matched_doc_ids des alertes Sigma}.
+        collecter → PERSISTER → publier le rapport → AVANCER les curseurs
+
+Un curseur n'avance jamais avant que les résultats correspondants ne
+soient atteignables par l'API. Toute rupture de cette séquence produit une
+perte silencieuse de détections.
+
+INDÉPENDANCE DES BRANCHES : chaque branche a son propre try. Une panne du
+modèle CNN ne doit pas priver l'analyste de la détection par règles, qui
+est précisément le filet de sécurité.
+
+LIMITE ASSUMÉE : `_state` est un état PROCESSUS. Avec plusieurs workers
+uvicorn le verrou ne protège rien. Mono-worker en soutenance ; la version
+multi-worker exigerait un verrou dans `pipeline_state` (Mongo).
 """
-
 import asyncio
-import os
-import sys
+import logging
 import threading
-from collections import Counter
-from datetime import datetime, timezone
+import uuid
+from collections import Counter, deque
 
-import pandas as pd
+import config as CFG
+from adapters.cnn_adapter import CNNAdapter
+from adapters.sigma_adapter import SigmaAdapter
+from core.timeutils import now_utc, to_utc
+from models.enums import ReportStatus
+from models.report_model import Report, ReportStats, TacticCount
+from repositories.log_repository import LogRepository
+from repositories.report_repository import ReportRepository
 
-_BACKEND = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_ROOT    = os.path.dirname(_BACKEND)
-_CORE    = os.path.join(_ROOT, "core")
+log = logging.getLogger(__name__)
 
-for _p in [_CORE, _ROOT]:
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
-
-from ml.ae_model      import AEModel
-from ml.sigma_model   import SigmaModel
-from models.es_repository import ESRepository, _derive_source
-
-# ── Configuration ─────────────────────────────────────────────────────────────
-STALE_LOCK_MINUTES = 10
-
-# ── État global thread-safe ───────────────────────────────────────────────────
-_state_lock = threading.Lock()
+_MAX_LOGS = 500
+_lock = threading.Lock()
 _state = {
-    "running":     False,
-    "started_at":  None,
-    "finished_at": None,
-    "done":        False,
-    "error":       None,
-    "logs":        [],
-    "run_cursor":  None,
-    "new_cursor":  None,
+    "running": False, "done": False, "error": None, "run_id": None,
+    "started_at": None, "finished_at": None, "logs": deque(maxlen=_MAX_LOGS),
 }
 
 
-def _check_stale_locked():
-    """À appeler UNIQUEMENT depuis un bloc with _state_lock."""
-    if _state["running"] and _state["started_at"]:
-        try:
-            started = datetime.fromisoformat(
-                _state["started_at"].replace("Z", "+00:00")
-            )
-            age_min = (datetime.now(timezone.utc) - started).total_seconds() / 60
-            if age_min > STALE_LOCK_MINUTES:
-                print(f"[AnalyseController] ⚠ Lock obsolète ({age_min:.1f} min) — auto-reset")
-                _state["running"] = False
-                _state["error"]   = f"Auto-reset après {age_min:.1f} min sans réponse"
-                _state["done"]    = True
-        except Exception:
-            pass
-
-
+# ══════════════════════════════════════════════════════════════════════
+#  État exposé à la vue (polling front)
+# ══════════════════════════════════════════════════════════════════════
 def get_state() -> dict:
-    with _state_lock:
-        _check_stale_locked()
-        return dict(_state)
+    with _lock:
+        s = dict(_state)
+        s["logs"] = list(_state["logs"])
+        return s
 
 
-def reset_state():
-    with _state_lock:
-        print("[AnalyseController] ⚠ Reset manuel du state")
-        _state.update(
-            running=False, done=False, error=None,
-            started_at=None, finished_at=None, logs=[],
-            run_cursor=None, new_cursor=None,
-        )
+def _log(msg: str, level: int = logging.INFO):
+    with _lock:
+        _state["logs"].append({"ts": now_utc().isoformat(), "msg": msg})
+    log.log(level, "[Analyse] %s", msg)
 
 
-def set_running(value: bool):
-    """DEPRECATED — conservé pour compatibilité."""
-    with _state_lock:
-        _state["running"] = value
-
-
-def _log(msg: str):
-    entry = {"ts": datetime.now(timezone.utc).isoformat(), "msg": msg}
-    with _state_lock:
-        _state["logs"].append(entry)
-    print(f"[AnalyseController] {msg}")
-
-
-def _set_field(**kwargs):
-    with _state_lock:
-        _state.update(**kwargs)
-
-
-def _try_acquire_lock() -> bool:
-    with _state_lock:
-        _check_stale_locked()
+def _acquire(run_id: str) -> bool:
+    with _lock:
         if _state["running"]:
             return False
-        _state.update(
-            running=True, done=False, error=None, logs=[],
-            finished_at=None, run_cursor=None, new_cursor=None,
-            started_at=datetime.now(timezone.utc).isoformat(),
-        )
+        _state["logs"].clear()
+        _state.update(running=True, done=False, error=None, run_id=run_id,
+                      finished_at=None, started_at=now_utc().isoformat())
         return True
 
 
-# ── Pipeline principal ────────────────────────────────────────────────────────
-
 async def run_analyse():
-    if not _try_acquire_lock():
-        print("[AnalyseController] Analyse déjà en cours — abandon")
+    run_id = str(uuid.uuid4())
+    if not _acquire(run_id):
+        log.warning("[Analyse] run déjà en cours — abandon")
         return
+    await asyncio.to_thread(_run_pipeline, run_id)
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  Branches — collecte PUIS persistance, dans la même unité d'échec
+# ══════════════════════════════════════════════════════════════════════
+def _cnn_branch(run_id: str, until: str) -> tuple[list[dict], str]:
+    since = ReportRepository.get_cnn_cursor() or CFG.PROD_START
+    episodes, next_cursor = CNNAdapter.collect(since, until)
+    ReportRepository.save_cnn_episodes(episodes, run_id)   # lève si incomplet
+    _log(f"{len(episodes)} épisodes CNN persistés")
+    return episodes, next_cursor
+
+
+def _sigma_branch(run_id: str, until: str) -> tuple[list[dict], str]:
+    since = ReportRepository.get_sigma_cursor() or CFG.PROD_START
+    alerts, next_cursor = SigmaAdapter.collect(since, until)
+    ReportRepository.save_sigma_alerts(alerts, run_id)     # lève si incomplet
+    _log(f"{len(alerts)} alertes Sigma persistées")
+    return alerts, next_cursor
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  Pipeline
+# ══════════════════════════════════════════════════════════════════════
+def _run_pipeline(run_id: str):
+    with _lock:
+        started = _state["started_at"]      # borne haute FIGÉE, partagée
+
+    cnn_eps, sigma_alerts, errors = [], [], []
+    cnn_cursor = sigma_cursor = None
 
     try:
-        # ── Étape 1 : curseur courant ────────────────────────────────────────
-        cursor = ESRepository.get_cursor()
-        _set_field(run_cursor=cursor)
-        _log(f"Analyse depuis : {cursor}")
-
-        new = ESRepository.get_new_logs_count(cursor)
-        _log(f"Nouveaux logs : {new['total']}")
-        for src, cnt in new.get("by_source", {}).items():
-            _log(f"  {src} : {cnt} logs")
-
-        if new["total"] == 0:
-            _log("Aucun nouveau log — analyse ignorée (snapshot précédent conservé)")
-            return
-
-        new_cursor = new.get("max_timestamp")
-        if not new_cursor:
-            _log("Impossible de déterminer max_timestamp — abandon")
-            return
-
-        _set_field(new_cursor=new_cursor)
-
-        # ── Étape 1bis : CLAIM atomique ──────────────────────────────────────
-        if not ESRepository.claim_cursor(expected_cursor=cursor, new_cursor=new_cursor):
-            _log("⚠ Curseur déjà avancé par un autre run — abandon (pas de doublon)")
-            return
-
-        _log(f"✓ Curseur claimé : {cursor} → {new_cursor}")
-
-        # ── Étape 2 : AE + Sigma en parallèle ────────────────────────────────
-        _log("Lancement AE + Sigma en parallèle...")
-
-        loop = asyncio.get_running_loop()
-        ae_future    = loop.run_in_executor(None, _run_ae,    cursor, new_cursor)
-        sigma_future = loop.run_in_executor(None, _run_sigma, cursor, new_cursor)
-
-        ae_result, sigma_alerts = await asyncio.gather(
-            ae_future, sigma_future, return_exceptions=True
-        )
-
-        if isinstance(ae_result, Exception):
-            _log(f"[AE] Erreur : {ae_result}")
-            ae_result = None
-        if isinstance(sigma_alerts, Exception):
-            _log(f"[SIGMA] Erreur : {sigma_alerts}")
-            sigma_alerts = []
-
-        _log(
-            f"AE : {'✓' if ae_result is not None else '✗'}  |  "
-            f"Sigma : {'✓' if sigma_alerts is not None else '✗'}"
-        )
-
-        # ── Étape 3 : fusion (corrélation + LLM + snapshot mémoire) ──────────
-        _log("Corrélation AE ↔ Sigma + génération LLM...")
-        try:
-            _run_fusion(ae_result, sigma_alerts or [], cursor, new_cursor)
-        except Exception as e:
-            _log(f"[FUSION] Erreur non bloquante : {e}")
-
-        _log("✓ Analyse terminée")
-
+        cnn_eps, cnn_cursor = _cnn_branch(run_id, started)
     except Exception as e:
-        _set_field(error=str(e))
-        _log(f"ERREUR CRITIQUE : {e}")
-    finally:
-        _set_field(
-            running=False,
-            done=True,
-            finished_at=datetime.now(timezone.utc).isoformat(),
-        )
+        errors.append(f"CNN : {e}")
+        _log(f"ÉCHEC branche CNN : {e}", logging.ERROR)
 
-
-# ── Fonctions bloquantes (AE / Sigma) ─────────────────────────────────────────
-
-def _run_ae(cursor: str, until: str = None) -> dict | None:
     try:
-        try:
-            result = AEModel.infer(cursor, until=until)
-        except TypeError:
-            result = AEModel.infer(cursor)
-            if result and "df_result" in result:
-                cols = result["df_result"].columns.tolist()
-                print("[DEBUG] colonnes df_result:", cols)
-                print("[DEBUG] '_id' présent:", "_id" in cols, "| 'source_id' présent:", "source_id" in cols)
-        _log(f"[AE] {result['n_anomalies']} anomalies sur {result['n_logs']} logs")
-        return result
+        sigma_alerts, sigma_cursor = _sigma_branch(run_id, started)
     except Exception as e:
-        _log(f"[AE] Erreur : {e}")
-        return None
+        errors.append(f"Sigma : {e}")
+        _log(f"ÉCHEC branche Sigma : {e}", logging.ERROR)
 
-
-def _run_sigma(cursor: str = None, until: str = None) -> list:
     try:
-        try:
-            alerts = SigmaModel.run_rules(cursor=cursor, until=until)
-        except TypeError:
-            alerts = SigmaModel.run_rules(cursor=cursor)
-        _log(f"[SIGMA] {len(alerts)} alertes déclenchées")
-        return alerts
+        logs_by_source = LogRepository.count_logs_by_source()
     except Exception as e:
-        _log(f"[SIGMA] Erreur : {e}")
-        return []
+        logs_by_source = {}
+        errors.append(f"Comptage logs : {e}")
 
+    if cnn_cursor and sigma_cursor:
+        status = ReportStatus.completed
+    elif cnn_cursor or sigma_cursor:
+        status = ReportStatus.partial
+    else:
+        status = ReportStatus.failed
 
-# ── Helpers extraction champs Sigma (gèrent clés nues OU préfixées alert.) ────
-
-def _sig_level(a: dict) -> str:
-    return str(a.get("level", a.get("alert.level", "low"))).lower()
-
-
-def _sig_title(a: dict) -> str:
-    return a.get("title", a.get("alert.title", ""))
-
-
-def _sig_tactic(a: dict) -> str:
-    t = a.get("tactic", a.get("alert.tactic", ""))
-    return "" if t in ("voir règle", "voir regle", "") else t
-
-
-def _sig_source(a: dict) -> str:
-    ls = a.get("log_source", "")
-    return _derive_source(_sig_title(a), a.get("tactic", a.get("alert.tactic", "")), ls)
-
-
-def _sig_matched_ids(a: dict) -> list:
-    return a.get("matched_doc_ids", []) or []
-
-
-# ── Fusion : corrélation exacte + LLM + snapshot déterministe ─────────────────
-
-def _run_fusion(ae_result: dict | None, sigma_alerts: list,
-                cursor: str, new_cursor: str):
-    """
-    SANS FusionRouter (retiré car redondant). Fait :
-      1. Corrélation EXACTE par intersection d'IDs
-         {source_id des anomalies AE} ∩ {matched_doc_ids des alertes Sigma}
-      2. Conserve les explications LLM Sigma via explain_sigma_alerts()
-         (les explications AE sont déjà générées par write_to_elasticsearch
-          au moment de l'inférence AE)
-      3. Snapshot MongoDB calculé EN MÉMOIRE — déterministe.
-    """
-    # ── 0. IDs des logs détectés en anomalie par l'AE ────────────────────────
-    ae_anomaly_log_ids: set[str] = set()
-    ae_by_source       = {}
-    ae_by_source_dict  = {}
-    logs_by_source     = {}
-
-    if ae_result and "df_result" in ae_result:
-        df = ae_result["df_result"]
-        for src, grp in df.groupby("log_source"):
-            src       = str(src)
-            anomalies = int((grp.get("ae_is_anomaly", 0) == 1).sum())
-            ae_by_source[src]      = {"windows": len(grp), "anomalies": anomalies}
-            ae_by_source_dict[src] = anomalies
-            logs_by_source[src]    = len(grp)
-
-        anom_mask = df.get("ae_is_anomaly", pd.Series(0, index=df.index)) == 1
-        for _, row in df[anom_mask].iterrows():
-            sid = row.get("source_id") or row.get("_id")
-            if sid:
-                ae_anomaly_log_ids.add(str(sid))
-
-    _log(f"[FUSION] {len(ae_anomaly_log_ids)} logs en anomalie AE")
-
-    # ── 1. Corrélation exacte par intersection d'IDs ─────────────────────────
-    correlated_alerts = 0
-    correlated_log_ids: set[str] = set()
-
-    for a in sigma_alerts:
-        sig_ids = set(str(x) for x in (a.get("matched_doc_ids", []) or []))
-        inter   = sig_ids & ae_anomaly_log_ids
-        is_corr = len(inter) > 0
-        a["ae_correlated"]    = is_corr
-        a["detection_source"] = "both" if is_corr else "sigma_only"
-        if is_corr:
-            correlated_alerts += 1
-            correlated_log_ids |= inter
-            _log(f"[FUSION] BOTH : {_sig_title(a)} ({len(inter)} log(s) commun(s))")
-
-    _log(f"[FUSION] Corrélées — {correlated_alerts} alertes | "
-         f"{len(correlated_log_ids)} logs")
-
-    # ── 2. Explications LLM Sigma (conservées, sans FusionRouter) ────────────
-    if sigma_alerts:
-        try:
-            from sigma_engine import explain_sigma_alerts
-            explain_sigma_alerts(sigma_alerts)
-            _log(f"[FUSION] ✓ Explications LLM générées pour {len(sigma_alerts)} alertes")
-        except Exception as e:
-            _log(f"[FUSION] explain_sigma_alerts non bloquant : {e}")
-    # (les explications AE sont déjà écrites par write_to_elasticsearch)
-
-     # ── 3. Stats en MÉMOIRE — déterministes ──────────────────────────────────
+    # ── Rapport AVANT curseurs ────────────────────────────────────────
+    report_ok = False
     try:
-        total_ae    = sum(ae_by_source_dict.values())
-        total_sigma = len(sigma_alerts)
-        critical    = sum(1 for a in sigma_alerts if _sig_level(a) == "critical")
+        _save_snapshot(run_id, started, status, errors,
+                       cnn_eps, sigma_alerts, logs_by_source)
+        report_ok = True
+    except Exception as e:
+        errors.append(f"Rapport : {e}")
+        _log(f"ÉCHEC écriture du rapport : {e}", logging.ERROR)
 
-        sigma_by_level = {"critical": 0, "high": 0, "medium": 0, "low": 0}
-        for a in sigma_alerts:
-            lvl = _sig_level(a)
-            sigma_by_level[lvl if lvl in sigma_by_level else "low"] += 1
-
-        sigma_by_source = {
-            "syslog": {"critical": 0, "high": 0, "medium": 0, "low": 0},
-            "auth":   {"critical": 0, "high": 0, "medium": 0, "low": 0},
-            "auditd": {"critical": 0, "high": 0, "medium": 0, "low": 0},
-        }
-        for a in sigma_alerts:
-            src = _sig_source(a)
-            if src == "unknown":
+    # ── Curseurs UNIQUEMENT si les résultats sont atteignables ────────
+    if report_ok:
+        for setter, value, name in (
+                (ReportRepository.set_cnn_cursor, cnn_cursor, "CNN"),
+                (ReportRepository.set_sigma_cursor, sigma_cursor, "Sigma")):
+            if not value:
                 continue
-            sigma_by_source.setdefault(
-                src, {"critical": 0, "high": 0, "medium": 0, "low": 0}
-            )
-            lvl = _sig_level(a)
-            sigma_by_source[src][lvl if lvl in sigma_by_source[src] else "low"] += 1
+            try:
+                setter(value)
+                _log(f"Curseur {name} → {value}")
+            except Exception as e:
+                errors.append(f"Curseur {name} : {e}")
+                _log(f"Curseur {name} NON avancé : {e}", logging.ERROR)
+    else:
+        _log("Rapport non publié → AUCUN curseur avancé (relance sûre).",
+             logging.WARNING)
 
-        title_counts = Counter(_sig_title(a) for a in sigma_alerts if _sig_title(a))
-        by_tactic = [{"tactic": t, "count": c}
-                     for t, c in title_counts.most_common(8)]
-
-        both       = correlated_alerts
-        sigma_only = max(total_sigma - correlated_alerts, 0)
-        ae_only    = max(total_ae - len(correlated_log_ids), 0)
-        detection_src = {
-            "ae_only":         ae_only,
-            "sigma_only":      sigma_only,
-            "both":            both,
-            "total":           ae_only + sigma_only + both,
-            "correlated_logs": len(correlated_log_ids),
-        }
-
-        stats = {
-            "ae_anomalies":    total_ae,
-            "sigma_alerts":    total_sigma,
-            "critical":        critical,
-            "correlated_both": both,
-            "cursor":          cursor or "",
-        }
-
-        timeline = ESRepository.get_timeline_window(days=7, lo=None, hi=new_cursor)
-
-        # ── 🆕 NOUVEAU : construire results[] en mémoire ──────────────────────
-        snapshot_results = _build_results(ae_result, sigma_alerts)
-        _log(f"[FUSION] {len(snapshot_results)} résultats normalisés pour le snapshot")
-        # ─────────────────────────────────────────────────────────────────────
-
-        with _state_lock:
-            started_at = _state.get("started_at", "")
-
-        ESRepository.save_report(
-            stats             = stats,
-            cursor            = cursor,
-            new_cursor        = new_cursor,
-            started_at        = started_at,
-            ae_by_source      = ae_by_source,
-            ae_by_source_dict = ae_by_source_dict,
-            sigma_by_source   = sigma_by_source,
-            sigma_by_level    = sigma_by_level,
-            by_tactic         = by_tactic,
-            detection_src     = detection_src,
-            logs_by_source    = logs_by_source,
-            timeline          = timeline,
-            results           = snapshot_results,   # 🆕
-        )
-        _log(f"[FUSION] ✓ Snapshot figé — {total_ae} AE | {total_sigma} Sigma "
-             f"| {critical} crit | {both} corrélées")
-
-    except Exception as e:
-        _log(f"[FUSION] save_report non bloquant : {e}")
+    with _lock:
+        _state.update(running=False, done=True,
+                      error="; ".join(errors) if errors else None,
+                      finished_at=now_utc().isoformat())
+    _log("✓ Analyse terminée" if not errors
+         else f"Analyse terminée avec {len(errors)} erreur(s)")
 
 
-# ── 🆕 NOUVELLE FONCTION à ajouter après _run_fusion ─────────────────────────
+# ══════════════════════════════════════════════════════════════════════
+#  Snapshot dashboard
+# ══════════════════════════════════════════════════════════════════════
+_TACTIC_PLACEHOLDERS = {"", "voir règle", "n/a", "unknown", "none"}
 
-_SEV_RANK = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "UNKNOWN": 4}
-_SRC_RANK = {"both": 0, "sigma_only": 1, "ae_only": 2, "unknown": 3}
 
-def _build_results(ae_result: dict | None, sigma_alerts: list) -> list:
-    """
-    Construit la liste normalisée des résultats depuis les données EN MÉMOIRE.
-    Même structure que ResultsController._normalize() — la table peut lire
-    directement depuis le snapshot sans passer par ES.
-    """
-    results = []
+def _save_snapshot(run_id, started, status, errors,
+                   cnn_eps, sigma_alerts, logs_by_source):
+    shown = [e for e in cnn_eps if e.get("verdict") == "true_positive"]
+    fp = [e for e in cnn_eps if e.get("verdict") == "false_positive"]
+    to_review = [e for e in cnn_eps
+                 if e.get("verdict") not in ("true_positive", "false_positive")]
 
-    # ── Anomalies AE ─────────────────────────────────────────────────────────
-    if ae_result and "df_result" in ae_result:
-        df = ae_result["df_result"]
-        anom_mask = df.get("ae_is_anomaly", pd.Series(0, index=df.index)) == 1
-        df_anom = df[anom_mask]
+    cnn_sev = Counter(str(e.get("severity", "low")).lower() for e in shown)
+    cnn_verdict = Counter(e.get("verdict", "uncertain") for e in cnn_eps)
+    sig_lvl = Counter(str(a.get("level", "LOW")).lower() for a in sigma_alerts)
 
-        for _, row in df_anom.iterrows():
-            # Sévérité : utiliser kb_severity si présent, sinon calculer
-            kb_sev = str(row.get("kb_severity", "") or "").upper()
-            if not kb_sev or kb_sev in ("", "UNKNOWN", "NAN", "NONE"):
-                # Calculer depuis composite_score ou ae_anomaly_score
-                score = float(row.get("composite_score", 0) or 0)
-                ae_score = float(row.get("ae_anomaly_score", 0) or 0)
-                if score >= 7 or ae_score >= 0.85:
-                    kb_sev = "CRITICAL"
-                elif score >= 5 or ae_score >= 0.70:
-                    kb_sev = "HIGH"
-                elif score >= 3 or ae_score >= 0.50:
-                    kb_sev = "MEDIUM"
-                else:
-                    kb_sev = "LOW"
+    tactics = Counter(
+        a["tactic"] for a in sigma_alerts
+        if a.get("tactic")
+        and str(a["tactic"]).strip().lower() not in _TACTIC_PLACEHOLDERS)
 
-            src = str(row.get("log_source", "") or "")
-            detection_source = str(row.get("detection_source", "ae_only") or "ae_only")
-
-            results.append({
-                "id":               str(row.get("source_id") or row.get("_id") or ""),
-                "type":             "anomaly",
-                "@timestamp":       str(row.get("@timestamp", "") or ""),
-                "severity":         kb_sev,
-                "kb_severity":      kb_sev,
-                "detection_source": detection_source,
-                "title":            src or "Anomalie AE",
-                "log_source":       src,
-                "tactic":           "",
-                "score":            float(row.get("ae_anomaly_score", 0) or 0),
-                "ae_anomaly_score": float(row.get("ae_anomaly_score", 0) or 0),
-                "ae_correlated":    detection_source == "both",
-                "llm_explanation":  str(row.get("llm_explanation", "") or ""),
-            })
-
-    # ── Alertes Sigma ─────────────────────────────────────────────────────────
-    for a in sigma_alerts:
-        lvl = _sig_level(a).upper()
-        if lvl not in _SEV_RANK:
-            lvl = "LOW"
-
-        detection_source = a.get("detection_source", "sigma_only")
-
-        results.append({
-            "id":               str(a.get("id", "") or ""),
-            "type":             "alert",
-            "@timestamp":       str(a.get("@timestamp", "") or ""),
-            "severity":         lvl,
-            "kb_severity":      lvl,
-            "level":            lvl,
-            "detection_source": detection_source,
-            "title":            _sig_title(a),
-            "log_source":       _sig_source(a),
-            "tactic":           _sig_tactic(a),
-            "score":            None,
-            "ae_anomaly_score": None,
-            "hits":             a.get("hits", a.get("alert.hits", 0)),
-            "ae_correlated":    a.get("ae_correlated", False),
-            "llm_explanation":  str(a.get("llm_explanation", "") or ""),
-        })
-
-    # Tri : même logique que ResultsController
-    results.sort(key=lambda x: (x.get("@timestamp") or ""), reverse=True)
-    results.sort(key=lambda x: (
-        _SRC_RANK.get((x.get("detection_source") or "unknown").lower(), 3),
-        _SEV_RANK.get((x.get("kb_severity") or "unknown").upper(), 4),
-    ))
-
-    return results
+    report = Report(
+        analysis_id=run_id,
+        started_at=to_utc(started) or now_utc(),
+        finished_at=now_utc(),
+        status=status,
+        errors=errors,
+        stats=ReportStats(
+            cnn_episodes=len(cnn_eps),
+            cnn_kept=len(shown),
+            cnn_to_review=len(to_review),
+            sigma_alerts=len(sigma_alerts),
+            cnn_critical=cnn_sev.get("critical", 0),
+            sigma_critical=sig_lvl.get("critical", 0),
+            logs_total=sum(logs_by_source.values()),
+            # Dénominateur = TOUS les épisodes ; les `uncertain` ne comptent
+            # pas comme réduction (travail analyste déporté, pas supprimé).
+            noise_reduction_pct=round(100 * len(fp) / max(len(cnn_eps), 1), 1),
+        ),
+        cnn_by_severity=dict(cnn_sev),
+        cnn_by_verdict=dict(cnn_verdict),
+        sigma_by_level=dict(sig_lvl),
+        logs_by_source=logs_by_source,
+        by_tactic=[TacticCount(tactic=t, count=c)
+                   for t, c in tactics.most_common(8)],
+    )
+    ReportRepository.save_report(report)

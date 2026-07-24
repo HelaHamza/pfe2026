@@ -1,0 +1,44 @@
+log_source,host_name,start,end,duration_s,n_alerts,n_distinct_proc,top_processes,dominant_features,mse_max,mse_mean
+auth,ASUS-X415JA,2026-06-22 12:49:50.373000+00:00,2026-06-22 12:50:35.262000+00:00,44.9,12,3,"sshd, userdel, useradd","user_rarity (8), event_type_seq (3), is_fail (1)",48.7472,26.3878
+auth,ASUS-X415JA,2026-07-01 09:29:50.088000+00:00,2026-07-01 09:30:05.480000+00:00,15.4,5,3,"userdel, sshd, useradd","event_type_seq (4), user_rarity (1)",48.0541,34.7644
+auth,ASUS-X415JA,2026-07-01 11:38:29.973000+00:00,2026-07-01 11:38:50.273000+00:00,20.3,55,3,"sshd, userdel, useradd","ip_is_external (47), event_type_seq (4), is_fail (3)",48.0541,16.8921
+syslog,ASUS-X415JA,2026-06-23 07:36:34.520000+00:00,2026-06-23 07:39:31.915000+00:00,177.4,3,3,"systemd-modules-load, snapd-apparmor, gsd-rfkill","inter_arrival_log (1), event_type_seq (1), proc_rarity (1)",47.2274,23.2393
+syslog,ASUS-X415JA,2026-06-25 08:08:38.704000+00:00,2026-06-25 08:08:52.284000+00:00,13.6,2,2,"kernel, nm-dispatcher","inter_arrival_log (1), proc_rarity (1)",47.2274,28.0315
+syslog,ASUS-X415JA,2026-06-25 15:26:07.571000+00:00,2026-06-25 15:26:07.571000+00:00,0.0,1,1,check-new-release-gtk,proc_rarity (1),47.2274,47.2274
+auditd,asus-x415ja,2026-07-02 07:37:18.994000+00:00,2026-07-02 07:37:19.111000+00:00,0.1,5,2,"pavucontrol, pool-pavucontro","proc_rarity (3), exe_path_rarity (2)",45.1803,27.4754
+auditd,asus-x415ja,2026-07-02 06:26:14.570000+00:00,2026-07-02 06:29:48.073000+00:00,213.5,359,123,"cp, mkdir, ln","parent_child_rarity (219), proc_rarity (90), exe_path_rarity (35)",45.1801,24.2171
+auditd,asus-x415ja,2026-07-01 11:19:20.078000+00:00,2026-07-01 11:22:14.818000+00:00,174.7,5,3,"gnome-text-edit, df, 64636F6E6620776F726B6572","proc_rarity (3), exe_path_rarity (2)",45.1801,29.1219
+auditd,asus-x415ja,2026-07-01 11:38:48.169000+00:00,2026-07-01 11:38:52.337000+00:00,4.2,7,3,"useradd, userdel, echo","syscall_rarity (4), event_type_seq (2), parent_child_rarity (1)",45.1717,29.637
+auditd,asus-x415ja,2026-07-01 12:43:22.821000+00:00,2026-07-01 12:47:24.934000+00:00,242.1,3,2,"sed, clear","parent_child_rarity (2), proc_rarity (1)",45.1717,27.7094
+auditd,asus-x415ja,2026-07-01 09:30:03.386000+00:00,2026-07-01 09:30:07.521000+00:00,4.1,7,4,"useradd, userdel, base64","syscall_rarity (4), parent_child_rarity (2), event_type_seq (1)",43.5627,32.2947
+auditd,asus-x415ja,2026-07-02 06:16:56.563000+00:00,2026-07-02 06:17:28.070000+00:00,31.5,6,2,"plugins-curated, exe","exe_path_rarity (4), inter_arrival_log (1), cmd_length_log (1)",43.0922,19.9519
+auth,ASUS-X415JA,2026-06-28 16:27:55.230000+00:00,2026-06-28 16:28:17.890000+00:00,22.7,7,3,"userdel, sshd, useradd","event_type_seq (4), user_rarity (3)",42.8249,26.3928
+auth,ASUS-X415JA,2026-06-22 13:57:10.700000+00:00,2026-06-22 13:57:10.811000+00:00,0.1,5,2,"userdel, useradd","event_type_seq (3), user_rarity (2)",37.6954,27.0113
+auth,ASUS-X415JA,2026-06-16 17:21:46.988000+00:00,2026-06-16 17:23:26.576000+00:00,99.6,4,4,"polkitd, charon, gnome-keyring-daemon",event_type_seq (4),33.1995,22.514
+syslog,ASUS-X415JA,2026-06-22 12:59:53.736000+00:00,2026-06-22 12:59:53.736000+00:00,0.0,2,1,fstrim,proc_rarity (2),30.9419,28.0947
+auth,ASUS-X415JA,2026-06-22 13:09:30.630000+00:00,2026-06-22 13:09:30.976000+00:00,0.3,2,1,sshd,user_rarity (2),30.2741,23.2662
+auditd,asus-x415ja,2026-07-01 13:50:32.352000+00:00,2026-07-01 13:50:32.440000+00:00,0.1,3,2,"check-new-relea, pool-check-new-",parent_child_rarity (3),27.838,21.8945
+auditd,asus-x415ja,2026-07-01 11:06:20.492000+00:00,2026-07-01 11:06:20.492000+00:00,0.0,1,1,echo,parent_child_rarity (1),27.6537,27.6537
+auditd,asus-x415ja,2026-07-01 14:31:47.520000+00:00,2026-07-01 14:31:47.852000+00:00,0.3,5,2,"git, sh",parent_child_rarity (5),27.6286,20.5384
+auditd,asus-x415ja,2026-07-02 07:48:36.788000+00:00,2026-07-02 07:48:36.871000+00:00,0.1,8,7,"release-upgrade, (ade-motd), date","proc_rarity (5), parent_child_rarity (3)",27.4916,20.5315
+auditd,asus-x415ja,2026-07-01 18:06:06.041000+00:00,2026-07-01 18:06:06.045000+00:00,0.0,2,2,"alsactl, (apport)","exe_path_rarity (1), parent_child_rarity (1)",27.3957,18.9072
+auditd,asus-x415ja,2026-07-01 10:53:42.871000+00:00,2026-07-01 10:54:13.187000+00:00,30.3,5,3,"head, systemctl, pool-gnome-term",parent_child_rarity (5),27.1975,17.0359
+auditd,asus-x415ja,2026-07-01 11:27:20.896000+00:00,2026-07-01 11:29:33.715000+00:00,132.8,2,2,"echo, df","parent_child_rarity (1), exe_path_rarity (1)",26.9953,18.6432
+syslog,ASUS-X415JA,2026-06-21 10:31:57.311000+00:00,2026-06-21 10:31:57.311000+00:00,0.0,1,1,dnsmasq-dhcp,proc_rarity (1),25.1361,25.1361
+auth,ASUS-X415JA,2026-06-27 09:16:40.579000+00:00,2026-06-27 09:16:40.579000+00:00,0.0,1,0,,event_type_seq (1),23.0163,23.0163
+auth,ASUS-X415JA,2026-06-16 16:21:33.729000+00:00,2026-06-16 16:21:37.137000+00:00,3.4,2,2,"dbus-daemon, gdm-password]",event_type_seq (2),21.785,16.8068
+syslog,ASUS-X415JA,2026-06-21 12:10:08.690000+00:00,2026-06-21 12:10:14.761000+00:00,6.1,2,2,"kernel, dnsmasq-dhcp","inter_arrival_log (1), proc_rarity (1)",21.087,15.6766
+syslog,ASUS-X415JA,2026-06-22 12:26:31.756000+00:00,2026-06-22 12:29:34.771000+00:00,183.0,3,3,"systemd-modules-load, snapd, whoopsie","inter_arrival_log (1), event_type_seq (1), proc_rarity (1)",21.0766,15.5155
+auth,ASUS-X415JA,2026-06-16 16:05:01.355000+00:00,2026-06-16 16:05:01.355000+00:00,0.0,1,1,CRON,event_type_seq (1),20.5101,20.5101
+syslog,ASUS-X415JA,2026-06-22 13:38:32.188000+00:00,2026-06-22 13:38:32.188000+00:00,0.0,1,1,whoopsie,proc_rarity (1),18.0425,18.0425
+syslog,ASUS-X415JA,2026-06-20 11:07:04.862000+00:00,2026-06-20 11:07:13.630000+00:00,8.8,2,2,"systemd, evolution-calen","inter_arrival_log (1), proc_rarity (1)",17.6656,15.5827
+syslog,ASUS-X415JA,2026-06-27 07:06:01.465000+00:00,2026-06-27 07:10:01.226000+00:00,239.8,2,2,"systemd-modules-load, CRON","inter_arrival_log (1), event_type_seq (1)",15.1979,12.7058
+syslog,ASUS-X415JA,2026-06-24 13:34:51.422000+00:00,2026-06-24 13:34:51.422000+00:00,0.0,1,1,kernel,inter_arrival_log (1),14.6263,14.6263
+auth,ASUS-X415JA,2026-06-16 16:46:42.291000+00:00,2026-06-16 16:46:42.291000+00:00,0.0,1,1,gdm-password],event_type_seq (1),14.5556,14.5556
+syslog,ASUS-X415JA,2026-06-21 09:45:26.477000+00:00,2026-06-21 09:45:26.477000+00:00,0.0,1,1,rsyslogd,inter_arrival_log (1),14.0888,14.0888
+syslog,ASUS-X415JA,2026-06-25 06:41:19.550000+00:00,2026-06-25 06:41:19.550000+00:00,0.0,1,1,kernel,inter_arrival_log (1),13.8283,13.8283
+auditd,asus-x415ja,2026-07-01 17:46:07.880000+00:00,2026-07-01 17:46:20.011000+00:00,12.1,2,1,hdparm,"inter_arrival_log (1), event_type_seq (1)",10.9865,10.2285
+syslog,ASUS-X415JA,2026-06-25 10:04:02.802000+00:00,2026-06-25 10:04:02.802000+00:00,0.0,1,1,systemd-modules-load,inter_arrival_log (1),10.6803,10.6803
+syslog,ASUS-X415JA,2026-06-27 09:16:25.228000+00:00,2026-06-27 09:16:25.228000+00:00,0.0,1,1,systemd-modules-load,inter_arrival_log (1),10.1424,10.1424
+syslog,ASUS-X415JA,2026-06-25 12:40:04.690000+00:00,2026-06-25 12:40:04.690000+00:00,0.0,1,1,kernel,inter_arrival_log (1),9.3318,9.3318
+syslog,ASUS-X415JA,2026-06-23 09:24:52.700000+00:00,2026-06-23 09:24:52.700000+00:00,0.0,1,1,kernel,inter_arrival_log (1),8.9807,8.9807

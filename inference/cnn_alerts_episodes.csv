@@ -1,0 +1,7 @@
+log_source,host_name,start,end,duration_s,n_alerts,n_distinct_proc,top_processes,dominant_features,mse_max,mse_mean
+auditd,asus-x415ja,2026-07-23 12:13:01.786000+00:00,2026-07-23 12:13:57.548000+00:00,55.8,5,2,"snapd, xdelta3",exe_path_rarity (5),43.0923,27.9719
+auditd,asus-x415ja,2026-07-23 11:00:41.863000+00:00,2026-07-23 11:02:01.555000+00:00,79.7,23,4,"cups-browsed, ippfind, snap-seccomp","user_rarity (19), parent_child_rarity (3), exe_path_rarity (1)",36.2425,25.0884
+auditd,asus-x415ja,2026-07-23 11:12:28.706000+00:00,2026-07-23 11:12:28.707000+00:00,0.0,3,2,"uvicorn, uname",parent_child_rarity (3),27.3168,21.5674
+auditd,asus-x415ja,2026-07-23 14:00:11.254000+00:00,2026-07-23 14:00:11.254000+00:00,0.0,1,1,snap-seccomp,exe_path_rarity (1),15.5449,15.5449
+auditd,asus-x415ja,2026-07-23 13:20:33.729000+00:00,2026-07-23 13:23:05.342000+00:00,151.6,22,4,"cups-browsed, ippfind, (fwupdmgr)","user_rarity (20), inter_arrival_log (1), parent_child_rarity (1)",15.5057,11.7241
+syslog,ASUS-X415JA,2026-07-23 13:20:33.694000+00:00,2026-07-23 13:20:33.694000+00:00,0.0,1,1,kernel,inter_arrival_log (1),8.1802,8.1802

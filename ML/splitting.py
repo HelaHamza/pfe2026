@@ -17,7 +17,7 @@ au demarrage.
 from __future__ import annotations
 import pandas as pd
 
-import config as C
+import config_cnn as C
 
 
 # ---------------------------------------------------------------------------

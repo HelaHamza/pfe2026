@@ -1,0 +1,101 @@
+# .github/workflows/ci.yml
+#
+# PERIMETRE ASSUME
+# ----------------
+# Cette CI ne reentraine PAS le modele et ne cherche pas a le faire : les
+# donnees vivent dans un Elasticsearch local et l'entrainement dure des heures
+# sur CPU. Un runner GitHub n'a acces ni aux unes ni au temps des autres.
+#
+# Ce que la CI verifie, et qui a une vraie valeur :
+#   * les contrats de configuration (bugs deja rencontres sur ce projet) ;
+#   * la logique de seuillage GPD-POT, testable sur donnees synthetiques ;
+#   * le store d'artefacts : manifest, detection d'alteration, atomicite de
+#     la promotion, rollback.
+#
+# Autrement dit : la CI valide le HARNAIS de reentrainement, le timer systemd
+# execute le reentrainement. C'est la separation CI / CT.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job rapide : ne demande aucune dependance lourde. Retour en < 1 min.
+  # -------------------------------------------------------------------------
+  lint:
+    name: Lint et compilation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compilation de tous les modules
+        run: python -m compileall -q ML/
+      - name: Ruff
+        run: |
+          pip install ruff
+          ruff check ML/ --select E9,F63,F7,F82 --output-format=github
+
+  # -------------------------------------------------------------------------
+  # Job complet : tests unitaires.
+  # -------------------------------------------------------------------------
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Dependances
+        run: |
+          python -m pip install -U pip
+          # torch CPU uniquement : la roue GPU pese ~2,5 Go pour rien ici.
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy pandas scipy scikit-learn joblib pyarrow \
+                      python-dotenv pytest pytest-cov
+
+      - name: Tests
+        working-directory: ML
+        env:
+          # config_cnn lit ces variables au chargement. Valeurs neutres :
+          # aucun test n'ouvre de connexion reseau.
+          ES_HOST: https://localhost:9200
+          ELASTIC_PWD: ci-dummy
+          # ES_TIME_LTE=now permet au controle de coherence des bornes
+          # temporelles de config_cnn de passer quelle que soit la date.
+          ES_TIME_LTE: now
+        run: |
+          pytest tests/ -v --tb=short \
+                 --cov=retraining --cov-report=term-missing
+
+  # -------------------------------------------------------------------------
+  # Verification que les unites systemd restent syntaxiquement valides.
+  # -------------------------------------------------------------------------
+  systemd:
+    name: Unites systemd
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: systemd-analyze verify
+        run: |
+          sudo cp ML/deploy/sentinel-retrain.service \
+                  ML/deploy/sentinel-retrain.timer /etc/systemd/system/
+          # Les chemins pointent vers un poste de developpement : les
+          # avertissements d'existence sont attendus, les erreurs de SYNTAXE
+          # ne le sont pas.
+          systemd-analyze verify sentinel-retrain.timer 2>&1 | tee out.txt
+          ! grep -qiE "Failed to (parse|load)" out.txt

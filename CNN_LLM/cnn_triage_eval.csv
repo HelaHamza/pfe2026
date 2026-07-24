@@ -1,0 +1,48 @@
+episode_id,log_source,start,verdict,confidence,severity,gt_scenario,title
+EP-924d1ebbf1,auth,2026-06-28 16:27:54.970000+00:00,uncertain,0.6,medium,,Création et suppression de comptes suite à multiples échecs SSH
+EP-9bb37b537f,syslog,2026-06-23 07:36:34.520000+00:00,false_positive,0.94,info,,"Chargement modules, snapd-apparmor et gsd-rfkill – activité système normale"
+EP-8dbcb5db4c,syslog,2026-06-25 08:08:38.704000+00:00,false_positive,0.92,info,,Exécution légitime de nm-dispatcher après réveil du poste
+EP-4c81a551a1,syslog,2026-06-25 15:26:07.571000+00:00,false_positive,0.95,info,,Vérification de mise à jour GNOME (check-new-release-gtk)
+EP-22cbaa7611,auditd,2026-07-12 23:00:00.257000+00:00,false_positive,0.95,info,,Rotation journaux et backup quotidien (cron.daily)
+EP-0151688dd2,auditd,2026-07-14 11:44:16.728000+00:00,uncertain,0.42,medium,cron_persist_T1053,Suspicion d'installation d'un binaire caché et persistance cron
+EP-7940ba7c5c,auditd,2026-07-14 12:05:12.513000+00:00,uncertain,0.5,low,,Exécution d'un binaire caché .rk_beacon par utilisateur hala-hamza
+EP-48bdfdb9dd,auditd,2026-07-13 05:23:49.983000+00:00,uncertain,0.55,medium,,Modification d’audit et rafraîchissement Snap en même temps
+EP-99f90406d2,auditd,2026-07-12 14:57:09.610000+00:00,false_positive,0.85,info,,Dnsmasq connecté et configuration modifiée par utilisateur normal
+EP-49b0474ff5,auditd,2026-07-12 15:21:02.626000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-d52bbbeedb,auditd,2026-07-14 09:22:09.461000+00:00,uncertain,0.55,medium,,Modification d’audit et exécution de codex par user-hala-hamza
+EP-600f39349d,auditd,2026-07-14 12:42:42.407000+00:00,false_positive,0.95,info,,Exécution normale de dnsmasq sous nobody
+EP-ac28dd51fc,auditd,2026-07-14 13:42:01.751000+00:00,false_positive,0.92,info,,Exécution légitime de hdparm puis activité dnsmasq (service réseau)
+EP-dc6c5fc571,auth,2026-07-01 11:38:29.973000+00:00,uncertain,0.6,medium,auth_ssh_bruteforce,Tentative création et suppression de compte après rafale SSH locale
+EP-6c73422792,auth,2026-06-28 10:25:54.523000+00:00,false_positive,0.95,info,,Session graphique normale avec pkexec
+EP-bfcc04ae2d,auth,2026-06-28 11:28:25.731000+00:00,false_positive,0.92,info,,Événement dbus-daemon isolé sans contexte utilisateur
+EP-54b05b8dec,syslog,2026-06-22 12:59:53.736000+00:00,false_positive,0.95,info,,Exécution planifiée de fstrim (maintenance SSD)
+EP-5e12c381e7,auditd,2026-07-12 15:15:01.231000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-72f108c1b9,auditd,2026-07-13 15:46:25.714000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-34e077aff7,auditd,2026-07-13 06:12:21.952000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-f16ff53223,auditd,2026-07-12 15:48:57.952000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-98a6a1edb7,auditd,2026-07-13 14:32:07.495000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-766c2f7c3c,auth,2026-07-01 09:29:50.088000+00:00,uncertain,0.0,low,,Triage indisponible (auth)
+EP-f7353e5372,syslog,2026-06-21 10:31:57.311000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-cc347e09b6,syslog,2026-06-21 12:10:08.690000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-c1f6abd1ab,syslog,2026-06-22 12:26:31.756000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-42c6231096,syslog,2026-06-22 13:38:32.188000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-8745ce3076,syslog,2026-06-20 11:07:04.862000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-6ec1d7db69,auditd,2026-07-12 16:26:27.952000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-a0200857f6,auditd,2026-07-13 06:05:22.925000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-4aae9f44bc,auth,,uncertain,0.0,low,,Triage indisponible (auth)
+EP-a9628cd9e1,syslog,2026-06-27 07:06:01.465000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-363b39d6bd,syslog,2026-06-24 13:34:51.422000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-20fc6845e9,syslog,2026-06-21 09:45:26.477000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-e29bf6626a,syslog,2026-06-25 06:41:19.550000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-55ffa58c66,auth,2026-06-27 22:38:44.256000+00:00,uncertain,0.0,low,,Triage indisponible (auth)
+EP-c5acce6c80,auditd,2026-07-12 16:49:21.517000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-b870704086,auditd,2026-07-13 12:40:42.724000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-d165627ed9,auditd,2026-07-13 18:14:10.932000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-40a0ccb237,syslog,2026-06-25 10:04:02.802000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-f49df78207,auditd,2026-07-12 16:33:57.856000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-35a8d6b5f8,syslog,2026-06-27 09:16:25.228000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-b1856ca29b,syslog,2026-06-25 12:40:04.690000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-5ce86e9a48,auditd,2026-07-13 17:20:52.760000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-7c02d9911e,auditd,2026-07-12 21:32:25.748000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)
+EP-e4b33c7adb,syslog,2026-06-23 09:24:52.700000+00:00,uncertain,0.0,low,,Triage indisponible (syslog)
+EP-c01e9d9595,auditd,2026-07-12 19:36:07.748000+00:00,uncertain,0.0,low,,Triage indisponible (auditd)

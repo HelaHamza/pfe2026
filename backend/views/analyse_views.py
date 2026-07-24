@@ -1,59 +1,41 @@
-# import asyncio
-# import json
-# from fastapi import APIRouter, Depends
-# from fastapi.responses import StreamingResponse
+"""
+views/analyse_views.py
+======================
+Déclenchement et suivi du pipeline batch.
 
-# from controllers.analyse_controller import run_analyse, get_state
-# from core.deps import get_current_user
+⚠️ À COMPARER avec ton fichier existant : garde tes chemins de routes si le
+frontend les appelle déjà (`/analyse/run`, `/analyse/status`…).
 
-# router = APIRouter(prefix="/run", tags=["Analyse"])
+Le lancement est ASYNCHRONE : la requête rend la main immédiatement, le
+pipeline tourne dans un thread et le front interroge /status. Un pipeline
+de plusieurs minutes ne peut pas tenir dans un cycle requête/réponse.
+"""
+from fastapi import APIRouter, BackgroundTasks, Depends
 
+from controllers import analyse_controller
+from core.deps import get_current_user
+from models.analyse_model import AnalyseStatus, AnalyseTrigger
 
-# @router.post("/analyse")
-# async def start_analyse(current_user: dict = Depends(get_current_user)):
-#     """Lance une analyse SOC (AE + Sigma + LLM)."""
-#     state = get_state()
-#     if state["running"]:
-#         return {"status": "already_running", "started_at": state["started_at"]}
-#     asyncio.create_task(run_analyse())
-#     return {"status": "started"}
-
-
-# @router.get("/analyse/status")
-# def analyse_status(current_user: dict = Depends(get_current_user)):
-#     state = get_state()
-#     return {
-#         "running":    state["running"],
-#         "done":       state["done"],
-#         "started_at": state["started_at"],
-#         "error":      state["error"],
-#         "last_log":   state["logs"][-1]["msg"] if state["logs"] else None,
-#     }
+router = APIRouter(prefix="/analyse", tags=["Analyse"])
 
 
-# @router.get("/analyse/stream")
-# async def stream_progress():
-#     """
-#     SSE pour suivre la progression en temps réel.
-#     Note : EventSource ne supportant pas les headers, l'auth ici est faite
-#     via le proxy Vite ou via un token en query string (à toi de voir).
-#     """
-#     async def generator():
-#         sent = 0
-#         while True:
-#             state = get_state()
-#             logs  = state["logs"]
-#             while sent < len(logs):
-#                 yield f"data: {json.dumps(logs[sent])}\n\n"
-#                 sent += 1
-#             if state["done"] and sent >= len(logs) and sent > 0:
-#                 yield f"data: {json.dumps({'msg': '__DONE__'})}\n\n"
-#                 break
-#             yield ": keepalive\n\n"
-#             await asyncio.sleep(0.5)
+@router.post("/run", response_model=AnalyseTrigger,
+             summary="Lancer un run du pipeline")
+async def run(background: BackgroundTasks,
+              current_user: dict = Depends(get_current_user)) -> AnalyseTrigger:
+    state = analyse_controller.get_state()
+    if state["running"]:
+        # 200 volontaire : ce n'est pas une erreur client, c'est un état.
+        # Le front affiche « analyse déjà en cours » et bascule sur /status.
+        return AnalyseTrigger(started=False, run_id=state["run_id"],
+                              message="Une analyse est déjà en cours.")
 
-#     return StreamingResponse(
-#         generator(),
-#         media_type="text/event-stream",
-#         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-#     )
+    background.add_task(analyse_controller.run_analyse)
+    return AnalyseTrigger(started=True, run_id=None,
+                          message="Analyse lancée.")
+
+
+@router.get("/status", response_model=AnalyseStatus,
+            summary="État du run en cours ou du dernier run")
+def status(current_user: dict = Depends(get_current_user)) -> AnalyseStatus:
+    return AnalyseStatus(**analyse_controller.get_state())

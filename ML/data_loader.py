@@ -3,13 +3,6 @@ data_loader.py
 ==============
 Chargement des logs depuis Elasticsearch.
 
-Principe clef : on lit les champs ECS *BRUTS* (poses par les modules
-Filebeat/Auditbeat, donc presents APRES l'ingest pipeline), et PLUS AUCUN
-champ `ml.*`. Cela rend le pipeline independant de la version de Logstash
-deployee (le `_search` fourni a montre que l'ancienne pipeline `ml.*` etait
-encore en base). `log_source` est derive ici en Python avec la meme logique
-que Logstash.
-
 Sortie : un DataFrame "brut" a colonnes normalisees, consomme par
 feature_engineering.build_features().
 """
@@ -23,7 +16,7 @@ import urllib.request
 import numpy as np
 import pandas as pd
 
-import config as C
+import config_cnn as C
 
 # Champs ECS bruts a recuperer (tous optionnels selon la source).
 _SOURCE_FIELDS = [

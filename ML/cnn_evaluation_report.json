@@ -1,0 +1,54 @@
+{
+  "test_window_by_source": {
+    "auth": {
+      "start": "2026-06-16 16:02:43.963000+00:00",
+      "end": "2026-07-02 12:10:01.179000+00:00",
+      "n": 5534
+    },
+    "syslog": {
+      "start": "2026-06-19 22:42:26.754000+00:00",
+      "end": "2026-06-27 09:16:25.230000+00:00",
+      "n": 40000
+    },
+    "auditd": {
+      "start": "2026-07-01 08:12:25.203000+00:00",
+      "end": "2026-07-02 12:12:16.519000+00:00",
+      "n": 79031
+    }
+  },
+  "thresholds": {
+    "auth": 11.108546713637551,
+    "syslog": 7.937677922924306,
+    "auditd": 8.669546602707712
+  },
+  "diagnostics": {
+    "auth": {
+      "n": 5534,
+      "alert_rate_pct": 1.717,
+      "score_median": 0.0072,
+      "score_p99": 15.4337,
+      "score_skew": 8.357,
+      "score_kurtosis": 92.04
+    },
+    "syslog": {
+      "n": 40000,
+      "alert_rate_pct": 0.065,
+      "score_median": 0.1034,
+      "score_p99": 3.3284,
+      "score_skew": 17.646,
+      "score_kurtosis": 754.337
+    },
+    "auditd": {
+      "n": 79031,
+      "alert_rate_pct": 0.531,
+      "score_median": 0.1322,
+      "score_p99": 4.4921,
+      "score_skew": 15.09,
+      "score_kurtosis": 268.325
+    }
+  },
+  "n_scored": 124565,
+  "n_alerts_primary": 541,
+  "n_alerts_context": 0,
+  "n_alert_episodes": 43
+}

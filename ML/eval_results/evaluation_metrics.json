@@ -1,0 +1,111 @@
+{
+  "config": {
+    "from_csv": "cnn_scored_test.csv",
+    "groundtruth": "groundtruth.jsonl",
+    "tolerance_s": 120,
+    "n_events": 159849,
+    "n_attack": 359,
+    "attack_prevalence": 0.002245869539377788
+  },
+  "episode_level": {
+    "window_detection_recall": 1.0,
+    "n_windows_detected": 3,
+    "n_windows_scorable": 3,
+    "n_windows_gt": 6,
+    "episode_precision": 0.0435,
+    "n_attack_episodes": 2,
+    "n_episodes": 46,
+    "detail": [
+      {
+        "name": "auth_ssh_bruteforce",
+        "source": "auth",
+        "scorable": true,
+        "detected": true,
+        "mse_max": 39.57
+      },
+      {
+        "name": "auth_user_creation",
+        "source": "auth",
+        "scorable": true,
+        "detected": true,
+        "mse_max": 39.57
+      },
+      {
+        "name": "auditd_base64_exec",
+        "source": "auditd",
+        "scorable": false,
+        "detected": false,
+        "mse_max": null
+      },
+      {
+        "name": "auditd_arg_heavy_exec",
+        "source": "auditd",
+        "scorable": false,
+        "detected": false,
+        "mse_max": null
+      },
+      {
+        "name": "syslog_volumetric_burst",
+        "source": "syslog",
+        "scorable": false,
+        "detected": false,
+        "mse_max": null
+      },
+      {
+        "name": "cron_persist_T1053",
+        "source": "auditd",
+        "scorable": true,
+        "detected": true,
+        "mse_max": 44.95
+      }
+    ]
+  },
+  "line_per_source": {
+    "auth": {
+      "n": 6452,
+      "n_attack": 249,
+      "roc_auc": 0.931,
+      "pr_auc": 0.6558,
+      "precision_at_k": 0.759,
+      "k": 249
+    },
+    "syslog": {
+      "n": 40000,
+      "n_attack": 0,
+      "note": "pas de contraste (labels homogenes)"
+    },
+    "auditd": {
+      "n": 113397,
+      "n_attack": 110,
+      "roc_auc": 0.8825,
+      "pr_auc": 0.0238,
+      "precision_at_k": 0.0727,
+      "k": 110
+    }
+  },
+  "global": {
+    "roc_auc": 0.8731,
+    "pr_auc": 0.158,
+    "n": 159849,
+    "n_attack": 359,
+    "attack_prevalence": 0.00225
+  },
+  "operating_point": {
+    "precision": 0.3419,
+    "recall": 0.2228,
+    "f1": 0.2698,
+    "tp": 80,
+    "fp": 154,
+    "tn": 159336,
+    "fn": 279,
+    "precision_medium_plus": 0.1732,
+    "n_fired_medium_plus": 127
+  },
+  "score_inversion": {
+    "attack_median_score": 4.8679,
+    "attack_max_score": 48.0541,
+    "benign_max_score": 47.2274,
+    "benign_above_attack_median": 435,
+    "benign_above_attack_median_frac": 0.0027
+  }
+}

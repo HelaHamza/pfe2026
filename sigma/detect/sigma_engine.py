@@ -1,35 +1,89 @@
 """
-=============================================================================
-SIGMA DETECTION ENGINE — version complète avec explication LLM
-=============================================================================
+sigma/detect/sigma_engine.py
+============================
+MOTEUR DE DÉTECTION PAR RÈGLES SIGMA.
 
-MODIFICATIONS :
-  1. print_alert()           → retourne l'es_id du doc créé dans sigma-alerts
-  2. run_simple_rules()      → fenêtre ]cursor, until] + matched_doc_ids
-  3. run_aggregation_rules() → inchangée (fenêtre glissante now-Xm)
-  4. explain_sigma_alerts()  → génère une explication LLM pour chaque alerte
-  5. main()                  → collecte toutes les alertes et appelle le LLM
-=============================================================================
+RÔLE : détecter et RETOURNER des alertes. Ce module n'écrit RIEN en base.
+
+Pourquoi ce changement : `sigma_engine` importait `ReportRepository` via un
+`sys.path` codant en dur le chemin du backend, tandis que le backend
+importait `sigma_engine`. Chaque couche dépendait de l'autre. Cela
+contredisait la doctrine du projet — « le backend est consommateur, le
+couplage se fait par MongoDB » — puisque c'était le moteur de détection qui
+écrivait en base.
+
+Désormais : le moteur produit des dicts, `backend/adapters/sigma_adapter.py`
+les collecte, `backend/controllers/analyse_controller.py` les fait
+persister. La seule dépendance restante au backend est `config.py`, et elle
+est purement CONFIGURATIONNELLE (hôte ES, chemin des règles) : aucune
+logique métier, aucun accès base.
+
+CONTRAT DE SORTIE — chaque alerte retournée porte :
+    title, level, tactic, hits, details,
+    event_time  : heure de l'ÉVÉNEMENT source (ISO) ou None
+    dedup_key   : clé déterministe d'idempotence
+    rule_kind   : "simple" | "aggregation"
+    log_source  : index ES d'origine
+    matched_doc_ids : (règles simples uniquement)
+et, après `explain_sigma_alerts`, llm_explanation + llm_model.
+
+DEUX FENÊTRES TEMPORELLES, volontairement différentes :
+  - règles SIMPLES      : incrémentale ]cursor, until], bornée par le
+                          curseur du backend. Une alerte manquée serait
+                          définitivement perdue.
+  - règles d'AGRÉGATION : glissante now−Xm, hors curseur. Un seuil « 5
+                          échecs en 10 minutes » n'a aucun sens sur une
+                          fenêtre historique arbitraire.
 """
-
+import hashlib
 import os
 import subprocess
+import sys
+from datetime import datetime
+
 import requests
-from datetime import datetime, timezone
 from urllib3.exceptions import InsecureRequestWarning
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+# ── Localisation de la configuration ──────────────────────────────────
+# `append` et non `insert` : quand le moteur est importé DEPUIS le backend,
+# le sys.path du backend prime et rien n'est masqué. Ce bloc ne sert qu'à
+# rendre l'exécution CLI autonome. Couplage de CONFIGURATION uniquement.
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.abspath(os.path.join(_HERE, "..", "..", "backend"))
+if _BACKEND_DIR not in sys.path:
+    sys.path.append(_BACKEND_DIR)
+
+import config as CFG
 
 # =============================================================================
 # CONFIG
 # =============================================================================
 
-SIGMA_BIN   = "/home/hala-hamza/pfe-venv/bin/sigma"
-SIGMA_PATH  = os.path.expanduser("~/pfe-backend-2026/sigma/rules")
-ES_HOST     = "https://localhost:9200"
-ES_USER     = "elastic"
-ES_PASS     = "pfe2026"
-INDEX       = "filebeat-logs-*,auditbeat-*"
-ALERT_INDEX = "sigma-alerts"
+SIGMA_BIN  = CFG.SIGMA_BIN
+SIGMA_PATH = CFG.SIGMA_RULES
+ES_HOST    = CFG.ES_HOST
+ES_USER    = CFG.ES_USER
+ES_PASS    = CFG.ES_PASS
+INDEX      = CFG.SIGMA_INDEX
+
+# Clés introduites avec le nouveau config.py. `getattr` avec valeur de repli :
+# le moteur de détection ne doit pas refuser de démarrer parce qu'une clé de
+# configuration est récente. Cela rend aussi l'ordre de migration indifférent
+# — chaque fichier peut être remplacé indépendamment.
+ES_VERIFY     = getattr(CFG, "ES_VERIFY_CERTS", False)
+LLM_SIGMA_DIR = getattr(CFG, "LLM_SIGMA_DIR",
+                        os.path.abspath(os.path.join(_HERE, "..", "..",
+                                                     "llm_sigma")))
+
+# Délais : sans eux, une règle pathologique ou un cluster qui ne répond pas
+# fige l'ensemble du pipeline sans possibilité de reprise.
+ES_TIMEOUT_S      = 30
+CONVERT_TIMEOUT_S = 30
+
+# La vérification TLS est désactivée PAR CONFIGURATION (certificat
+# auto-signé en laboratoire), pas par un `verify=False` enfoui dans le code.
+if not ES_VERIFY:
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 COLORS = {
     "CRITICAL": "\033[91m",
@@ -37,11 +91,11 @@ COLORS = {
     "MEDIUM"  : "\033[94m",
     "LOW"     : "\033[96m",
     "OK"      : "\033[92m",
-    "RESET"   : "\033[0m"
+    "RESET"   : "\033[0m",
 }
 
 # =============================================================================
-# RÈGLES AVEC AGRÉGATION
+# RÈGLES AVEC AGRÉGATION  (inchangé)
 # =============================================================================
 
 AGGREGATION_RULES = {
@@ -143,55 +197,105 @@ AGGREGATION_RULES = {
 }
 
 # =============================================================================
-# SAUVEGARDE ALERTE DANS ES — retourne l'_id généré
+# IDEMPOTENCE — clé déterministe
 # =============================================================================
 
-def save_alert(title, level, tactic, hits, details) -> str:
-    """Sauvegarde l'alerte dans sigma-alerts et retourne son _id ES."""
-    alert = {
-        "@timestamp"      : datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "alert.title"     : title,
-        "alert.level"     : level,
-        "alert.tactic"    : tactic,
-        "alert.hits"      : hits,
-        "alert.details"   : details[:5] if isinstance(details, list) else [details],
-        "alert.source"    : "sigma",
-        "event.kind"      : "alert",
-        "event.category"  : "intrusion_detection",
-        "ae_correlated"   : False,
-        "detection_source": "sigma_only",
-    }
-    try:
-        r = requests.post(
-            f"{ES_HOST}/{ALERT_INDEX}/_doc",
-            auth=(ES_USER, ES_PASS),
-            verify=False,
-            json=alert
-        )
-        return r.json().get("_id")
-    except Exception as e:
-        print(f"  [SIGMA] Save alert error: {e}")
-        return None
+def _dedup_key(title: str, matched_doc_ids=None) -> str:
+    """- Règles simples : ancrée sur les _id ES matchés → même match = même
+         clé → un re-run ou une reprise après crash écrase au lieu de
+         dupliquer.
+       - Règles d'agrégation (matched_doc_ids=None) : ancrée sur le TITRE
+         seul → une alerte par règle et par run (snapshot temps-réel).
+
+    LIMITE CONNUE : `es_search` plafonne à 500 hits, donc pour une règle qui
+    matche davantage la clé n'est ancrée que sur les 500 premiers _id. Sans
+    conséquence depuis que le backend préfixe l'_id Mongo par le run_id,
+    mais à mentionner si le jury creuse l'idempotence."""
+    if matched_doc_ids:
+        payload = title + "|" + "|".join(sorted(str(i) for i in matched_doc_ids))
+        return "sig:simple:" + hashlib.sha1(payload.encode()).hexdigest()
+    return "sig:agg:" + hashlib.sha1(title.encode()).hexdigest()
 
 # =============================================================================
 # HELPERS
 # =============================================================================
 
+def _latest_event_time(hits: list) -> str | None:
+    """@timestamp du hit le plus récent. ES trie déjà en desc : le premier
+    hit portant un timestamp est le plus récent.
+
+    CORRECTIF CENTRAL. `format_sample` produit une CHAÎNE d'affichage : une
+    fois les détails formatés, l'heure d'origine est irrécupérable. Sans
+    cette extraction, le backend retombait sur l'heure du run et toutes les
+    alertes Sigma remontaient en tête du tableau SOC, au-dessus d'épisodes
+    CNN pourtant plus récents. Sur un dashboard chronologique, c'est faux."""
+    for h in hits or []:
+        ts = (h.get("_source") or {}).get("@timestamp")
+        if ts:
+            return ts
+    return None
+
+
+def _event_source(hits: list) -> tuple[str | None, str | None]:
+    """(log_source, host) extraits du premier hit exploitable.
+
+    CORRECTIF : `INDEX` est le PATTERN INTERROGÉ
+    ("filebeat-logs-*,auditbeat-*"), pas la source du log. Le stocker comme
+    `log_source` ne dit rien à l'analyste — il faut le dataset réel
+    (auth, syslog, auditd…) et la machine concernée."""
+    for h in hits or []:
+        src   = h.get("_source") or {}
+        event = src.get("event") or {}
+        dataset = (event.get("dataset") or event.get("module")
+                   or h.get("_index"))
+        host = ((src.get("host") or {}).get("name")
+                or (src.get("agent") or {}).get("hostname"))
+        if dataset or host:
+            return dataset, host
+    return None, None
+
+
+def _parse_tactic(tags: list) -> str:
+    """attack.t1110.001 → 'T1110.001'. 'N/A' si aucun tag de technique.
+    Heuristique : premier tag `attack.tXXXX` contenant un chiffre."""
+    for tag in tags:
+        t = str(tag).lower().strip()
+        if t.startswith("attack.t") and any(c.isdigit() for c in t):
+            return t.split("attack.", 1)[1].upper()
+    return "N/A"
+
+
 def get_rule_meta(path):
-    title, level = os.path.basename(path), "UNKNOWN"
+    """Retourne (title, level, tactic). `tactic` est extrait du bloc `tags:`.
+
+    NOTE : `level` peut valoir "UNKNOWN" si la règle n'expose pas de champ
+    `level`. Le backend normalise cette valeur (norm_severity → low) : sans
+    ça l'alerte n'appartenait à aucune sévérité filtrable et disparaissait
+    du tableau dès qu'un filtre était posé."""
+    title, level, tags = os.path.basename(path), "UNKNOWN", []
+    in_tags = False
     try:
         with open(path) as f:
             for line in f:
                 if line.startswith("title:"):
-                    title = line.replace("title:", "").strip()
-                if line.startswith("level:"):
-                    level = line.replace("level:", "").strip().upper()
+                    title = line.split("title:", 1)[1].strip(); in_tags = False
+                elif line.startswith("level:"):
+                    level = line.split("level:", 1)[1].strip().upper(); in_tags = False
+                elif line.startswith("tags:"):
+                    in_tags = True
+                elif in_tags:
+                    s = line.strip()
+                    if s.startswith("- "):
+                        tags.append(s[2:].strip())
+                    elif s and not line.startswith((" ", "\t")):
+                        in_tags = False          # nouvelle clé top-level
     except Exception:
         pass
-    return title, level
+    return title, level, _parse_tactic(tags)
 
 
 def sigma_to_lucene(path):
+    """Conversion Sigma → Lucene. Les règles en `status: test` sont ignorées."""
     try:
         with open(path) as f:
             for line in f:
@@ -200,18 +304,19 @@ def sigma_to_lucene(path):
                         return None
                     break
         r = subprocess.run(
-            [SIGMA_BIN, "convert", "-t", "lucene",
-             "--without-pipeline", path],
-            capture_output=True
-        )
+            [SIGMA_BIN, "convert", "-t", "lucene", "--without-pipeline", path],
+            capture_output=True, timeout=CONVERT_TIMEOUT_S)
         stdout = r.stdout.decode("utf-8", errors="replace").strip()
         return stdout if stdout else None
+    except subprocess.TimeoutExpired:
+        print(f"  [TIMEOUT] conversion de {os.path.basename(path)}")
+        return None
     except Exception:
         return None
 
 
 def _time_filter(cursor: str = None, until: str = None):
-    """Retourne une clause range @timestamp ]cursor, until] ou None."""
+    """Clause range @timestamp ]cursor, until], ou None."""
     r = {}
     if cursor:
         r["gt"] = cursor
@@ -221,46 +326,48 @@ def _time_filter(cursor: str = None, until: str = None):
 
 
 def es_search(index, query, source_fields, size=500, time_filter=None):
-    """
-    Recherche ES. Si time_filter est fourni, enveloppe la query dans
-    un bool/must pour restreindre à la fenêtre temporelle.
-    size=500 pour capturer tous les _id matchés (corrélation exacte).
-    """
-    if time_filter:
-        wrapped = {"bool": {"must": [query, time_filter]}}
-    else:
-        wrapped = query
+    """Recherche ES restreinte à la fenêtre temporelle si elle est fournie.
+
+    size=500 : capture les _id matchés pour la clé de déduplication.
+    track_total_hits : sans lui, `total.value` plafonne à 10 000 et le
+    compteur `hits` de l'alerte est faux au-delà."""
+    wrapped = ({"bool": {"must": [query, time_filter]}} if time_filter
+               else query)
     try:
         r = requests.post(
             f"{ES_HOST}/{index}/_search",
-            auth=(ES_USER, ES_PASS), verify=False,
+            auth=(ES_USER, ES_PASS), verify=ES_VERIFY, timeout=ES_TIMEOUT_S,
             json={
-                "size"   : size,
-                "query"  : wrapped,
-                "_source": source_fields,
-                "sort"   : [{"@timestamp": "desc"}]
-            }
-        )
+                "size"             : size,
+                "query"            : wrapped,
+                "_source"          : source_fields,
+                "track_total_hits" : True,
+                "sort"             : [{"@timestamp": "desc"}],
+            })
         return r.json()
-    except Exception:
+    except Exception as e:
+        print(f"  [ES] échec recherche sur {index} : {e}")
         return None
 
 
 def es_aggregate(index, query, window_min, group_by, agg_field, threshold):
-    if agg_field:
-        inner_agg = {"unique": {"cardinality": {"field": agg_field}}}
-    else:
-        inner_agg = {}
+    inner_agg = ({"unique": {"cardinality": {"field": agg_field}}}
+                 if agg_field else {})
 
     if group_by:
-        aggs = {
-            "groups": {
-                "terms": {"field": group_by, "size": 50},
-                "aggs" : inner_agg if inner_agg else {}
-            }
-        }
+        aggs = {"groups": {"terms": {"field": group_by, "size": 50},
+                           "aggs": inner_agg if inner_agg else {}}}
+    elif agg_field:
+        # La règle veut compter des VALEURS DISTINCTES (ex. « 5 IP sources
+        # différentes »). L'ancien code ignorait agg_field ici et comptait
+        # des documents : la règle ne mesurait pas ce qu'elle annonçait.
+        aggs = {"total": {"cardinality": {"field": agg_field}}}
     else:
-        aggs = {"total": {"value_count": {"field": "_id"}}}
+        # `value_count` sur `_id` est REFUSÉ par Elasticsearch 8.x (fielddata
+        # sur _id désactivée par défaut). La réponse ne contenait alors pas
+        # de clé `aggregations`, l'exception était avalée, et la règle
+        # s'affichait [OK] — un faux négatif présenté comme un résultat sain.
+        aggs = {"total": {"value_count": {"field": "@timestamp"}}}
 
     body = {
         "size" : 0,
@@ -270,12 +377,20 @@ def es_aggregate(index, query, window_min, group_by, agg_field, threshold):
                 "filter": [{"range": {"@timestamp": {"gte": f"now-{window_min}m"}}}]
             }
         },
-        "aggs": aggs
+        "aggs": aggs,
     }
+    # Retourne None en cas d'ÉCHEC, [] si la règle n'a rien déclenché.
+    # Confondre les deux revenait à afficher [OK] sur une règle en erreur.
     try:
-        r    = requests.post(f"{ES_HOST}/{index}/_search",
-                             auth=(ES_USER, ES_PASS), verify=False, json=body)
+        r = requests.post(f"{ES_HOST}/{index}/_search",
+                          auth=(ES_USER, ES_PASS), verify=ES_VERIFY,
+                          timeout=ES_TIMEOUT_S, json=body)
         data = r.json()
+        if "aggregations" not in data:
+            reason = data.get("error", {}).get("reason", data)
+            print(f"  [ES] agrégation refusée sur {index} : "
+                  f"{str(reason)[:160]}")
+            return None
         alerts = []
         if group_by:
             for bucket in data["aggregations"]["groups"]["buckets"]:
@@ -287,8 +402,9 @@ def es_aggregate(index, query, window_min, group_by, agg_field, threshold):
             if count > threshold:
                 alerts.append({"group": "global", "count": count})
         return alerts
-    except Exception:
-        return []
+    except Exception as e:
+        print(f"  [ES] échec agrégation sur {index} : {e}")
+        return None
 
 
 def es_correlate(index, query, group_by, window_min):
@@ -300,14 +416,16 @@ def es_correlate(index, query, group_by, window_min):
                 "filter": [{"range": {"@timestamp": {"gte": f"now-{window_min}m"}}}]
             }
         },
-        "aggs": {"groups": {"terms": {"field": group_by, "size": 50}}}
+        "aggs": {"groups": {"terms": {"field": group_by, "size": 50}}},
     }
     try:
-        r    = requests.post(f"{ES_HOST}/{index}/_search",
-                             auth=(ES_USER, ES_PASS), verify=False, json=body)
+        r = requests.post(f"{ES_HOST}/{index}/_search",
+                          auth=(ES_USER, ES_PASS), verify=ES_VERIFY,
+                          timeout=ES_TIMEOUT_S, json=body)
         data = r.json()
         return {b["key"] for b in data["aggregations"]["groups"]["buckets"]}
-    except Exception:
+    except Exception as e:
+        print(f"  [ES] échec corrélation sur {index} : {e}")
         return set()
 
 
@@ -324,25 +442,31 @@ def get_samples(index, query, window_min, source_ip=None):
             }
         },
         "_source": ["@timestamp", "user.name", "source.ip",
-                    "process.name", "message", "event.outcome"],
-        "sort"   : [{"@timestamp": "desc"}]
+                    "process.name", "message", "event.outcome",
+                    "event.dataset", "event.module",
+                    "host.name", "agent.hostname"],
+        "sort"   : [{"@timestamp": "desc"}],
     }
     try:
         r = requests.post(f"{ES_HOST}/{index}/_search",
-                          auth=(ES_USER, ES_PASS), verify=False, json=body)
+                          auth=(ES_USER, ES_PASS), verify=ES_VERIFY,
+                          timeout=ES_TIMEOUT_S, json=body)
         return r.json()["hits"]["hits"]
     except Exception:
         return []
 
 
 def format_sample(hit):
-    s    = hit["_source"]
-    ts   = s.get("@timestamp", "")[:19]
-    usr  = s.get("user",    {}).get("name", "")
-    ip   = s.get("source",  {}).get("ip",   "")
-    prc  = s.get("process", {}).get("name", "")
-    msg  = s.get("message", "")[:70]
-    ds   = s.get("event",   {}).get("dataset", "")
+    """Rendu lisible d'un hit ES. ⚠️ Produit une CHAÎNE : l'heure d'origine
+    n'y est plus exploitable en aval — c'est `_latest_event_time` qui la
+    transmet séparément."""
+    s   = hit["_source"]
+    ts  = s.get("@timestamp", "")[:19]
+    usr = s.get("user",    {}).get("name", "")
+    ip  = s.get("source",  {}).get("ip",   "")
+    prc = s.get("process", {}).get("name", "")
+    msg = s.get("message", "")[:70]
+    ds  = s.get("event",   {}).get("dataset", "")
 
     info_parts = [ts]
     if usr: info_parts.append(f"user={usr}")
@@ -356,30 +480,27 @@ def format_sample(hit):
 # AFFICHAGE
 # =============================================================================
 
-def print_alert(title, level, tactic, hits_info, hits_count=0) -> str:
-    """Affiche l'alerte ET retourne l'es_id du doc sauvegardé."""
+def print_alert(title, level, tactic, hits_info) -> None:
+    """Affichage console UNIQUEMENT. La persistance appartient au backend."""
     color = COLORS.get(level, COLORS["RESET"])
     print(f"\n{color}[ALERT]{COLORS['RESET']} {title}")
     print(f"  Level  : {color}{level}{COLORS['RESET']}")
     print(f"  Tactic : {tactic}")
     for info in hits_info:
         print(f"  → {info}")
-    return save_alert(title, level, tactic, hits_count, hits_info)
 
 
 def print_ok(title):
     print(f"{COLORS['OK']}[OK]{COLORS['RESET']}    {title}")
 
 # =============================================================================
-# RÈGLES SIMPLES — fenêtre ]cursor, until] + matched_doc_ids
+# RÈGLES SIMPLES — fenêtre incrémentale ]cursor, until]
 # =============================================================================
 
 def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
-    """
-    Parcourt les règles Sigma simples, restreintes à la fenêtre ]cursor, until].
-    Retourne une liste de dicts
-        {title, level, tactic, hits, details, es_id, matched_doc_ids}.
-    """
+    """Parcourt les règles Sigma simples sur la fenêtre ]cursor, until].
+    Retourne la liste des alertes (voir CONTRAT DE SORTIE en tête de module).
+    N'écrit rien."""
     AGG_TITLES = set(AGGREGATION_RULES.keys())
     results    = []
     tfilter    = _time_filter(cursor, until)
@@ -388,8 +509,8 @@ def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
         for file in sorted(files):
             if not file.endswith(".yml"):
                 continue
-            path         = os.path.join(root, file)
-            title, level = get_rule_meta(path)
+            path                 = os.path.join(root, file)
+            title, level, tactic = get_rule_meta(path)
             if title in AGG_TITLES:
                 continue
 
@@ -400,9 +521,13 @@ def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
 
             data = es_search(
                 INDEX,
-                {"query_string": {"query": lucene, "default_field": "message"}},
-                ["@timestamp", "process.name", "user.name",
-                 "source.ip", "message", "event.outcome"],
+                {"query_string": {"query": lucene, "default_field": "message",
+                                  "analyze_wildcard": True}},
+                # event.dataset / host.name AJOUTÉS : sans eux, ES ne
+                # renvoie pas ces champs et la source réelle reste inconnue.
+                ["@timestamp", "process.name", "user.name", "source.ip",
+                 "message", "event.outcome", "event.dataset", "event.module",
+                 "host.name", "agent.hostname"],
                 time_filter=tfilter,
             )
             if not data:
@@ -413,15 +538,22 @@ def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
                 all_hits    = data["hits"]["hits"]
                 hits_info   = [format_sample(h) for h in all_hits[:3]]
                 matched_ids = [h["_id"] for h in all_hits]
-                es_id       = print_alert(title, level, "voir règle", hits_info, count)
+                dkey        = _dedup_key(title, matched_doc_ids=matched_ids)
+                src, host   = _event_source(all_hits)
+
+                print_alert(title, level, tactic, hits_info)
                 summary.append({"rule": title, "level": level, "hits": count})
                 results.append({
                     "title":           title,
                     "level":           level,
-                    "tactic":          "voir règle",
+                    "tactic":          tactic,
                     "hits":            count,
                     "details":         hits_info,
-                    "es_id":           es_id,
+                    "event_time":      _latest_event_time(all_hits),
+                    "dedup_key":       dkey,
+                    "rule_kind":       "simple",
+                    "log_source":      src or INDEX,
+                    "host":            host,
                     "matched_doc_ids": matched_ids,
                 })
             else:
@@ -430,15 +562,12 @@ def run_simple_rules(summary, cursor: str = None, until: str = None) -> list:
     return results
 
 # =============================================================================
-# RÈGLES AVEC AGRÉGATION — inchangée (fenêtre glissante now-Xm)
+# RÈGLES AVEC AGRÉGATION — fenêtre glissante now-Xm (hors curseur)
 # =============================================================================
 
 def run_aggregation_rules(summary) -> list:
-    """
-    Parcourt les règles Sigma avec agrégation/corrélation.
-    Retourne une liste de dicts {title, level, tactic, hits, details, es_id}.
-    Pas de matched_doc_ids : ces règles ne seront pas corrélées avec l'AE.
-    """
+    """Règles d'agrégation et de corrélation. Pas de matched_doc_ids : ces
+    règles ne sont pas corrélées avec l'autoencodeur. N'écrit rien."""
     print(f"\n--- Règles avec agrégation ---\n")
     results = []
 
@@ -452,63 +581,85 @@ def run_aggregation_rules(summary) -> list:
         query      = rule["query"]
         tactic     = rule["tactic"]
 
-        # ── Corrélation succès après échecs ───────────────────────
+        # ── Corrélation succès après échecs ────────────────────────
         if "correlate_with" in rule:
             success_ips = es_correlate(index, query,
                                        "source.ip.keyword", window_min)
-            failure_ips = es_correlate(
-                index, rule["correlate_with"]["query"],
-                "source.ip.keyword", window_min
-            )
+            failure_ips = es_correlate(index, rule["correlate_with"]["query"],
+                                       "source.ip.keyword", window_min)
             correlated = success_ips & failure_ips
             if correlated:
                 hits_info = [
                     f"IP {ip} — succès SSH après échecs ({window_min}min)"
                     for ip in list(correlated)[:3]
                 ]
-                es_id = print_alert(title, level, tactic,
-                                    hits_info, len(correlated))
+                dkey = _dedup_key(title)
+                print_alert(title, level, tactic, hits_info)
                 summary.append({"rule": title, "level": level,
-                                 "hits": len(correlated)})
+                                "hits": len(correlated)})
                 results.append({
-                    "title":   title,
-                    "level":   level,
-                    "tactic":  tactic,
-                    "hits":    len(correlated),
-                    "details": hits_info,
-                    "es_id":   es_id,
+                    "title":      title,
+                    "level":      level,
+                    "tactic":     tactic,
+                    "hits":       len(correlated),
+                    "details":    hits_info,
+                    # Corrélation d'agrégats : aucun événement unique ne
+                    # porte l'alerte. Le backend marquera
+                    # event_time_estimated=True plutôt que d'inventer une
+                    # heure présentée comme exacte.
+                    "event_time": None,
+                    "dedup_key":  dkey,
+                    "rule_kind":  "aggregation",
+                    "log_source": index,
                 })
             else:
                 print_ok(f"{title} (fenêtre: {window_min}min)")
             continue
 
-        # ── Agrégation standard ────────────────────────────────────
+        # ── Agrégation standard ─────────────────────────────────────
         triggered = es_aggregate(index, query, window_min,
                                  group_by, agg_field, threshold)
+        if triggered is None:
+            # Une règle EN ÉCHEC ne doit jamais s'afficher comme une règle
+            # sans détection : c'est un faux négatif silencieux.
+            color = COLORS["CRITICAL"]
+            print(f"{color}[ERREUR]{COLORS['RESET']} {title} — "
+                  f"agrégation ES en échec, règle NON ÉVALUÉE")
+            continue
         if triggered:
             hits_info = []
             total     = 0
+            newest    = None
+            src, host = None, None
             for t in triggered[:5]:
                 label = "users distincts" if agg_field else "connexions"
                 hits_info.append(
-                    f"IP {t['group']} → {t['count']} {label} en {window_min}min"
-                )
+                    f"IP {t['group']} → {t['count']} {label} en {window_min}min")
                 total += t["count"]
-                for s in get_samples(
+                samples = get_samples(
                     index, query, window_min,
                     source_ip=t["group"] if t["group"] != "global" else None
-                )[:2]:
+                )[:2]
+                if newest is None:
+                    newest = _latest_event_time(samples)
+                    src, host = _event_source(samples)
+                for s in samples:
                     hits_info.append(f"  {format_sample(s)}")
 
-            es_id = print_alert(title, level, tactic, hits_info, total)
+            dkey = _dedup_key(title)
+            print_alert(title, level, tactic, hits_info)
             summary.append({"rule": title, "level": level, "hits": total})
             results.append({
-                "title":   title,
-                "level":   level,
-                "tactic":  tactic,
-                "hits":    total,
-                "details": hits_info,
-                "es_id":   es_id,
+                "title":      title,
+                "level":      level,
+                "tactic":     tactic,
+                "hits":       total,
+                "details":    hits_info,
+                "event_time": newest,
+                "dedup_key":  dkey,
+                "rule_kind":  "aggregation",
+                "log_source": src or index,
+                "host":       host,
             })
         else:
             print_ok(f"{title} (fenêtre: {window_min}min, seuil: {threshold})")
@@ -516,45 +667,38 @@ def run_aggregation_rules(summary) -> list:
     return results
 
 # =============================================================================
-# EXPLICATION LLM DES ALERTES SIGMA
+# EXPLICATION LLM — écrite DANS les dicts, pas en base
 # =============================================================================
 
-def explain_sigma_alerts(alerts: list):
-    """
-    Pour chaque alerte Sigma, génère une explication LLM en français
-    et met à jour le document dans sigma-alerts via _update.
-    """
-    import json
-    import ssl
-    import base64
-    import urllib.request
-    import sys
-    import os
+def explain_sigma_alerts(alerts: list) -> list:
+    """Enrichit chaque alerte de `llm_explanation` et `llm_model`, en place.
 
-    ml_dir = os.path.dirname(os.path.abspath(__file__))
-    if ml_dir not in sys.path:
-        sys.path.insert(0, ml_dir)
-    sys.path.insert(0, os.path.expanduser("~/pfe-backend-2026/ML"))
-    from rag_explainer import make_grok_client, call_llm_with_retry
+    L'explication est ainsi écrite en base EN MÊME TEMPS que l'alerte, dans
+    une seule opération. Auparavant l'alerte était persistée puis
+    l'explication ajoutée dans un second temps : une interruption entre les
+    deux publiait une alerte définitivement dépourvue d'explication.
 
+    Non bloquant par construction : une alerte sans explication reste une
+    alerte qui doit remonter au SOC."""
     if not alerts:
         print("  [SIGMA-LLM] Aucune alerte à expliquer")
-        return
+        return alerts
+
+    if LLM_SIGMA_DIR not in sys.path:
+        sys.path.insert(0, LLM_SIGMA_DIR)
+    try:
+        from rag_explainer import make_grok_client, call_llm_with_retry
+    except ImportError as e:
+        print(f"  [SIGMA-LLM] rag_explainer indisponible ({e}) — étape sautée")
+        return alerts
 
     try:
         grok = make_grok_client()
     except ValueError as e:
         print(f"  [SIGMA-LLM] Skipped — {e}")
-        return
+        return alerts
 
-    ctx_ssl = ssl.create_default_context()
-    ctx_ssl.check_hostname = False
-    ctx_ssl.verify_mode    = ssl.CERT_NONE
-    token   = base64.b64encode(f"{ES_USER}:{ES_PASS}".encode()).decode()
-    headers = {
-        "Content-Type":  "application/json",
-        "Authorization": f"Basic {token}",
-    }
+    model_used = getattr(grok, "_sentinel_model", "openai/gpt-oss-120b")
 
     print(f"\n  [SIGMA-LLM] Explication de {len(alerts)} alerte(s) Sigma...")
     ok, errors = 0, 0
@@ -565,7 +709,6 @@ def explain_sigma_alerts(alerts: list):
         tactic  = alert["tactic"]
         hits    = alert["hits"]
         details = alert.get("details", [])
-        es_id   = alert.get("es_id")
 
         details_str = "\n".join(f"  - {d}" for d in details[:5])
         prompt = f"""Tu es un expert SOC spécialisé en détection d'intrusion Linux.
@@ -599,7 +742,7 @@ Moins de 350 mots. Factuel uniquement.
 """
         messages = [
             {
-                "role"   : "system",
+                "role":    "system",
                 "content": (
                     "Tu es un expert SOC spécialisé en détection d'intrusion "
                     "sur systèmes Linux. Tu analyses des alertes de règles Sigma. "
@@ -612,51 +755,40 @@ Moins de 350 mots. Factuel uniquement.
         try:
             response    = call_llm_with_retry(grok, messages, max_tokens=500)
             explanation = response.choices[0].message.content
+            ok += 1
+            print(f"  [SIGMA-LLM] ✓ {level:8s} | {title[:55]}")
         except Exception as e:
             explanation = f"Erreur LLM : {type(e).__name__} — {e}"
+            errors += 1
             print(f"  [SIGMA-LLM] Erreur sur '{title}': {e}")
 
-        update_payload = {
-            "llm_explanation": explanation,
-            "llm_model"      : "llama-3.1-8b-instant",
-            "prompt_tokens"  : len(prompt.split()),
-        }
+        alert["llm_explanation"] = explanation
+        alert["llm_model"]       = model_used
 
-        if es_id and es_id not in ("", "None", "nan"):
-            try:
-                body = json.dumps({"doc": update_payload}).encode()
-                req  = urllib.request.Request(
-                    f"{ES_HOST}/{ALERT_INDEX}/_update/{es_id}",
-                    data=body, headers=headers, method="POST"
-                )
-                urllib.request.urlopen(req, context=ctx_ssl)
-                ok += 1
-                print(f"  [SIGMA-LLM] ✓ {level:8s} | {title[:55]}")
-            except Exception as e:
-                errors += 1
-                print(f"  [SIGMA-LLM] Update error {es_id}: {e}")
-        else:
-            errors += 1
-            print(f"  [SIGMA-LLM] ⚠ pas d'es_id pour '{title}'")
-
-    print(f"  [SIGMA-LLM] Terminé — {ok} explications sauvegardées | {errors} erreurs")
+    print(f"  [SIGMA-LLM] Terminé — {ok} expliquée(s) | {errors} erreur(s)")
+    return alerts
 
 # =============================================================================
-# MAIN
+# CLI — DIAGNOSTIC UNIQUEMENT
 # =============================================================================
 
 def main():
+    """Exécution manuelle : affiche les détections, N'ÉCRIT RIEN.
+
+    Auparavant, ce point d'entrée appelait les règles avec un run_id à None
+    et créait en base des documents `_id = "None::…"` qui polluaient le
+    dashboard à chaque test. La persistance appartenant désormais au
+    backend, ce risque a disparu par construction."""
     summary    = []
     all_alerts = []
 
     print(f"\n{'='*65}")
-    print(f"  SIGMA DETECTION ENGINE")
+    print(f"  SIGMA DETECTION ENGINE — mode diagnostic (aucune écriture)")
     print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*65}\n")
 
     print("--- Règles simples ---\n")
     all_alerts += run_simple_rules(summary)
-
     all_alerts += run_aggregation_rules(summary)
 
     print(f"\n{'='*65}")
@@ -669,19 +801,13 @@ def main():
                 print(f"  {color}[{lvl}]{COLORS['RESET']} "
                       f"{a['rule']} — {a['hits']} événement(s)")
     print(f"{'='*65}\n")
-    print(f"  Alertes sauvegardées dans : {ALERT_INDEX}")
 
-    import sys as _sys, os as _os
-    for _p in [
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', 'core'),
-        _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', '..', 'ML'),
-    ]:
-        if _p not in _sys.path:
-            _sys.path.insert(0, _p)
-    from fusion_router import FusionRouter
-    router = FusionRouter()
-    router._sigma_alerts_cache = []
-    router.process_sigma_alerts(all_alerts)
+    sans_heure = sum(1 for a in all_alerts if not a.get("event_time"))
+    print(f"  {len(all_alerts)} alerte(s) collectée(s) — "
+          f"{sans_heure} sans heure d'événement exacte")
+    print(f"  Persistance : assurée par le backend "
+          f"(controllers/analyse_controller.py)\n")
+    return all_alerts
 
 
 if __name__ == "__main__":

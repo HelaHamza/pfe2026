@@ -37,8 +37,8 @@ import numpy as np
 import torch
 from scipy.stats import genpareto
 
-import config as C
-import preprocessing as PP
+import config_cnn as C
+import cnn_windowing as W          # [FIX] remplace `import preprocessing as PP`
 
 
 def _pot_threshold(scores, target_rate=C.POT_TARGET_RATE,
@@ -93,16 +93,10 @@ def _pot_threshold(scores, target_rate=C.POT_TARGET_RATE,
     except Exception as e:
         return emp, {"method": "quantile_fallback", "reason": str(e),
                      "u": u, "n_excess": int(nu), "emp": emp}
-
-
 def compute_thresholds_from_df(model, df_calib, feats_by_src, scalers,
-                               keep_by_src, device):
-    """Calibre le seuil par source sur la CALIBRATION BRUTE (df_calib).
-    Le scaler ayant ete fit sur le train, il n'y a aucune fuite : on se
-    contente d'appliquer la transformation puis POT sur le score."""
-    thresholds = {}
-    n_floored = 0
-    n_fallback = 0
+                               vocabs, device):
+    """Calibre le seuil par source sur la CALIBRATION BRUTE (df_calib), API CNN."""
+    thresholds, n_floored, n_fallback = {}, 0, 0
     print("  Seuil GPD-POT par source (sur calibration BRUTE) :")
     for s in C.SOURCES:
         if s not in scalers:
@@ -110,32 +104,41 @@ def compute_thresholds_from_df(model, df_calib, feats_by_src, scalers,
         d = df_calib[df_calib["log_source"] == s].reset_index(drop=True)
         if len(d) == 0:
             continue
-        X = PP.transform(d, feats_by_src[s], scalers[s], keep_by_src[s])
-        scores = model.reconstruction_error(torch.FloatTensor(X).to(device), s)
+        Xs, Xt, _ = W.build_windows(d, feats_by_src[s], scalers[s], vocabs[s], s)
+        scores = model.reconstruction_error(
+            torch.from_numpy(Xs).to(device),
+            torch.from_numpy(Xt).to(device), s)
         rate = C.POT_TARGET_RATE_BY_SOURCE.get(s, C.POT_TARGET_RATE)
         thr, info = _pot_threshold(scores, target_rate=rate)
         thresholds[s] = {"threshold": float(thr), "info": info}
         if info["method"] == "gpd_pot":
             flags = []
-            if info.get("floored"):
-                flags.append("plancher")
-                n_floored += 1
-            if info.get("finite_endpoint"):
-                flags.append("xi<0")
+            if info.get("floored"):     flags.append("plancher"); n_floored += 1
+            if info.get("finite_endpoint"): flags.append("xi<0")
             extra = (f"gpd xi={info['xi']:.3f} n_exc={info['n_excess']}"
                      + (f" [{','.join(flags)}]" if flags else ""))
         else:
-            extra = f"{info['method']} ({info.get('reason', '')})"
-            n_fallback += 1
+            extra = f"{info['method']} ({info.get('reason', '')})"; n_fallback += 1
         print(f"    {s:8s}: thr={thr:.6f}  ({extra}) | n_calib={len(d):,}")
-
-    n_gpd = sum(1 for t in thresholds.values()
-                if t["info"].get("method") == "gpd_pot")
-    if n_gpd and (n_floored + n_fallback) >= n_gpd:
-        print("  [!] POT rarement determinant (plancher/fallback dominant) : "
-              "envisager d'abaisser POT_INIT_Q ou d'assumer le quantile "
-              "empirique.")
     return thresholds
+
+
+def realized_alert_rate(model, df, feats_by_src, scalers, vocabs,
+                        thresholds, device):
+    """QA : taux d'alerte réellement réalisé par source (API CNN)."""
+    rates = {}
+    for s in C.SOURCES:
+        if s not in scalers:
+            continue
+        d = df[df["log_source"] == s].reset_index(drop=True)
+        if len(d) == 0:
+            continue
+        Xs, Xt, _ = W.build_windows(d, feats_by_src[s], scalers[s], vocabs[s], s)
+        scores = model.reconstruction_error(
+            torch.from_numpy(Xs).to(device),
+            torch.from_numpy(Xt).to(device), s)
+        rates[s] = float((scores > get_threshold(thresholds, s)).mean())
+    return rates
 
 
 def get_threshold(thresholds, src):
@@ -145,20 +148,3 @@ def get_threshold(thresholds, src):
     return float(t["threshold"]) if isinstance(t, dict) else float(t)
 
 
-def realized_alert_rate(model, df, feats_by_src, scalers, keep_by_src,
-                        thresholds, device):
-    """QA : taux d'alerte REELLEMENT realise par source sur un df donne.
-    Sert a verifier que le seuil tient sa cible (calib) et a detecter la
-    derive temporelle ou les attaques (test >> calib)."""
-    rates = {}
-    for s in C.SOURCES:
-        if s not in scalers:
-            continue
-        d = df[df["log_source"] == s].reset_index(drop=True)
-        if len(d) == 0:
-            continue
-        X = PP.transform(d, feats_by_src[s], scalers[s], keep_by_src[s])
-        scores = model.reconstruction_error(torch.FloatTensor(X).to(device), s)
-        thr = get_threshold(thresholds, s)
-        rates[s] = float((scores > thr).mean())
-    return rates

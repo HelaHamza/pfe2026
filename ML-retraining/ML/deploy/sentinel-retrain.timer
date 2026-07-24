@@ -1,0 +1,42 @@
+# /etc/systemd/system/sentinel-retrain.timer
+#
+#   sudo systemctl enable --now sentinel-retrain.timer
+#   systemctl list-timers sentinel-retrain     # prochaine execution
+#
+# POURQUOI systemd PLUTOT QUE cron, concretement pour ce projet :
+#
+#   Persistent=true      un portable est rarement allume le 1er a 02:00. cron
+#                        aurait SILENCIEUSEMENT saute le mois -- et personne
+#                        ne s'en apercoit avant plusieurs cycles manques.
+#                        systemd rattrape l'execution au demarrage suivant.
+#   journalctl           journalisation centralisee, rotation geree, pas de
+#                        redirection artisanale vers un fichier qui grossit.
+#   MemoryMax            impossible avec cron (cf. le .service).
+#   systemctl start      declenchement manuel immediat pour une demonstration,
+#                        dans EXACTEMENT le meme environnement que l'execution
+#                        automatique. C'est ce point qui evite le classique
+#                        "ca marche quand je le lance a la main".
+
+[Unit]
+Description=Sentinel CNN - declencheur mensuel du reentrainement
+Requires=sentinel-retrain.service
+
+[Timer]
+# Le 1er de chaque mois a 02:00, heure locale.
+OnCalendar=*-*-01 02:00:00
+
+# Rattrapage si la machine etait eteinte a l'heure prevue.
+Persistent=true
+
+# Evite un demarrage pile a l'heure ronde, en concurrence avec les taches de
+# maintenance systeme (logrotate, apt, sauvegardes).
+RandomizedDelaySec=900
+
+# Laisse le temps a la stack ELK de finir de demarrer si le rattrapage se
+# declenche juste apres un boot.
+OnBootSec=15min
+
+Unit=sentinel-retrain.service
+
+[Install]
+WantedBy=timers.target

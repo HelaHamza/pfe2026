@@ -1,0 +1,24 @@
+{
+  "_comment": "Incidents confirmes A LA MAIN, exclus du corpus de reentrainement. A alimenter apres chaque exercice offensif, chaque scenario de validation joue sur la machine, et chaque faux negatif decouvert a posteriori. Ce fichier est la memoire longue du systeme : Mongo peut etre purge, pas lui.",
+  "_schema": {
+    "id": "identifiant libre, unique",
+    "start": "ISO-8601 UTC, debut de l'incident",
+    "end": "ISO-8601 UTC, fin de l'incident",
+    "log_source": "auth | syslog | auditd | null (= toutes sources)",
+    "host_name": "nom d'hote, ou null (= tous hotes)",
+    "source_ip": "optionnel, restreint encore l'excision",
+    "technique": "identifiant MITRE ATT&CK, optionnel",
+    "note": "texte libre"
+  },
+  "incidents": [
+    {
+      "id": "exemple_a_supprimer",
+      "start": "2026-06-20T14:00:00Z",
+      "end": "2026-06-20T14:10:00Z",
+      "log_source": "auditd",
+      "host_name": "ASUS-X415JA",
+      "technique": "T1053.003",
+      "note": "EXEMPLE - persistance cron /tmp/.update. Remplace ou supprime cette entree."
+    }
+  ]
+}

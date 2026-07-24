@@ -1,31 +1,29 @@
 """
-=============================================================================
 views/ai_dashboard_views.py
-=============================================================================
+===========================
+Dashboard Expert AI : épisodes CNN en attente de revue humaine.
+
+Séparé du dashboard SOC par un préfixe distinct — les deux publics ne
+consomment pas la même file. Le SOC voit ce qui est confirmé, l'expert voit
+ce qui est douteux.
 """
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 
-from controllers import stats_controller_ai as stats_controller
+from controllers.stats_controller_ai import StatsControllerAI
+from core.deps import get_current_user
+from models.detection_models import ResultsResponse
+from models.enums import Severity
 
-router = APIRouter(prefix="/ai-dashboard", tags=["ai-dashboard"])
-
-
-@router.get("/versions")
-async def get_versions():
-    return stats_controller.list_versions()
+router = APIRouter(prefix="/ai-dashboard", tags=["Expert AI"])
 
 
-@router.get("/overview")
-async def get_overview(version: str | None = Query(default=None)):
-    data = stats_controller.get_overview(version)
-    if data is None:
-        raise HTTPException(status_code=404, detail="Aucune métrique trouvée.")
-    return data
-
-
-@router.get("/compare")
-async def compare(versions: str | None = Query(default=None)):
-    version_list = None
-    if versions:
-        version_list = [v.strip() for v in versions.split(",") if v.strip()]
-    return stats_controller.compare_versions(version_list)
+@router.get("/pending", response_model=ResultsResponse,
+            summary="Épisodes CNN non tranchés par le triage LLM")
+def pending_review(
+    limit: int = Query(500, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    level: Severity | None = Query(None),
+    current_user: dict = Depends(get_current_user),
+) -> ResultsResponse:
+    return StatsControllerAI.pending_review(
+        level=level.value if level else None, limit=limit, skip=skip)

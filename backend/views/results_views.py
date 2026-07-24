@@ -1,28 +1,36 @@
-# from fastapi import APIRouter, Depends, HTTPException, Query
+"""
+views/results_views.py
+======================
+Couche VUE. Dans une API REST, la vue est la sérialisation JSON exposée :
+routage, validation d'entrée, contrat de sortie. Aucune logique métier.
 
-# from controllers.results_controller import ResultsController
-# from core.deps import get_current_user
+Correctifs :
+  - `source` / `level` typés par énumération → 422 explicite au lieu d'un
+    200 avec liste vide sur une faute de frappe côté front.
+  - `response_model` → contrat de sortie validé + documentation OpenAPI
+    réelle (avant : aucun schéma, donc aucune vue au sens strict).
+  - `skip` → pagination possible, maintenant que `total` est honnête.
+"""
+from fastapi import APIRouter, Depends, Query
 
-# router = APIRouter(prefix="/results", tags=["Results"])
+from controllers.results_controller import ResultsController
+from core.deps import get_current_user
+from models.detection_models import ResultsResponse
+from models.enums import DetectionSource, Severity
+
+router = APIRouter(prefix="/results", tags=["Results"])
 
 
-# @router.get("")
-# def get_results(
-#     limit:  int = Query(100, ge=1, le=500),
-#     level:  str = Query(None),
-#     source: str = Query(None),
-#     current_user: dict = Depends(get_current_user),
-# ):
-#     return ResultsController.get_results(limit, level=level, source=source)
-
-
-# @router.get("/{doc_type}/{doc_id}")
-# def get_detail(
-#     doc_type: str,
-#     doc_id: str,
-#     current_user: dict = Depends(get_current_user),
-# ):
-#     try:
-#         return ResultsController.get_detail(doc_type, doc_id)
-#     except ValueError as e:
-#         raise HTTPException(404, str(e))
+@router.get("", response_model=ResultsResponse,
+            summary="Tableau des détections du dernier run")
+def get_results(
+    limit: int = Query(500, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    level: Severity | None = Query(None, description="Filtre de sévérité."),
+    source: DetectionSource | None = Query(None, description="Branche."),
+    current_user: dict = Depends(get_current_user),
+) -> ResultsResponse:
+    return ResultsController.get_results(
+        level=level.value if level else None,
+        source=source.value if source else None,
+        limit=limit, skip=skip)
