@@ -21,7 +21,8 @@ import logging
 import pymongo
 from pymongo.errors import OperationFailure
 
-from config import MONGO_COLL_CNN, MONGO_COLL_REPORTS, MONGO_COLL_SIGMA
+from config import (MONGO_COLL_CNN, MONGO_COLL_METRICS, MONGO_COLL_REPORTS,
+                    MONGO_COLL_RETRAIN, MONGO_COLL_SIGMA)
 from core.database import get_db
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -45,6 +46,26 @@ def _create(collection, keys, **kwargs) -> None:
                       "déjà des doublons sur ces clés. Purge-les avant de "
                       "relancer.")
 
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  Dashboard Expert IA (métriques + ré-entraînement)
+# ══════════════════════════════════════════════════════════════════════
+def init_ai_dashboard_indexes(db) -> None:
+    log.info("Dashboard Expert IA")
+
+    # metrics : 1 doc / version. Sert get_version + la dédup d'upsert.
+    _create(db[MONGO_COLL_METRICS], [("version", ASC)], unique=True,
+            name="ux_metrics_version")
+    # get_latest + list_versions : tri sur ingested_at.
+    _create(db[MONGO_COLL_METRICS], [("ingested_at", DESC)],
+            name="ix_metrics_ingested")
+
+    # retrain_runs : dédup d'upsert sur created_at. Un index mono-champ se
+    # parcourt dans les DEUX sens → il sert AUSSI get_last et list_recent
+    # (tri created_at DESC). Un second index DESC serait redondant.
+    _create(db[MONGO_COLL_RETRAIN], [("created_at", ASC)], unique=True,
+            name="ux_retrain_created_at")
 
 # ══════════════════════════════════════════════════════════════════════
 #  Authentification (repris de la version initiale)
@@ -108,10 +129,11 @@ def init_indexes() -> None:
     db = get_db()
     init_auth_indexes(db)
     init_detection_indexes(db)
+    init_ai_dashboard_indexes(db)          # ← ajout
 
     log.info("\nIndex présents par collection :")
     for name in ("password_resets", MONGO_COLL_CNN, MONGO_COLL_SIGMA,
-                 MONGO_COLL_REPORTS):
+                 MONGO_COLL_REPORTS, MONGO_COLL_METRICS, MONGO_COLL_RETRAIN):
         try:
             log.info("  %-16s %s", name, sorted(db[name].index_information()))
         except OperationFailure as e:

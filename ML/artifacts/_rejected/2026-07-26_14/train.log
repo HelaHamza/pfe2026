@@ -1,0 +1,51 @@
+================================================================
+  AE CONV HYBRIDE (sequence + rarete) | Device=cpu | W=16
+================================================================
+
+[1] Chargement + features (is_fail inclus)...
+  [CACHE] Snapshot recharge (18,160 logs)
+  [FEAT-CNN] auth  : inter-arrivee mediane 0.01s | 77 logs
+  [FEAT-CNN] syslog: inter-arrivee mediane 2.40s | 2,480 logs
+  [FEAT-CNN] auditd: inter-arrivee mediane 0.00s | 15,603 logs
+    novelty_state : proc=163, user=8, geo=1, syscall=16, exe=100, lineage=229
+
+[2] Split temporel (pool / calib / test)...
+
+[3] Preparation par source (vocab + scaler + fenetres)...
+  auth    : donnees insuffisantes (46) -- ignoree
+  syslog  : 3 scalaires + vocab=8 tokens | 1,190 fenetres train / 298 val
+  auditd  : 9 scalaires + vocab=21 tokens | 7,488 fenetres train / 1,873 val
+
+[4] Entrainement (Huber scalaire + CE sequence)...
+    [syslog] epoch 20/200 val=0.435254
+    [syslog] epoch 40/200 val=0.391243
+    [syslog] epoch 60/200 val=0.367209
+    [syslog] epoch 80/200 val=0.349866
+    [syslog] epoch 100/200 val=0.324865
+    [syslog] epoch 120/200 val=0.319007
+    [syslog] early stop epoch 135 (val=0.319007)
+    [auditd] epoch 20/150 val=0.152119
+    [auditd] epoch 40/150 val=0.123419
+    [auditd] epoch 60/150 val=0.094644
+    [auditd] epoch 80/150 val=0.048886
+    [auditd] epoch 100/150 val=0.033807
+    [auditd] epoch 120/150 val=0.026995
+    [auditd] epoch 140/150 val=0.022198
+  duree : 105.6s
+
+[5] Normalisation |residu| + NLL sur CALIB...
+
+[6] Seuil GPD-POT par source (thresholding reutilise)...
+    syslog  : thr=10.468311 (quantile_fallback) | n_calib=496
+    auditd  : thr=1.201484 (quantile_fallback) | n_calib=3,121
+
+[7] Sauvegarde artifacts CNN...
+    novelty_state -> /home/hala-hamza/pfe-2026/ML/artifacts/_candidate/cnn_novelty_state.pkl
+
+[8] Scoring du TEST (schema alerts.csv)...
+    syslog  :     3 alertes / 496 (0.60%)
+    auditd  :   420 alertes / 3,121 (13.46%)
+
+  -> cnn_scored_test.csv
+  A/B : python evaluation.py --from-csv cnn_scored_test.csv
+================================================================

@@ -1,0 +1,1 @@
+{"episode_id": "EP-a1408a5d64", "verdict": "uncertain", "confidence": 0.65, "severity": "medium", "title": "Création d'un compte local via adduser sans contexte", "mitre": [{"technique_id": "T1136.001", "tactic": "Persistence", "name": "Create Account: Local Account"}]}

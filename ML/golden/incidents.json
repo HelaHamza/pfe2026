@@ -1,0 +1,36 @@
+{
+  "incidents": [
+    {
+      "id": "auth_ssh_bruteforce",
+      "technique": "T1110.001",
+      "log_source": "auth",
+      "start": "2026-07-01T11:38:29Z",
+      "end":   "2026-07-01T11:38:48Z",
+      "note": "60 echecs SSH invaliduser sur 127.0.0.1"
+    },
+    {
+      "id": "auth_user_creation",
+      "technique": "T1136.001",
+      "log_source": "auth",
+      "start": "2026-07-01T11:38:48Z",
+      "end":   "2026-07-01T11:38:50Z",
+      "note": "useradd testintrus puis userdel"
+    },
+    {
+      "id": "auditd_base64_exec",
+      "technique": "T1059.004",
+      "log_source": "auditd",
+      "start": "2026-07-01T11:38:50Z",
+      "end":   "2026-07-01T11:38:52Z",
+      "note": "commande base64, cible cmd_entropy"
+    },
+    {
+      "id": "auditd_arg_heavy_exec",
+      "technique": "T1059.004",
+      "log_source": "auditd",
+      "start": "2026-07-01T11:38:52Z",
+      "end":   "2026-07-01T11:38:54Z",
+      "note": "echo 150 args, cible arg_count"
+    }
+  ]
+}

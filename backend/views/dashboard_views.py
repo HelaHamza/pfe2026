@@ -9,7 +9,7 @@ route principale, corrigée d'un `response_model`.
 """
 from fastapi import APIRouter, Depends
 
-from controllers.stats_controller import StatsController
+from controllers.dashboard_controller import StatsController
 from core.deps import get_current_user
 from models.dashboard_model import DashboardResponse
 

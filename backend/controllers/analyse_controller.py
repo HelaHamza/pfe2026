@@ -1,24 +1,3 @@
-"""
-controllers/analyse_controller.py
-=================================
-ORCHESTRATEUR BATCH. Ne connaît ni le pipeline (→ adapters) ni Mongo
-(→ repository). Il ne fait qu'ordonner, et cet ordre est la garantie
-centrale du système :
-
-        collecter → PERSISTER → publier le rapport → AVANCER les curseurs
-
-Un curseur n'avance jamais avant que les résultats correspondants ne
-soient atteignables par l'API. Toute rupture de cette séquence produit une
-perte silencieuse de détections.
-
-INDÉPENDANCE DES BRANCHES : chaque branche a son propre try. Une panne du
-modèle CNN ne doit pas priver l'analyste de la détection par règles, qui
-est précisément le filet de sécurité.
-
-LIMITE ASSUMÉE : `_state` est un état PROCESSUS. Avec plusieurs workers
-uvicorn le verrou ne protège rien. Mono-worker en soutenance ; la version
-multi-worker exigerait un verrou dans `pipeline_state` (Mongo).
-"""
 import asyncio
 import logging
 import threading
@@ -27,12 +6,15 @@ from collections import Counter, deque
 
 import config as CFG
 from adapters.cnn_adapter import CNNAdapter
+from adapters.eval_adapter import EvalAdapter
+from adapters.gate_adapter import GateAdapter
 from adapters.sigma_adapter import SigmaAdapter
 from core.timeutils import now_utc, to_utc
 from models.enums import ReportStatus
 from models.report_model import Report, ReportStats, TacticCount
 from repositories.log_repository import LogRepository
 from repositories.report_repository import ReportRepository
+from repositories.retrain_repository import RetrainRepository
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +65,9 @@ async def run_analyse():
 # ══════════════════════════════════════════════════════════════════════
 def _cnn_branch(run_id: str, until: str) -> tuple[list[dict], str]:
     since = ReportRepository.get_cnn_cursor() or CFG.PROD_START
+    # Retour IMMÉDIAT au modal : predict_cnn + triage LLM prennent plusieurs
+    # minutes sans émettre de log — sans ce message, le front reste à 0 %.
+    _log("Inférence CNN + triage LLM en cours… (plusieurs minutes)")
     episodes, next_cursor = CNNAdapter.collect(since, until)
     ReportRepository.save_cnn_episodes(episodes, run_id)   # lève si incomplet
     _log(f"{len(episodes)} épisodes CNN persistés")
@@ -91,10 +76,43 @@ def _cnn_branch(run_id: str, until: str) -> tuple[list[dict], str]:
 
 def _sigma_branch(run_id: str, until: str) -> tuple[list[dict], str]:
     since = ReportRepository.get_sigma_cursor() or CFG.PROD_START
+    _log("Analyse Sigma en cours…")
     alerts, next_cursor = SigmaAdapter.collect(since, until)
     ReportRepository.save_sigma_alerts(alerts, run_id)     # lève si incomplet
     _log(f"{len(alerts)} alertes Sigma persistées")
     return alerts, next_cursor
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  Auto-ingest des artefacts hors-bande (domaines C et E)
+#  Non bloquants : un échec ici n'invalide JAMAIS le run de détection.
+#  Calqués sur le bloc « Résumé de triage » : try / log / errors.append.
+# ══════════════════════════════════════════════════════════════════════
+def _ingest_gate(errors: list[str]) -> None:
+    """Domaine C : pousse le dernier gate_*.json dans retrain_runs.
+    Idempotent (upsert sur created_at) ; on saute l'écriture si ce gate est
+    déjà en base pour éviter le bruit de log à chaque run."""
+    doc = GateAdapter.load_latest()
+    if not doc:
+        return                              # aucun gate sur disque → carte C vide
+    last = RetrainRepository.get_last()
+    if last and to_utc(last.get("created_at")) == doc.created_at:
+        _log("Gate déjà en base — ré-ingestion sautée (C à jour)")
+        return
+    RetrainRepository.insert_gate(doc)
+    _log(f"Gate {doc.created_at} ({doc.verdict}) ingéré (domaine C)")
+
+
+def _ingest_eval(run_id: str, errors: list[str]) -> None:
+    """Domaine E : attache eval_summary.json AU RUN COURANT. Absent → no-op,
+    la carte E reste has_data=False. mtime journalisée (péremption visible)."""
+    loaded = EvalAdapter.load_summary()
+    if not loaded:
+        return
+    raw, mtime = loaded
+    ReportRepository.save_eval_comparison(run_id, raw)
+    _log(f"Comparaison d'éval attachée au run {run_id} "
+         f"(éval générée le {mtime.isoformat()})")
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -103,6 +121,10 @@ def _sigma_branch(run_id: str, until: str) -> tuple[list[dict], str]:
 def _run_pipeline(run_id: str):
     with _lock:
         started = _state["started_at"]      # borne haute FIGÉE, partagée
+
+    # Borne basse du run pour le comptage des logs ES (AVANT avancement des
+    # curseurs). ES = domaine Sigma → on prend le curseur Sigma.
+    run_since = ReportRepository.get_sigma_cursor() or CFG.PROD_START
 
     cnn_eps, sigma_alerts, errors = [], [], []
     cnn_cursor = sigma_cursor = None
@@ -120,7 +142,9 @@ def _run_pipeline(run_id: str):
         _log(f"ÉCHEC branche Sigma : {e}", logging.ERROR)
 
     try:
-        logs_by_source = LogRepository.count_logs_by_source()
+        # Fenêtre ]run_since, started] → logs DU RUN, pas tout l'index.
+        logs_by_source = LogRepository.count_logs_by_source(
+            since=run_since, until=started)
     except Exception as e:
         logs_by_source = {}
         errors.append(f"Comptage logs : {e}")
@@ -159,6 +183,35 @@ def _run_pipeline(run_id: str):
         _log("Rapport non publié → AUCUN curseur avancé (relance sûre).",
              logging.WARNING)
 
+    # ── Résumé de triage attaché au report (enchaînement automatique) ──
+    if report_ok:
+        try:
+            summary = CNNAdapter.load_triage_summary()
+            if summary:
+                ReportRepository.save_triage_summary(run_id, summary)
+                _log("Résumé de triage attaché au report")
+            else:
+                _log("Aucun résumé de triage pour ce run (domaine D vide)",
+                     logging.WARNING)
+        except Exception as e:
+            errors.append(f"Triage : {e}")
+            _log(f"Résumé de triage NON attaché : {e}", logging.ERROR)
+
+    # ── Domaine C : auto-ingest du dernier gate de ré-entraînement ─────
+    try:
+        _ingest_gate(errors)
+    except Exception as e:
+        errors.append(f"Gate (C) : {e}")
+        _log(f"Auto-ingest gate NON effectué : {e}", logging.ERROR)
+
+    # ── Domaine E : auto-ingest de l'éval offline, attachée au run courant ─
+    if report_ok:
+        try:
+            _ingest_eval(run_id, errors)
+        except Exception as e:
+            errors.append(f"Éval (E) : {e}")
+            _log(f"Auto-ingest éval NON effectué : {e}", logging.ERROR)
+
     with _lock:
         _state.update(running=False, done=True,
                       error="; ".join(errors) if errors else None,
@@ -183,6 +236,15 @@ def _save_snapshot(run_id, started, status, errors,
     cnn_sev = Counter(str(e.get("severity", "low")).lower() for e in shown)
     cnn_verdict = Counter(e.get("verdict", "uncertain") for e in cnn_eps)
     sig_lvl = Counter(str(a.get("level", "LOW")).lower() for a in sigma_alerts)
+
+    # Anomalies AE (TP) ventilées par source. INITIALISÉ à 0 pour CHAQUE source
+    # présente dans les logs : un run à 0 TP renvoie ainsi {auditd:0, auth:0,
+    # syslog:0} et non {}. Le front distingue « 0 anomalie » de « champ absent »
+    # et affiche donc toujours le %.
+    anomalies_by_source: dict[str, int] = {src: 0 for src in logs_by_source}
+    for e in shown:                          # TP uniquement
+        src = (e.get("log_source") or "unknown").lower()
+        anomalies_by_source[src] = anomalies_by_source.get(src, 0) + 1
 
     tactics = Counter(
         a["tactic"] for a in sigma_alerts
@@ -211,6 +273,7 @@ def _save_snapshot(run_id, started, status, errors,
         cnn_by_verdict=dict(cnn_verdict),
         sigma_by_level=dict(sig_lvl),
         logs_by_source=logs_by_source,
+        anomalies_by_source=anomalies_by_source,
         by_tactic=[TacticCount(tactic=t, count=c)
                    for t, c in tactics.most_common(8)],
     )

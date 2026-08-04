@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from core.email import send_approval_notification, send_rejection_notification
+from core.mailer import send_approval_notification, send_rejection_notification
 from models.user_model import ApproveUserRequest, UserResponse
 from repositories import user_repository as users
 from typing import List

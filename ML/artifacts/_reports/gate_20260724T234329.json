@@ -1,0 +1,110 @@
+{
+  "verdict": "PROMOTE",
+  "created_at": "2026-07-24T23:43:29.432265+00:00",
+  "candidat": "/tmp/copie",
+  "courant": "artifacts/2026-07-01",
+  "echecs_bloquants": [],
+  "avertissements": [],
+  "note": "",
+  "tests": [
+    {
+      "nom": "integrite_artefacts",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "jeu d'artefacts coherent",
+      "metriques": {
+        "n_problemes": 0,
+        "problemes": []
+      }
+    },
+    {
+      "nom": "golden_set",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "recall episodique 4/4 (100%)",
+      "metriques": {
+        "recall": 1.0,
+        "n_incidents": 4,
+        "detecte": {
+          "auth_ssh_bruteforce": true,
+          "auth_user_creation": true,
+          "auditd_base64_exec": true,
+          "auditd_arg_heavy_exec": true
+        },
+        "baseline_courant": {
+          "auth_ssh_bruteforce": true,
+          "auth_user_creation": true,
+          "auditd_base64_exec": true,
+          "auditd_arg_heavy_exec": true
+        },
+        "regressions": []
+      }
+    },
+    {
+      "nom": "taux_alerte",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "candidat=40 ep. vs courant=40 ep. | ratio 1.00 (bande [0.5, 2.0])",
+      "metriques": {
+        "episodes_candidat": 40,
+        "episodes_courant": 40,
+        "ratio": 1.0
+      }
+    },
+    {
+      "nom": "distribution_scores",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "donnees insuffisantes pour le test KS",
+      "metriques": {
+        "D_max": 0.0,
+        "source_pire_cas": null,
+        "par_source": {
+          "auditd": {
+            "D": 0.0,
+            "p_sous_echantillon": 0.7185142568618185,
+            "n_candidat": 74552,
+            "n_courant": 74552
+          },
+          "auth": {
+            "D": 0.0,
+            "p_sous_echantillon": 0.999391964808433,
+            "n_candidat": 2486,
+            "n_courant": 2486
+          },
+          "syslog": {
+            "D": 0.0,
+            "p_sous_echantillon": 0.6388604192561329,
+            "n_candidat": 71813,
+            "n_courant": 71813
+          }
+        }
+      }
+    },
+    {
+      "nom": "seuils_pot",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "auth: 11.109 (x1.00) | syslog: 7.938 (x1.00) | auditd: 8.670 (x1.00)",
+      "metriques": {
+        "seuils": {
+          "auth": {
+            "candidat": 11.108547,
+            "courant": 11.108547,
+            "ratio": 1.0
+          },
+          "syslog": {
+            "candidat": 7.937678,
+            "courant": 7.937678,
+            "ratio": 1.0
+          },
+          "auditd": {
+            "candidat": 8.669547,
+            "courant": 8.669547,
+            "ratio": 1.0
+          }
+        }
+      }
+    }
+  ]
+}

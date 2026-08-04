@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "created_at": "2026-07-26T09:47:26.304146+00:00",
+  "hostname": "ASUS-X415JA",
+  "git_commit": "22240f7",
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu130",
+    "numpy": "2.4.4",
+    "pandas": "3.0.2",
+    "scipy": "1.17.1",
+    "sklearn": "1.8.0",
+    "pyarrow": "24.0.0"
+  },
+  "config_fingerprint": {
+    "hash": "d3ecda0d5798d3c6",
+    "params": {
+      "WINDOW_SIZE": 16,
+      "WINDOW_STRIDE": 1,
+      "EMBED_DIM": 16,
+      "CNN_FEATURES": {
+        "auditd": [
+          "cmd_entropy",
+          "cmd_length_log",
+          "arg_count",
+          "proc_rarity",
+          "exe_path_rarity",
+          "user_rarity",
+          "syscall_rarity",
+          "parent_child_rarity",
+          "inter_arrival_log"
+        ],
+        "auth": [
+          "is_fail",
+          "msg_length_log",
+          "user_rarity",
+          "geo_rarity",
+          "inter_arrival_log",
+          "ip_is_external"
+        ],
+        "syslog": [
+          "msg_length_log",
+          "proc_rarity",
+          "inter_arrival_log"
+        ]
+      },
+      "LATENT_DIM_BY_SOURCE": {
+        "auditd": 10,
+        "auth": 8,
+        "syslog": 6
+      },
+      "CONV_CHANNELS": [
+        32,
+        64
+      ],
+      "POOL_LEN": 4,
+      "KERNEL_SIZE": 3,
+      "DROPOUT": 0.1,
+      "DENOISE_MASK_FRAC": 0.15,
+      "HUBER_DELTA": 0.5,
+      "TOKEN_LOSS_WEIGHT": 0.25,
+      "SCORE_LSE_TAU_BY_SOURCE": {
+        "auditd": 3.0,
+        "auth": 1.0,
+        "syslog": 2.0
+      },
+      "POT_TARGET_RATE_BY_SOURCE": {
+        "auditd": 0.0025,
+        "auth": 0.002,
+        "syslog": 0.001
+      },
+      "POT_INIT_Q": 0.98,
+      "POT_XI_MIN": -0.5,
+      "POT_XI_MAX": 0.8,
+      "EPISODE_GAP_SECONDS": 300,
+      "SEED": 42
+    }
+  },
+  "files": {
+    "model_cnn.pt": {
+      "sha256": "1e301e9bc4c1c8a40d0a6f52bc90dfd9190d32a9729faa6794f5d580e2345e8f",
+      "bytes": 385665
+    },
+    "cnn_bundle.pkl": {
+      "sha256": "0116f89275587677eae544c765ec092627020b8c52ba64dbde3d0600d6ca9263",
+      "bytes": 1925
+    },
+    "cnn_thresholds.pkl": {
+      "sha256": "db64abab4a9712336a540721dec6730d3418b9e1052c782ff2c8c3e6d731f3f4",
+      "bytes": 243
+    },
+    "cnn_novelty_state.pkl": {
+      "sha256": "efe2d6682712af004aec7e664d776bd5e9c98f1a9773a56d259f96c93c47362b",
+      "bytes": 15542
+    },
+    "dataset_snapshot.parquet": {
+      "sha256": "31080ae704ad2299ecc5ddbb0ddc07c700cd03848af5d9e66caecdd86373d0ce",
+      "bytes": 154358
+    }
+  },
+  "version": "2026-07-26",
+  "status": "rejected",
+  "rejection": [
+    "golden_set",
+    "taux_alerte",
+    "distribution_scores",
+    "seuils_pot"
+  ]
+}

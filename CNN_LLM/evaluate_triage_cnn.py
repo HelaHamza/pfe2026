@@ -14,7 +14,7 @@ La verite terrain sert UNIQUEMENT ici, a l'evaluation. Elle n'est jamais
 injectee dans le prompt : le LLM ne la voit pas.
 
 Usage :
-    python evaluate_triage_cnn.py --gt /home/hala-hamza/pfe-backend-2026/ML/groundtruth.jsonl
+    python evaluate_triage_cnn.py --gt /home/hala-hamza/pfe-2026/evaluation/groundtruth.jsonl
 """
 from __future__ import annotations
 

@@ -36,6 +36,8 @@ CORRECTIFS PAR RAPPORT À LA VERSION PRÉCÉDENTE
    exporté `ReportRepository` reste une instance module-level, ce qui
    préserve tous les appels existants `ReportRepository.methode(...)`.
 """
+
+
 from __future__ import annotations
 
 import hashlib
@@ -54,7 +56,6 @@ from models.enums import norm_severity
 from models.report_model import Report
 
 log = logging.getLogger(__name__)
-
 
 
 def _is_quota_error(e: Exception) -> bool:
@@ -405,6 +406,71 @@ class MongoReportRepository:
         else:
             log.info("Stockage Atlas : %.0f/%d Mo (%.0f %%)",
                      used, ATLAS_QUOTA_MB, ratio * 100)
+
+    # ── Agrégats dashboard Expert IA (A) ───────────────────────────────
+    def cnn_verdict_breakdown(self, run_id: str) -> dict[str, int]:
+        """{verdict: count} en UNE agrégation. Somme des valeurs = épisodes
+        anomaux passés au triage. Aucun libellé de verdict codé en dur."""
+        pipeline = [
+            {"$match": {"run_id": run_id}},
+            {"$group": {"_id": "$verdict", "n": {"$sum": 1}}},
+        ]
+        return {(r["_id"] or "unknown"): r["n"]
+                for r in self._cnn.aggregate(pipeline)}
+
+    def cnn_severity_breakdown(self, run_id: str,
+                               verdicts=None) -> dict[str, int]:
+        match = {"run_id": run_id}
+        if verdicts:
+            match["verdict"] = {"$in": list(verdicts)}
+        pipeline = [
+            {"$match": match},
+            {"$group": {"_id": "$severity", "n": {"$sum": 1}}},
+        ]
+        return {(r["_id"] or "unknown"): r["n"]
+                for r in self._cnn.aggregate(pipeline)}
+
+    def list_recent_reports(self, limit: int = 10) -> list[dict]:
+        """Runs publiables récents (completed | partial), plus récent d'abord."""
+        cur = (self._reports
+               .find({"status": {"$in": ["completed", "partial"]}})
+               .sort("finished_at", pymongo.DESCENDING)
+               .limit(limit))
+        out = []
+        for r in cur:
+            r["_id"] = str(r["_id"])
+            out.append(r)
+        return out
+
+    # ── Résumé de triage (D) ───────────────────────────────────────────
+    def save_triage_summary(self, run_id: str, summary: dict) -> None:
+        try:
+            res = self._reports.update_one(
+                {"analysis_id": run_id}, {"$set": {"triage": summary}})
+        except PyMongoError as e:
+            raise PersistenceError(
+                f"Résumé triage du run {run_id} non écrit : {e}") from e
+        if res.matched_count == 0:
+            raise PersistenceError(
+                f"Aucun rapport pour le run {run_id} : résumé triage PERDU. "
+                f"Le rapport doit être persisté AVANT l'ingestion du triage.")
+
+    # ── Comparaison d'éval CNN vs CNN→LLM (E) ──────────────────────────
+    def save_eval_comparison(self, run_id: str, comparison: dict) -> None:
+        """Attache la comparaison CNN vs cascade au document report (sous-objet
+        `eval_comparison`). Même logique que save_triage_summary : run-scoped,
+        idempotent, écrase le sous-objet à chaque ingest."""
+        try:
+            res = self._reports.update_one(
+                {"analysis_id": run_id},
+                {"$set": {"eval_comparison": comparison}})
+        except PyMongoError as e:
+            raise PersistenceError(
+                f"Comparaison d'éval du run {run_id} non écrite : {e}") from e
+        if res.matched_count == 0:
+            raise PersistenceError(
+                f"Aucun rapport pour le run {run_id} : comparaison d'éval PERDUE. "
+                f"Le rapport doit être persisté AVANT l'ingestion de la comparaison.")
 
 
 # Instance module-level : tous les appels existants `ReportRepository.x(...)`

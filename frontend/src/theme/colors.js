@@ -12,6 +12,10 @@ export const severity = {
 };
 
 export const detection = {
+  // Contrat actuel : une row = une branche (type ∈ { cnn, sigma }).
+  cnn:   "#378ADD",  // CNN autoencoder (bleu)
+  sigma: "#7F77DD",  // Sigma (violet)
+  // Legacy — à retirer une fois toute l'UI migrée (plus de concept `both`).
   ae_only:    "#378ADD",
   sigma_only: "#7F77DD",
   both:       "#1D9E75",

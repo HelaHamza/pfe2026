@@ -1,0 +1,8 @@
+attack_id,technique,n_overlap,n_alerts,cnn,cascade
+T1110.001_auth_fail_burst_b269a7d9,T1110.001,2,2,True,True
+T1136.001_new_user_session_b269a7d9,T1136.001,2,2,True,True
+T1059.004_rare_binary_burst_b269a7d9,T1059.004,1,1,True,True
+T1055_ptrace_probe_b269a7d9,T1055,1,1,True,True
+T1547.006_kmod_load_attempt_b269a7d9,T1547.006,1,1,True,True
+T1548_capability_set_b269a7d9,T1548,1,1,True,False
+T1070.006_timestomp_decoy_b269a7d9,T1070.006,1,1,True,False

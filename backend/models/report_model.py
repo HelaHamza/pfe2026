@@ -58,4 +58,6 @@ class Report(BaseModel):
     cnn_by_verdict: dict[str, int] = Field(default_factory=dict)
     sigma_by_level: dict[str, int] = Field(default_factory=dict)
     logs_by_source: dict[str, int] = Field(default_factory=dict)
+    # Anomalies AE (true_positive) ventilées par source de log. Somme = cnn_kept.
+    anomalies_by_source: dict[str, int] = Field(default_factory=dict)
     by_tactic: list[TacticCount] = Field(default_factory=list)

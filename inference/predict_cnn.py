@@ -25,7 +25,7 @@ import sys
 import joblib
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_ML_DIR = os.path.expanduser("~/pfe-backend-2026/ML")
+_ML_DIR = os.path.expanduser("~/pfe-2026/ML")
 if _ML_DIR not in sys.path:
     sys.path.insert(0, _ML_DIR)
 
@@ -141,7 +141,7 @@ def main():
         emit = episodes
         print("\n[4] Aucun épisode dans la fenêtre.")
 
-    scored.to_csv(SCORED_LIVE_CSV, index=False)
+    scored.to_csv(SCORED_LIVE_CSV, index=False) # ici on sauvegarde le dataframe scored dans un fichier CSV pour référence
     if len(primary):
         primary.to_csv(ALERTS_CSV, index=False)
     if len(context):

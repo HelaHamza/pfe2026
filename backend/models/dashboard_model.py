@@ -1,18 +1,7 @@
 """
 models/dashboard_model.py
 =========================
-Contrat de sortie du dashboard SOC.
-
-Deux garanties apportées :
-  1. FORME STABLE JUSQU'AU DERNIER NIVEAU. `stats` est toujours un
-     ReportStats complet (zéros si aucun run) et non un dict vide : le
-     front n'a plus à distinguer « pas de données » de « données à zéro »
-     dans son rendu.
-  2. STATUT VISIBLE. Depuis qu'un run peut être `partial`, un « 0 alerte
-     Sigma » peut signifier « rien détecté » OU « branche jamais exécutée ».
-     Sur un outil de sécurité, ces deux zéros ne peuvent pas s'afficher de
-     la même façon : `status` + `errors` permettent au front de poser un
-     bandeau d'avertissement.
+Contrat de sortie de GET /dashboard : snapshot du dernier run publié.
 """
 from datetime import datetime
 
@@ -40,4 +29,6 @@ class DashboardResponse(BaseModel):
     cnn_by_verdict: dict[str, int] = Field(default_factory=dict)
     sigma_by_level: dict[str, int] = Field(default_factory=dict)
     logs_by_source: dict[str, int] = Field(default_factory=dict)
+    # Anomalies AE (true_positive) par source → taux d'anomalie par type de log.
+    anomalies_by_source: dict[str, int] = Field(default_factory=dict)
     by_tactic: list[TacticCount] = Field(default_factory=list)

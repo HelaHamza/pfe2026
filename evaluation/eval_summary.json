@@ -1,0 +1,29 @@
+{
+  "mode": "alertes",
+  "n_episodes": 10,
+  "n_attacks": 7,
+  "threshold": null,
+  "triage_coverage": 1.0,
+  "alert_level": {
+    "cnn": {
+      "precision": 0.9,
+      "n_alerts": 10,
+      "tp": 9,
+      "fp": 1
+    },
+    "cascade": {
+      "precision": 1.0,
+      "n_alerts": 7,
+      "tp": 7,
+      "fp": 0,
+      "fp_removed": 1
+    }
+  },
+  "attack_level": {
+    "cnn_recall": 1.0,
+    "cascade_recall": 0.7142857142857143,
+    "attacks_detected_cnn": 7,
+    "attacks_detected_cascade": 5
+  },
+  "episode_level": null
+}

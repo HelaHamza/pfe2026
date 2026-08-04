@@ -7,7 +7,7 @@ from core.security import (
     generate_reset_token, hash_token,
     generate_otp, hash_otp,                          # ← nouveaux imports
 )
-from core.email import send_new_user_notification, send_password_reset, send_otp
+from core.mailer import send_new_user_notification, send_password_reset, send_otp
 from repositories import user_repository as users
 from repositories import password_reset_repository as resets
 from repositories import otp_repository as otps                # ← nouveau repo

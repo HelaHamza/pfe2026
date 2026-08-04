@@ -1,4 +1,4 @@
-// src/components/dashboard/layout/EmptyDashboardState.jsx
+// src/components/dashboard/layout/EmptySOCDashboardState.jsx
 import { neutral } from '../../../theme/colors'
 
 export default function EmptyDashboardState({ onLaunch }) {
@@ -19,8 +19,9 @@ export default function EmptyDashboardState({ onLaunch }) {
 
       <p style={{ margin: '0 auto 24px', maxWidth: 480, fontSize: 14, color: neutral.textMuted, lineHeight: 1.6 }}>
         Aucune analyse n'a encore été lancée. Cliquez ci-dessous pour démarrer
-        la détection : les modules AE, Sigma et LLM vont analyser vos logs et
-        corréler les anomalies avec les techniques MITRE ATT&CK.
+        la détection : le CNN-AE remonte les épisodes anormaux, Sigma couvre les
+        signatures connues, et le LLM trie et explique chaque cas avant de le
+        rattacher aux techniques MITRE ATT&CK.
       </p>
 
       <button onClick={onLaunch} style={{
@@ -39,16 +40,16 @@ export default function EmptyDashboardState({ onLaunch }) {
         textAlign: 'left',
       }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#185FA5', marginBottom: 4 }}>AE</div>
-          <div style={{ fontSize: 11, color: neutral.textMuted }}>Détection d'anomalies par auto-encodeur</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#378ADD', marginBottom: 4 }}>CNN-AE</div>
+          <div style={{ fontSize: 11, color: neutral.textMuted }}>Détection d'anomalies par autoencodeur convolutif</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#534AB7', marginBottom: 4 }}>SIGMA</div>
-          <div style={{ fontSize: 11, color: neutral.textMuted }}>Règles de corrélation sur signatures connues</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#7F77DD', marginBottom: 4 }}>SIGMA</div>
+          <div style={{ fontSize: 11, color: neutral.textMuted }}>Règles de détection sur signatures connues</div>
         </div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#fb923c', marginBottom: 4 }}>FUSION</div>
-          <div style={{ fontSize: 11, color: neutral.textMuted }}>Corrélation AE + Sigma + enrichissement LLM</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#fb923c', marginBottom: 4 }}>LLM</div>
+          <div style={{ fontSize: 11, color: neutral.textMuted }}>Triage, explication et vérification des épisodes</div>
         </div>
       </div>
     </div>

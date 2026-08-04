@@ -1,6 +1,6 @@
 """Crée le compte admin par défaut. À lancer une fois : python -m scripts.seed_admin"""
 from core.security import hash_password
-from core.email import send_admin_welcome
+from core.mailer import send_admin_welcome
 from repositories import user_repository as users
 
 

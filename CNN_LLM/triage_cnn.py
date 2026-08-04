@@ -46,6 +46,7 @@ import pandas as pd
 
 import config_llm_cnn as CL
 import episode_context_cnn as EC
+import grounding_cnn as G          # <-- NOUVEAU : verification de fidelite (aval)
 import prompts_cnn as P
 import rag_cnn
 from llm_client_cnn import LLMError, complete_json
@@ -61,14 +62,19 @@ def _iso(v):
 
 
 # ---------------------------------------------------------------------------
-def _validate(raw: dict, ep: EC.Episode, allowed_mitre: set[str],
-              flags: list[str]) -> dict:
+def _validate(raw: dict, ep: EC.Episode, allowed_mitre: dict,
+              flags: list[str], shown_kb_ids: set[str]) -> dict:
     """Garde-fous DETERMINISTES appliques APRES le LLM.
 
-    Un LLM est un composant faillible : il peut halluciner un T-code, se
-    montrer trop sur de lui, ou clore une alerte qu'aucun analyste ne
-    fermerait. Ces regles sont verifiables ligne a ligne par un jury, ce qui
-    rend le systeme auditable meme si le modele derape.
+    Un LLM est un composant faillible : il peut halluciner un T-code, citer une
+    source qu'on ne lui a pas donnee, fabriquer une IP, ou clore une alerte
+    qu'aucun analyste ne fermerait. Ces regles sont verifiables ligne a ligne
+    par un jury, ce qui rend le systeme auditable meme si le modele derape.
+
+    v2 -- ajout d'une couche de GROUNDING (module grounding_cnn) : le RAG
+    reduit l'hallucination en amont (bons faits en entree), ces controles la
+    traquent en aval (les affirmations de sortie sont-elles ancrees ?).
+    `shown_kb_ids` = ids des chunks REELLEMENT montres pour cet episode.
     """
     out: dict = {
         "episode_id": ep.episode_id,
@@ -117,18 +123,12 @@ def _validate(raw: dict, ep: EC.Episode, allowed_mitre: set[str],
         sev = "info"
     out["severity"] = sev
 
-    # 5. MITRE : liste fermee, pas d'invention
-    mitre, dropped = [], []
-    for m in raw.get("mitre") or []:
-        if not isinstance(m, dict):
-            continue
-        tid = str(m.get("technique_id", "")).strip().upper()
-        if tid in allowed_mitre:
-            mitre.append({"technique_id": tid,
-                          "tactic": str(m.get("tactic", "")).strip(),
-                          "name": str(m.get("name", "")).strip()})
-        elif tid:
-            dropped.append(tid)
+    # 5. MITRE : liste fermee + tactic/name RECOPIES depuis la verite terrain.
+    #    Le LLM ne fournit QUE l'ID (contraint a allowed_mitre) ; le libelle
+    #    (tactique/nom) vient du systeme, jamais du modele. Un T1053.003 que le
+    #    LLM etiquette a tort "Defense Evasion" ressort corrige "Persistence".
+    #    -> surface d'hallucination de metadonnee MITRE = eliminee.
+    mitre, dropped = G.canonical_mitre(raw.get("mitre"), allowed_mitre)
     if dropped:
         out["guardrails"].append(
             f"technique(s) hors KB rejetee(s) : {', '.join(dropped)}")
@@ -142,9 +142,29 @@ def _validate(raw: dict, ep: EC.Episode, allowed_mitre: set[str],
         val = raw.get(k) or []
         out[k] = [str(x) for x in val][:6] if isinstance(val, list) else []
 
-    # 7. tracabilite : une conclusion sans source KB est signalee
+    # 7. tracabilite + GROUNDING des kb_refs.
+    #    v1 ne signalait que l'ABSENCE de source. v2 verifie en plus que chaque
+    #    source citee a REELLEMENT ete montree au modele pour CET episode :
+    #    citer un chunk non injecte (souvent recopie d'un exemple few-shot) est
+    #    une hallucination de source -> on la retire et on la trace.
+    kept_refs, hallucinated_refs = G.check_kb_refs(out["kb_refs"], shown_kb_ids)
+    if hallucinated_refs:
+        out["guardrails"].append(
+            f"source(s) KB citee(s) mais NON montree(s) [hallucination] : "
+            f"{', '.join(hallucinated_refs)} -> retiree(s)")
+        out["kb_refs"] = kept_refs
     if not out["kb_refs"]:
         out["guardrails"].append("aucune source KB citee -> explication non tracable")
+
+    # 7b. GROUNDING des preuves : tout identifiant CONCRET (IP, binaire pointe,
+    #     chemin, horodatage) cite en 'evidence' doit exister dans le dossier.
+    #     Attrape la fabrication dangereuse (IP de C2 inventee) sans punir la
+    #     paraphrase interpretative. Calcule ici pour servir aux gardes 8 et 8c.
+    ungrounded = G.check_evidence(out["evidence"], ep.render())
+    if ungrounded:
+        out["guardrails"].append(
+            f"{len(ungrounded)} preuve(s) avec identifiant ABSENT du dossier "
+            f"[possible fabrication] -> revue humaine")
 
     # 8. exigence d'actionnabilite
     if v in ("true_positive", "uncertain"):
@@ -161,6 +181,18 @@ def _validate(raw: dict, ep: EC.Episode, allowed_mitre: set[str],
     if v == "false_positive" and len(out["rationale"]) < CL.MIN_RATIONALE_CHARS:
         out["guardrails"].append(
             "cloture sans justification suffisante -> uncertain")
+        out["verdict"] = "uncertain"
+        out["confidence"] = min(out["confidence"], 0.6)
+
+    # 8c. GARDE ANTI-HALLUCINATION SUR LA CLOTURE.
+    #     Clore une alerte (false_positive) est l'action la plus dangereuse du
+    #     systeme (asymetrie, cf. prompt regle 5). Si cette cloture s'appuie sur
+    #     une source hallucinee OU une preuve non ancree, on REFUSE de clore :
+    #     l'episode remonte en 'uncertain' pour revue humaine.
+    if out["verdict"] == "false_positive" and (hallucinated_refs or ungrounded):
+        out["guardrails"].append(
+            "cloture appuyee sur source hallucinee / preuve non ancree "
+            "-> uncertain [anti-hallucination]")
         out["verdict"] = "uncertain"
         out["confidence"] = min(out["confidence"], 0.6)
 
@@ -192,6 +224,13 @@ def triage_episode(ep: EC.Episode, index: rag_cnn.KBIndex,
                    dry_run: bool = False) -> dict:
     flags = EC.policy_flags(ep)
     hits = index.retrieve(ep.rag_query(), ep.keys, ep.log_source)
+
+    # Ensemble des chunks REELLEMENT montres a ce prompt -> sert au grounding
+    # des kb_refs. Correct tant que la KB tient sous RAG_MAX_CHARS (render()
+    # n'en tronque alors aucun). Si la KB depasse un jour ce budget, deriver
+    # cet ensemble de ce que render() a effectivement conserve.
+    shown_kb_ids = {c.id for c, _ in hits}
+
     dossier = ep.render() + f"\nPOLICY_FLAGS: {'; '.join(flags) or '(aucun)'}"
     user = P.build_user_prompt(dossier, index.render(hits),
                               index.allowed_mitre, flags)
@@ -209,7 +248,7 @@ def triage_episode(ep: EC.Episode, index: rag_cnn.KBIndex,
         raw = complete_json(messages)
     except LLMError as e:
         return _fail_open(ep, flags, str(e))
-    return _validate(raw, ep, index.allowed_mitre, flags)
+    return _validate(raw, ep, index.allowed_mitre, flags, shown_kb_ids)
 
 
 # ---------------------------------------------------------------------------
@@ -315,6 +354,18 @@ def main() -> None:
         print(f"      Verifier LLM_PROVIDER / LLM_BASE_URL / cle API avant "
               f"d'exploiter ce run. Aucun triage n'a reellement eu lieu.")
 
+    # --- diagnostic anti-hallucination (agrege sur le run) ------------------
+    n_ref_hall = sum(1 for r in results
+                     if any("hallucination]" in g for g in r.get("guardrails", [])))
+    n_ev_fab = sum(1 for r in results
+                   if any("fabrication]" in g for g in r.get("guardrails", [])))
+    n_escalated = sum(1 for r in results
+                      if any("anti-hallucination]" in g for g in r.get("guardrails", [])))
+    if n_ref_hall or n_ev_fab or n_escalated:
+        print(f"\n  [grounding] {n_ref_hall} episode(s) avec source KB hallucinee | "
+              f"{n_ev_fab} avec preuve non ancree | "
+              f"{n_escalated} cloture(s) refusee(s) par securite.")
+
     # --- sorties ------------------------------------------------------------
     with open(CL.TRIAGE_JSONL, "w", encoding="utf-8") as f:
         for r in results:
@@ -352,6 +403,10 @@ def main() -> None:
         "n_alerts_in": int(sum(e.n_alerts for e in eps)),
         "verdicts": counts,
         "n_fail_open": n_failopen,
+        # traces anti-hallucination -> chiffrables dans le memoire
+        "n_kb_ref_hallucinated": n_ref_hall,
+        "n_evidence_fabricated": n_ev_fab,
+        "n_closure_refused_grounding": n_escalated,
         "n_episodes_to_analyst": len(kept),
         "noise_reduction_pct": round(
             100 * (1 - len(kept) / max(len(eps), 1)), 1),

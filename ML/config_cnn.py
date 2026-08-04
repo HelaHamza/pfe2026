@@ -32,8 +32,7 @@ ES_TIME_GTE = os.getenv("ES_TIME_GTE", "2026-04-24T00:00:00Z")
 ES_TIME_LTE = os.getenv("ES_TIME_LTE", "now")
 MAX_DOCS    = int(os.getenv("MAX_DOCS", "400000"))
 
-DATASET_CACHE = "dataset_snapshot.parquet"
-USE_CACHE     = True
+
 
 SOURCES = ["auth", "syslog", "auditd"]
 
@@ -138,13 +137,18 @@ MAX_DOCS_BY_SOURCE = {"syslog": 200000, "auth": 50000, "auditd": 900000}
 # --- Artifacts SEPARES (n'ecrasent AUCUN artifact MLP) ----------------------
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
-ARTIFACT_DIR = os.getenv("SENTINEL_ARTIFACT_DIR", _HERE)   # <-- la clé
+ARTIFACT_DIR = os.getenv("CNN_ARTIFACT_DIR", _HERE)
+os.makedirs(ARTIFACT_DIR, exist_ok=True)
+
+MODEL_PATH         = os.path.join(ARTIFACT_DIR, "model_cnn.pt")
+BUNDLE_PATH        = os.path.join(ARTIFACT_DIR, "cnn_bundle.pkl")
+THRESH_PATH        = os.path.join(ARTIFACT_DIR, "cnn_thresholds.pkl")
+NOVELTY_STATE_PATH = os.path.join(ARTIFACT_DIR, "cnn_novelty_state.pkl")
 
 
-MODEL_PATH      = os.path.join(_HERE, "model_cnn.pt")
-BUNDLE_PATH     = os.path.join(_HERE, "cnn_bundle.pkl")
-THRESH_PATH     = os.path.join(_HERE, "cnn_thresholds.pkl")
-NOVELTY_STATE_PATH = os.path.join(_HERE, "cnn_novelty_state.pkl")
+DATASET_CACHE = os.path.join(ARTIFACT_DIR, "dataset_snapshot.parquet")
+USE_CACHE     = os.getenv("CNN_USE_CACHE", "1") == "1"
+
 
 SEED_SECONDS = 6 * 3600   # cf. note ci-dessous pour le calibrer
 
@@ -152,7 +156,7 @@ SCORED_TEST_CSV = "cnn_scored_test.csv"
 
 # --- Coherence : debut de fenetre jamais posterieur a la borne d'extraction --
 import pandas as _pd
-_lte = _pd.Timestamp.utcnow() if ES_TIME_LTE == "now" else _pd.Timestamp(ES_TIME_LTE)
+_lte = _pd.Timestamp.now("UTC") if ES_TIME_LTE == "now" else _pd.Timestamp(ES_TIME_LTE)
 for _s, _start in DATA_START_BY_SOURCE.items():
     if _start and _pd.Timestamp(_start) > _lte:
         raise ValueError(

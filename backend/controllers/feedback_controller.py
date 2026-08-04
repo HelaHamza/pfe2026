@@ -1,6 +1,6 @@
 # controllers/feedback_controller.py
 from fastapi import HTTPException, status
-from core.email import (
+from core.mailer import (
     send_feedback_notification, send_feedback_approved,
     send_feedback_rejected, ADMIN_EMAIL,
 )

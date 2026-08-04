@@ -1,0 +1,1 @@
+{"episode_id": "EP-defe209fe9", "verdict": "true_positive", "confidence": 0.86, "severity": "high", "title": "Tentatives SSH échouées avec noms d'utilisateur rares depuis localhost", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}

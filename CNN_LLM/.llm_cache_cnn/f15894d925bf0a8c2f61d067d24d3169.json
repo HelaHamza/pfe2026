@@ -1,0 +1,1 @@
+{"episode_id": "EP-defe209fe9", "verdict": "true_positive", "confidence": 0.86, "severity": "high", "title": "Tentatives de connexion SSH échouées avec utilisateurs inconnus (brute‑force)", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { aiDashboardService } from '../services/api'
 
-export function useAiDashboardData() {
-  const [comparison, setComparison] = useState(null)
+// Usine : un hook de fetch générique, réutilisé par chaque section.
+// loading / error / reload isolés par section — miroir du has_data backend.
+function useDomain(fetcher) {
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -10,19 +12,21 @@ export function useAiDashboardData() {
     setLoading(true)
     setError(null)
     try {
-      // compare() sans argument = toutes les versions, ordre chronologique
-      const data = await aiDashboardService.compare()
-      setComparison(data)
+      setData(await fetcher())
     } catch (err) {
       setError(err?.response?.data?.detail || err.message || 'Erreur de chargement')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetcher])
 
-  useEffect(() => {
-    load()
-  }, [load])
-
-  return { comparison, loading, error, reload: load }
+  useEffect(() => { load() }, [load])
+  return { data, loading, error, reload: load }
 }
+
+export const useFrozenModel    = () => useDomain(aiDashboardService.frozenModel)
+export const useOverview       = () => useDomain(aiDashboardService.overview)
+export const useRetraining     = () => useDomain(aiDashboardService.retraining)
+export const useTriage         = () => useDomain(aiDashboardService.triage)
+export const useEvalComparison = () => useDomain(aiDashboardService.evalComparison)
+export const usePending        = () => useDomain(aiDashboardService.pending)

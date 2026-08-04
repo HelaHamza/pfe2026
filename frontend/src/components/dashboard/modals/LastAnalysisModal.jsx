@@ -12,17 +12,22 @@ export default function LastAnalysisModal({ report, stats, onClose, onLaunchNew 
   if (!report) return null
   const { started_at, finished_at, status: rStatus, analysis_id } = report
 
+  // Câblage sur ReportStats (contrat actuel).
   const s = stats || report.stats || {}
+  const critical = (s.cnn_critical ?? 0) + (s.sigma_critical ?? 0)
   const kpis = [
-    { label: 'Anomalies AE',  value: (s.ae_anomalies    ?? s.total_ae    ?? 0).toLocaleString('fr-FR'), color: '#185FA5' },
-    { label: 'Alertes Sigma', value: (s.sigma_alerts    ?? s.total_sigma ?? 0).toLocaleString('fr-FR'), color: '#534AB7' },
-    { label: 'Critiques',     value: (s.critical        ?? 0).toLocaleString('fr-FR'),                  color: severity.CRITICAL.bgStrong },
-    { label: 'Corrélées',     value: (s.correlated_both ?? s.correlated  ?? 0).toLocaleString('fr-FR'), color: status.ok },
+    { label: 'Anomalies AE', value: (s.cnn_episodes  ?? 0).toLocaleString('fr-FR'), color: '#185FA5' },
+    { label: 'Alertes Sigma', value: (s.sigma_alerts  ?? 0).toLocaleString('fr-FR'), color: '#534AB7' },
+    { label: 'Critiques',     value: critical.toLocaleString('fr-FR'),               color: severity.CRITICAL.bgStrong },
+    { label: 'À réviser',     value: (s.cnn_to_review ?? 0).toLocaleString('fr-FR'), color: status.warning },
   ]
 
   const statusColor = rStatus === 'completed' ? status.ok
-                    : rStatus === 'running'   ? status.warning
+                    : rStatus === 'partial'   ? status.warning
                     : status.error
+  const statusLabel = rStatus === 'completed' ? 'Analyse terminée'
+                    : rStatus === 'partial'   ? 'Analyse partielle'
+                    : 'Échouée'
 
   return (
     <div onClick={onClose} style={{
@@ -46,7 +51,7 @@ export default function LastAnalysisModal({ report, stats, onClose, onLaunchNew 
               padding: '3px 10px', marginBottom: 8,
             }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor }} />
-              {rStatus === 'completed' ? 'Analyse terminée' : rStatus === 'running' ? 'En cours' : 'Échouée'}
+              {statusLabel}
             </div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: neutral.text }}>
               Dernière analyse
@@ -80,19 +85,6 @@ export default function LastAnalysisModal({ report, stats, onClose, onLaunchNew 
             </div>
           ))}
         </div>
-
-        {(s.correlated_both === 0 || s.correlated === 0) &&
-         (s.ae_anomalies > 0 || s.total_ae > 0) &&
-         (s.sigma_alerts > 0 || s.total_sigma > 0) && (
-          <div style={{
-            background: severity.MEDIUM.bg, color: severity.MEDIUM.text,
-            border: `1px solid ${severity.MEDIUM.border}`, borderRadius: 8,
-            padding: '10px 14px', fontSize: 12, marginBottom: '1rem',
-          }}>
-            ⚠ Aucune corrélation AE + Sigma — vérifiez la fenêtre temporelle dans{' '}
-            <code>fusion_router.py</code>
-          </div>
-        )}
 
         <div style={{ borderTop: `1px solid ${neutral.border}`, marginBottom: '1rem' }} />
 

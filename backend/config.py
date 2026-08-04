@@ -8,6 +8,9 @@ démarrage. Un défaut sur un mot de passe transforme une erreur de
 configuration bruyante en connexion silencieuse avec de mauvais
 identifiants — inacceptable dans un projet de sécurité.
 """
+
+
+
 import os
 import sys
 
@@ -48,6 +51,10 @@ MONGO_COLL_SIGMA   = os.getenv("MONGO_COLL_SIGMA",   "sigma_alerts")
 MONGO_COLL_REPORTS = os.getenv("MONGO_COLL_REPORTS", "reports")
 MONGO_COLL_STATE   = os.getenv("MONGO_COLL_STATE",   "pipeline_state")
 
+
+MONGO_COLL_METRICS = "metrics"        # 1 doc / version de modèle (domaine B)
+MONGO_COLL_RETRAIN = "retrain_runs"   # 1 doc / tentative de gate  (domaine C)
+
 # Garde-fou stockage (Atlas free tier M0 = 512 Mo on-disk).
 ATLAS_QUOTA_MB   = int(os.getenv("ATLAS_QUOTA_MB", "512"))
 ATLAS_WARN_RATIO = float(os.getenv("ATLAS_WARN_RATIO", "0.90"))
@@ -85,12 +92,29 @@ PROD_START = os.getenv("PROD_START", "2026-07-19T00:00:00+00:00")
 # blocage fige l'API sur running=True sans reset possible.
 PIPELINE_STEP_TIMEOUT_S = int(os.getenv("PIPELINE_STEP_TIMEOUT_S", "3600"))
 
-REPO_ROOT = _path("REPO_ROOT", "~/pfe-backend-2026")
+REPO_ROOT = _path("REPO_ROOT", "~/pfe-2026")
 
 INFERENCE_DIR    = _path("INFERENCE_DIR", f"{REPO_ROOT}/inference")
 CNN_LLM_DIR      = _path("CNN_LLM_DIR",   f"{REPO_ROOT}/CNN_LLM")
 CNN_TRIAGE_JSONL = os.path.join(CNN_LLM_DIR,   "cnn_triage.jsonl")
+CNN_TRIAGE_REPORT = os.path.join(CNN_LLM_DIR, "cnn_triage_report.json")
+
 CNN_RUN_META     = os.path.join(INFERENCE_DIR, "cnn_run_meta.json")
+
+
+# ── Domaine C : retraining gate (produit par ML/retraining/validation_gate.py)
+ML_DIR          = _path("ML_DIR", f"{REPO_ROOT}/ML")
+GATE_REPORTS_DIR = os.path.join(ML_DIR, "artifacts", "_reports")   # gate_*.json
+QUARANTINE_JSON  = os.path.join(ML_DIR, "retraining", "quarantine.json")
+
+# ── Domaine E : éval offline CNN vs cascade (produit par
+#    evaluation/evaluate_cnn_vs_llm.py). Model-scoped : à RÉGÉNÉRER après
+#    chaque promotion de modèle, sinon l'auto-ingest attache des chiffres périmés.
+EVAL_DIR         = _path("EVAL_DIR", f"{REPO_ROOT}/evaluation")
+EVAL_SUMMARY_JSON = os.path.join(EVAL_DIR, "eval_summary.json")
+CNN_EVAL_REPORT_JSON = os.path.join(ML_DIR, "cnn_evaluation_report.json")
+
+
 
 SIGMA_DETECT_DIR = _path("SIGMA_DETECT_DIR", f"{REPO_ROOT}/sigma/detect")
 SIGMA_RULES      = _path("SIGMA_RULES",      f"{REPO_ROOT}/sigma/rules")

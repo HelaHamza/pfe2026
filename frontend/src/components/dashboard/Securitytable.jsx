@@ -1,17 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// src/components/dashboard/Securitytable.jsx
-// Refonte : bordure gauche colorée par sévérité (standard SIEM)
-//           + fond teinté léger pour les lignes CRITICAL
-//           + colonne TYPE supprimée → titre prend plus d'espace
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { useState } from "react";
 import { severity, detection, neutral } from "../../theme/colors";
 
+// Contrat actuel : une row = une branche. `type` ∈ { "cnn", "sigma" }.
 const SRC_LABEL = {
-  both:       "AE + Σ",
-  ae_only:    "AE",
-  sigma_only: "Σ Sigma",
+  cnn:   "CNN-AE",
+  sigma: "Σ Sigma",
 };
 
 function SevBadge({ level }) {
@@ -65,19 +58,20 @@ function FilterPill({ value, label, color, current, setF }) {
   );
 }
 
-export default function SecurityTable({ results, onSelect, selected }) {
+export default function SecurityTable({ results, onSelect, selected, emptyHint }) {
   const [sevF,   setSevF]   = useState("");
   const [srcF,   setSrcF]   = useState("");
   const [search, setSearch] = useState("");
   const [page,   setPage]   = useState(1);
 
-  // Normalisation (AE = kb_severity, Sigma = level)
   const normalize = (r) => ({
     ...r,
-    _severity: (r.kb_severity || r.severity || r.level || "").toUpperCase(),
-    _source:   (r.detection_source || "").toLowerCase(),
+    _severity: (r.severity || "").toUpperCase(),
+    _source:   (r.type || "").toLowerCase(),
     _text:     (r.title || r.log_source || "").toLowerCase(),
   });
+
+  const rawEmpty = (results || []).length === 0;
 
   const filtered = (results || [])
     .map(normalize)
@@ -148,10 +142,9 @@ export default function SecurityTable({ results, onSelect, selected }) {
         }} />
 
         {[
-          ["",           "#185FA5",          "Toutes sources"],
-          ["ae_only",    detection.ae_only,    "AE"],
-          ["sigma_only", detection.sigma_only, "Sigma"],
-          ["both",       detection.both,       "AE + Σ"],
+          ["",      "#185FA5",                    "Toutes sources"],
+          ["cnn",   detection.cnn   || "#3b82f6", "CNN-AE"],
+          ["sigma", detection.sigma || "#8b5cf6", "Sigma"],
         ].map(([v, c, l]) => (
           <FilterPill key={`src-${v}`} value={v} label={l} color={c} current={srcF} setF={handleSrcF} />
         ))}
@@ -170,7 +163,7 @@ export default function SecurityTable({ results, onSelect, selected }) {
           textTransform: "uppercase", letterSpacing: "0.06em",
           color: neutral.textMuted,
         }}>
-          {["Time", "Titre / Règle", "Tactique", "Sévérité", "Source", "Score"].map((h) => (
+          {["Time", "Titre / Règle", "Tactique", "Sévérité", "Source", "Volume"].map((h) => (
             <span key={h}>{h}</span>
           ))}
         </div>
@@ -179,9 +172,9 @@ export default function SecurityTable({ results, onSelect, selected }) {
         {paginated.length === 0 ? (
           <div style={{
             padding: "32px 14px", textAlign: "center",
-            color: neutral.textFaint, fontSize: 13,
+            color: neutral.textFaint, fontSize: 13, lineHeight: 1.6,
           }}>
-            Aucun événement
+            {rawEmpty && emptyHint ? emptyHint : "Aucun événement"}
           </div>
         ) : (
           paginated.map((r, i) => {
@@ -189,11 +182,8 @@ export default function SecurityTable({ results, onSelect, selected }) {
             const isOpen = selected?.id === r.id;
             const isCritical = r._severity === "CRITICAL";
 
-            const score = r.ae_anomaly_score != null
-              ? (r.ae_anomaly_score * 100).toFixed(1) + "%"
-              : (r.score != null ? r.score : "—");
+            const volume = r.hits != null ? r.hits : "—";
 
-            // Bordure gauche colorée + fond teinté pour critiques
             const leftBorder = sev ? sev.bgStrong : neutral.border;
             const rowBg = isOpen
               ? "#eff6ff"
@@ -220,7 +210,8 @@ export default function SecurityTable({ results, onSelect, selected }) {
                   fontSize: 11, color: neutral.textMuted,
                   fontFamily: "ui-monospace, monospace",
                 }}>
-                  {r["@timestamp"]?.replace("T", " ").slice(11, 19) ?? "—"}
+                  {r.event_time?.replace("T", " ").slice(11, 19) ?? "—"}
+                  {r.event_time_estimated ? " *" : ""}
                 </span>
                 <span style={{
                   fontSize: 12, fontWeight: isCritical ? 600 : 500,
@@ -238,14 +229,14 @@ export default function SecurityTable({ results, onSelect, selected }) {
                   {r.tactic || "—"}
                 </span>
                 <SevBadge level={r._severity} />
-                <SrcBadge source={r.detection_source} />
+                <SrcBadge source={r.type} />
                 <span style={{
                   fontSize: 11, fontFamily: "ui-monospace, monospace",
                   color: isCritical ? severity.CRITICAL.text : neutral.textMuted,
                   fontWeight: isCritical ? 600 : 400,
                   textAlign: "right",
                 }}>
-                  {score}
+                  {volume}
                 </span>
               </div>
             );
@@ -259,16 +250,16 @@ export default function SecurityTable({ results, onSelect, selected }) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <span style={{ fontSize: 10, color: neutral.textFaint }}>
-            <code style={{ color: detection.sigma_only }}>sigma-alerts</code>
+            <code style={{ color: detection.sigma || "#8b5cf6" }}>sigma-alerts</code>
             {" · "}
-            <code style={{ color: detection.ae_only }}>ml-autoencoder-scores</code>
+            <code style={{ color: detection.cnn || "#3b82f6" }}>cnn-episodes</code>
           </span>
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 11, color: neutral.textMuted, marginRight: 4 }}>
               Page {safePage} / {totalPages}
               <span style={{ color: neutral.textFaint, marginLeft: 4 }}>
-                ({(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} sur {filtered.length})
+                ({filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} sur {filtered.length})
               </span>
             </span>
             <button

@@ -1,66 +1,76 @@
 import { useState, useCallback, useRef } from 'react'
 import { dashboardService } from '../services/api'
-import { openAuthenticatedStream } from '../services/streamClient'
 
+// Le backend n'expose PAS de stream SSE : il a /analyse/run (lance) et
+// /analyse/status (état + logs). On lance, puis on POLL le statut.
+//
+// get_state() renvoie : { running, done, error, run_id, started_at,
+//                         finished_at, logs: [{ts, msg}, ...] }
+
+const POLL_MS = 1500
+
+// Étapes attendues → progression approximative (le backend ne renvoie pas de %).
 const STEPS = [
-  'Analyse depuis', 'Nouveaux logs', 'Lancement AE',
-  '[AE]', '[SIGMA]', 'Corrélation', '[FUSION]',
-  'Curseur mis à jour', 'Résultats', 'terminée',
+  'Inférence CNN', 'épisodes CNN persistés',
+  'Règles Sigma', 'alertes Sigma persistées',
+  'Curseur', 'Résumé de triage', 'Gate', 'éval', 'terminée',
 ]
-const MAX_RETRIES = 3
 
 export function useAnalysisRunner({ onComplete, onError } = {}) {
   const [analysing, setAnalysing] = useState(false)
   const [logs, setLogs] = useState([])
   const [pct, setPct] = useState(0)
-  const closeRef = useRef(null)
+  const timerRef = useRef(null)
+
+  const stopPolling = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }, [])
 
   const launch = useCallback(async () => {
     if (analysing) return
     try {
-      const resp = await dashboardService.launchAnalysis()
-      if (resp.status === 'already_running') return
+      const resp = await dashboardService.launchAnalysis()   // POST /analyse/run
+      if (resp?.status === 'already_running') return
 
       setAnalysing(true); setLogs([]); setPct(0)
-      let retries = 0
-      let stepCount = 0
 
-      closeRef.current = openAuthenticatedStream('/run/analyse/stream', {
-        onMessage: (e) => {
-          try {
-            const data = JSON.parse(e.data)
-            if (data.msg === '__DONE__') {
-              closeRef.current?.()
-              setPct(100)
-              setTimeout(() => {
-                setAnalysing(false); setLogs([]); setPct(0)
-                onComplete?.()
-              }, 1200)
-              return
-            }
-            setLogs(prev => [...prev.slice(-6), data.msg])
-            const matched = STEPS.findIndex(s => data.msg.includes(s))
-            if (matched >= stepCount) {
-              stepCount = matched + 1
-              setPct(Math.min(Math.round((stepCount / STEPS.length) * 95), 95))
-            }
-          } catch {}
-        },
-        onError: () => {
-          retries++
-          if (retries >= MAX_RETRIES) {
-            closeRef.current?.()
-            setAnalysing(false); setPct(0)
-            onError?.('Connexion au stream perdue — l\'analyse tourne peut-être encore en arrière-plan')
-            onComplete?.()
-          }
-        },
-      })
+      timerRef.current = setInterval(async () => {
+        let state
+        try {
+          state = await dashboardService.getAnalysisStatus()  // GET /analyse/status
+        } catch (e) {
+          // Erreur réseau ponctuelle : on retente au prochain tick.
+          return
+        }
+
+        // Logs : liste de { ts, msg } → on garde les 7 derniers messages.
+        const msgs = (state.logs || []).map(l => (typeof l === 'string' ? l : l.msg))
+        setLogs(msgs.slice(-7))
+
+        // Progression approximative depuis les jalons franchis.
+        const done = STEPS.filter(s => msgs.some(m => m.includes(s))).length
+        setPct(prev => Math.max(prev, Math.min(Math.round((done / STEPS.length) * 95), 95)))
+
+        // Fin de run.
+        if (state.done || state.running === false) {
+          stopPolling()
+          setPct(100)
+          if (state.error) onError?.(state.error)
+          setTimeout(() => {
+            setAnalysing(false); setLogs([]); setPct(0)
+            onComplete?.()        // recharge le dashboard (fetchAll)
+          }, 1000)
+        }
+      }, POLL_MS)
     } catch (e) {
+      stopPolling()
       setAnalysing(false)
       onError?.(e.message)
     }
-  }, [analysing, onComplete, onError])
+  }, [analysing, onComplete, onError, stopPolling])
 
   return { analysing, logs, pct, launch }
 }

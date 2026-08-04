@@ -1,0 +1,26 @@
+{
+  "created_at": "2026-07-24T23:42:42.583971+00:00",
+  "source_parquet": "dataset_snapshot.parquet",
+  "context_seconds": 3600,
+  "n_incidents": 4,
+  "events_per_incident": {
+    "auth_ssh_bruteforce": 230,
+    "auth_user_creation": 230,
+    "auditd_base64_exec": 11584,
+    "auditd_arg_heavy_exec": 11602
+  },
+  "golden_events": {
+    "rows": 9699,
+    "sha256": "41936783e356cbd3ee6c0fa12f6b22794778ef0dfef2084f28d44a5856638cdd"
+  },
+  "reference_events": {
+    "rows": 148851,
+    "window": {
+      "start": "2026-06-14T00:00:00Z",
+      "end": "2026-06-21T00:00:00Z",
+      "note": "semaine benigne, largement avant les attaques du 1er juillet"
+    },
+    "sha256": "8b9568f42a29cc4172480d5a2f6c9e5438a96da4679bf6e6ea6197d1ce8bc3e6"
+  },
+  "incidents_sha256": "9aef67c80184dedb5f6128359e08c72bfcf7eae68aa17ceb02cbfe8d8565b508"
+}

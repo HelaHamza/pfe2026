@@ -16,7 +16,6 @@ dépendait du pipeline. Cycle supprimé.
 """
 import json
 import logging
-import os
 import subprocess
 import sys
 
@@ -46,6 +45,12 @@ def _run_step(cmd: list[str], cwd: str, label: str) -> None:
 
 class CNNAdapter:
     """Inférence CNN de production + triage LLM/RAG."""
+
+    _TRIAGE_KEEP = (
+        "model", "provider", "temperature", "rag_backend", "n_kb_chunks",
+        "n_episodes_reaggregated", "n_episodes_in", "n_alerts_in", "verdicts",
+        "n_fail_open", "n_episodes_to_analyst", "noise_reduction_pct",
+        "elapsed_s")
 
     @staticmethod
     def _read_next_cursor() -> str:
@@ -94,16 +99,30 @@ class CNNAdapter:
         en cas d'échec — le contrôleur décide alors de ne pas avancer le
         curseur."""
         log.info("Inférence CNN (production) — fenêtre ]%s , %s]", since, until)
-        _run_step([sys.executable, "predict_cnn.py",
+        _run_step([sys.executable, "predict_cnn.py",                 # fichier qui infère l'autoencodeur
                    "--until", until, "--since", since],
                   CFG.INFERENCE_DIR, "predict_cnn.py")
 
         next_cursor = cls._read_next_cursor()
 
-        _run_step([sys.executable, "triage_cnn.py"],
+        _run_step([sys.executable, "triage_cnn.py"],                 # fichier qui triage les alertes
                   CFG.CNN_LLM_DIR, "triage_cnn.py (LLM + RAG)")
 
-        episodes = cls._load_triaged()
+        episodes = cls._load_triaged()                               # charge les épisodes triés depuis cnn_triage.jsonl
         log.info("%d épisodes triagés (curseur candidat : %s)",
                  len(episodes), next_cursor)
         return episodes, next_cursor
+
+    @classmethod
+    def load_triage_summary(cls) -> dict:
+        """Résumé du run de triage (métadonnées LLM/RAG) écrit par
+        triage_cnn.py. Absence non bloquante : un run sans résumé reste un
+        run valide, le domaine D sera juste vide pour ce run."""
+        try:
+            with open(CFG.CNN_TRIAGE_REPORT, encoding="utf-8") as f:
+                raw = json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            log.warning("cnn_triage_report.json illisible (%s) — "
+                        "résumé de triage ignoré pour ce run", e)
+            return {}
+        return {k: raw[k] for k in cls._TRIAGE_KEEP if k in raw}

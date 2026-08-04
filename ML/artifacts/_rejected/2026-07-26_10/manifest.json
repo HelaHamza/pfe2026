@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "created_at": "2026-07-26T09:28:48.499561+00:00",
+  "hostname": "ASUS-X415JA",
+  "git_commit": "22240f7",
+  "versions": {
+    "python": "3.12.3",
+    "torch": "2.11.0+cu130",
+    "numpy": "2.4.4",
+    "pandas": "3.0.2",
+    "scipy": "1.17.1",
+    "sklearn": "1.8.0",
+    "pyarrow": "24.0.0"
+  },
+  "config_fingerprint": {
+    "hash": "d3ecda0d5798d3c6",
+    "params": {
+      "WINDOW_SIZE": 16,
+      "WINDOW_STRIDE": 1,
+      "EMBED_DIM": 16,
+      "CNN_FEATURES": {
+        "auditd": [
+          "cmd_entropy",
+          "cmd_length_log",
+          "arg_count",
+          "proc_rarity",
+          "exe_path_rarity",
+          "user_rarity",
+          "syscall_rarity",
+          "parent_child_rarity",
+          "inter_arrival_log"
+        ],
+        "auth": [
+          "is_fail",
+          "msg_length_log",
+          "user_rarity",
+          "geo_rarity",
+          "inter_arrival_log",
+          "ip_is_external"
+        ],
+        "syslog": [
+          "msg_length_log",
+          "proc_rarity",
+          "inter_arrival_log"
+        ]
+      },
+      "LATENT_DIM_BY_SOURCE": {
+        "auditd": 10,
+        "auth": 8,
+        "syslog": 6
+      },
+      "CONV_CHANNELS": [
+        32,
+        64
+      ],
+      "POOL_LEN": 4,
+      "KERNEL_SIZE": 3,
+      "DROPOUT": 0.1,
+      "DENOISE_MASK_FRAC": 0.15,
+      "HUBER_DELTA": 0.5,
+      "TOKEN_LOSS_WEIGHT": 0.25,
+      "SCORE_LSE_TAU_BY_SOURCE": {
+        "auditd": 3.0,
+        "auth": 1.0,
+        "syslog": 2.0
+      },
+      "POT_TARGET_RATE_BY_SOURCE": {
+        "auditd": 0.0025,
+        "auth": 0.002,
+        "syslog": 0.001
+      },
+      "POT_INIT_Q": 0.98,
+      "POT_XI_MIN": -0.5,
+      "POT_XI_MAX": 0.8,
+      "EPISODE_GAP_SECONDS": 300,
+      "SEED": 42
+    }
+  },
+  "files": {
+    "dataset_snapshot.parquet": {
+      "sha256": "18c663c40e04ea772d2252f9bd8fac15e3779c009f0146d7fdd1711151177b27",
+      "bytes": 2334
+    }
+  },
+  "version": "2026-07-26",
+  "status": "rejected",
+  "rejection": {
+    "raison": "extraction_anemique",
+    "details": [
+      "total 0 < 20,000",
+      "auth 0 < 300",
+      "syslog 0 < 2,000",
+      "auditd 0 < 5,000"
+    ]
+  }
+}

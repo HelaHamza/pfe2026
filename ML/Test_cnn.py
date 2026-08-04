@@ -1,23 +1,16 @@
 """
-inference_cnn.py
+Test_cnn.py
 ================
-Equivalent CNN de inference.py : INFERENCE SEULE sur le split TEST, avec le
-modele CNN hybride DEJA entraine (aucun re-entrainement).
-
-Comme inference.py, il n'y a PAS de fichier de test statique : le TEST est le
-dernier bloc chronologique par source, recalcule par splitting.temporal_split
-(meme decoupage qu'a l'entrainement -> source unique de verite).
 
 Sorties (prefixe cnn_) :
   * cnn_scored_test.csv     tous les evenements du test, scores (pour A/B eval)
   * cnn_alerts.csv          alertes PRIMAIRES (is_alert==1, role='alert')
-  * cnn_alerts_context.csv  alertes de sources en role 'correlation' (feed Sigma)
   * cnn_alerts_episodes.csv episodes (alertes primaires regroupees)
   * cnn_evaluation_report.json  bornes du test + diagnostics legers
 
 Usage :
   python train_eval_cnn.py     # 1) entraine + calibre + sauve les artifacts
-  python inference_cnn.py      # 2) infere sur le test -> alertes / episodes
+  python Test_cnn.py      # 2) infere sur le test -> alertes / episodes
   python evaluation.py --from-csv cnn_scored_test.csv   # 3) A/B chiffre
 """
 from __future__ import annotations

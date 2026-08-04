@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// src/components/dashboard/SigmaSeverityBars.jsx
-// Barres horizontales par sévérité — remplace l'ancien affichage en cartes
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { severity, neutral } from "../../theme/colors";
 
 const ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
@@ -22,6 +17,7 @@ export default function SigmaSeverityBars({ byLevel }) {
       border: `1px solid ${neutral.border}`,
       borderRadius: 8,
       padding: "16px 18px",
+      minHeight: 180,
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
         <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text }}>
@@ -32,38 +28,47 @@ export default function SigmaSeverityBars({ byLevel }) {
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {counts.map(({ key, count }) => {
-          const c = severity[key];
-          const pct = (count / max) * 100;
-          return (
-            <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{
-                fontSize: 11, fontWeight: 600,
-                color: c.text, width: 64,
-                textTransform: "uppercase", letterSpacing: "0.04em",
-              }}>
-                {key}
-              </span>
-              <div style={{ flex: 1, height: 8, background: c.bg, position: "relative" }}>
-                <div style={{
-                  width: `${pct}%`, height: "100%",
-                  background: c.bgStrong,
-                  transition: "width 0.4s ease",
-                }} />
+      {total === 0 ? (
+        <div style={{
+          fontSize: 12, color: neutral.textFaint,
+          textAlign: "center", padding: "40px 0",
+        }}>
+          Aucune alerte Sigma sur ce run
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {counts.map(({ key, count }) => {
+            const c = severity[key];
+            const pct = (count / max) * 100;
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 600,
+                  color: c.text, width: 64,
+                  textTransform: "uppercase", letterSpacing: "0.04em",
+                }}>
+                  {key}
+                </span>
+                <div style={{ flex: 1, height: 8, background: c.bg, position: "relative" }}>
+                  <div style={{
+                    width: `${pct}%`, height: "100%",
+                    background: c.bgStrong,
+                    transition: "width 0.4s ease",
+                  }} />
+                </div>
+                <span style={{
+                  fontSize: 12, fontWeight: 600,
+                  color: count === 0 ? neutral.textFaint : neutral.text,
+                  width: 32, textAlign: "right",
+                  fontVariantNumeric: "tabular-nums",
+                }}>
+                  {count}
+                </span>
               </div>
-              <span style={{
-                fontSize: 12, fontWeight: 600,
-                color: count === 0 ? neutral.textFaint : neutral.text,
-                width: 32, textAlign: "right",
-                fontVariantNumeric: "tabular-nums",
-              }}>
-                {count}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

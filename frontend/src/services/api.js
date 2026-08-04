@@ -43,13 +43,17 @@ export const dashboardService = {
   getDashboard:    ()             => api.get('/dashboard').then(r => r.data),
   getResults:      (limit = 500)  => api.get('/results', { params: { limit } }).then(r => r.data),
   getResultDetail: (type, id)     => api.get(`/results/${type}/${id}`).then(r => r.data),
-  launchAnalysis:  ()             => api.post('/run/analyse').then(r => r.data),
+  launchAnalysis:  ()             => api.post('/analyse/run').then(r => r.data),
 }
 
 export const aiDashboardService = {
-  getVersions: ()          => api.get('/ai-dashboard/versions').then(r => r.data),
-  getOverview: (version)   => api.get('/ai-dashboard/overview', { params: version ? { version } : {} }).then(r => r.data),
-  compare:     (versions)  => api.get('/ai-dashboard/compare',  { params: versions ? { versions } : {} }).then(r => r.data),
+  frozenModel:    () => api.get('/ai-dashboard/frozen-model').then(r => r.data),
+  overview:       () => api.get('/ai-dashboard/overview').then(r => r.data),
+  retraining:     () => api.get('/ai-dashboard/retraining').then(r => r.data),
+  triage:         () => api.get('/ai-dashboard/triage').then(r => r.data),
+  evalComparison: () => api.get('/ai-dashboard/eval-comparison').then(r => r.data),
+  pending: (params = {}) =>
+    api.get('/ai-dashboard/pending', { params }).then(r => r.data),
 }
 
 export default api

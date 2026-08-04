@@ -118,9 +118,9 @@ LLM_CACHE_ENABLED = True
 
 # --- RAG --------------------------------------------------------------------
 KB_DIR = os.path.join(BASE_DIR, "kb")   # la KB voyage AVEC le code
-RAG_TOP_K = 6
+RAG_TOP_K = 6 
 RAG_ALPHA = 0.6           # score = ALPHA*semantique + (1-ALPHA)*lexical
-RAG_MAX_CHARS = 12000     # budget car. KB dans le prompt ; KB ~9000 → tient entière
+RAG_MAX_CHARS = 6000     # budget car. KB dans le prompt ; KB ~9000 → tient entière
 
 
 # --- Backend d'encodage -----------------------------------------------------

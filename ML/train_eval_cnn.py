@@ -218,3 +218,34 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+#     # Après avoir splitté, AVANT d'écrire le rapport.
+# # df_train / df_eval / df_test : tes partitions ; adapte la colonne source
+# # à ton schéma (ml.log_source, "source", ...).
+# SRC_COL = "log_source"          # ← nom réel de ta colonne source
+
+# def _counts_by_source(df) -> dict[str, int]:
+#     if df is None or len(df) == 0:
+#         return {}
+#     return df.groupby(SRC_COL).size().astype(int).to_dict()
+
+# train_c = _counts_by_source(df_train)
+# eval_c  = _counts_by_source(df_eval)
+# test_c  = _counts_by_source(df_test)
+
+# splits_by_source = {
+#     src: {
+#         "train": int(train_c.get(src, 0)),
+#         "eval":  int(eval_c.get(src, 0)),
+#         "test":  int(test_c.get(src, 0)),
+#     }
+#     for src in set(train_c) | set(eval_c) | set(test_c)
+# }
+
+# report["splits_by_source"] = splits_by_source   # ← la clé que l'adapter lit

@@ -13,7 +13,11 @@ Deux fenêtres, volontairement différentes :
   - règles d'AGRÉGATION : glissante now−Xm. Un seuil « 5 échecs en 10 min »
                           n'a pas de sens sur une fenêtre historique
                           arbitraire → hors curseur, assumé.
+
+
 """
+
+
 import logging
 import sys
 

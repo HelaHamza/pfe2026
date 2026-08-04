@@ -1,0 +1,17 @@
+[importlinter]
+root_packages =
+    views
+    controllers
+    repositories
+    adapters
+    models
+    core
+
+[importlinter:contract:couches]
+name = Flux de dependances unidirectionnel
+type = layers
+layers =
+    views
+    controllers
+    repositories | adapters
+    models

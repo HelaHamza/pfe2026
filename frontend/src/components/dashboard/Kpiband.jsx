@@ -1,9 +1,4 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// src/components/dashboard/Kpiband.jsx
-// Refonte : carte "Critiques" dominante (1.4fr) + zéros déprioritisés en gris
-// ─────────────────────────────────────────────────────────────────────────────
-
-import { severity, neutral, status } from "../../theme/colors";
+import { severity, neutral } from "../../theme/colors";
 
 function fmt(n) {
   return (n ?? 0).toLocaleString("fr-FR");
@@ -87,15 +82,17 @@ function StatCard({ label, value, hint, hintColor }) {
   );
 }
 
-export default function KpiBand({ stats, logsBySource, attacksBySource }) {
-  const critical   = stats?.critical          ?? 0;
-  const sigma      = stats?.sigma_alerts      ?? stats?.total_sigma ?? 0;
-  const ae         = stats?.ae_anomalies      ?? stats?.total_ae    ?? 0;
-  const correlated = stats?.correlated_both   ?? stats?.correlated  ?? 0;
-  const unack      = stats?.critical_unacknowledged ?? 0;
-
-  // Si AE > 0 mais correlated = 0 → warning fusion
-  const fusionWarning = ae > 0 && sigma > 0 && correlated === 0;
+export default function KpiBand({ stats }) {
+  // Câblage sur ReportStats (contrat actuel) :
+  //   critical = sévérités critiques des DEUX branches
+  //   ae       = anomalies AE CONFIRMÉES (true_positive) → cohérent avec le
+  //              tableau qui n'affiche que les TP. Le total brut avant triage
+  //              reste visible dans le panneau « Triage CNN → LLM ».
+  //   toReview = uncertain / fail-open → déportés vers l'Expert AI
+  const critical = (stats?.cnn_critical ?? 0) + (stats?.sigma_critical ?? 0);
+  const sigma    = stats?.sigma_alerts  ?? 0;
+  const ae       = stats?.cnn_kept      ?? 0;   // TP uniquement
+  const toReview = stats?.cnn_to_review ?? 0;
 
   return (
     <div style={{
@@ -104,7 +101,7 @@ export default function KpiBand({ stats, logsBySource, attacksBySource }) {
       gap: 10,
       padding: "16px 0",
     }}>
-      <CriticalCard count={critical} unacknowledged={unack} />
+      {/* <CriticalCard count={critical} /> */}
       <StatCard
         label="Alertes Sigma"
         value={sigma}
@@ -113,13 +110,12 @@ export default function KpiBand({ stats, logsBySource, attacksBySource }) {
       <StatCard
         label="Anomalies AE"
         value={ae}
-        hint={ae > 0 ? "Détectées par autoencoder" : "Aucune anomalie"}
+        hint={ae > 0 ? "Confirmées par le LLM (TP)" : "Aucune anomalie confirmée"}
       />
       <StatCard
-        label="Corrélées AE+Σ"
-        value={correlated}
-        hint={fusionWarning ? "Vérifier fenêtre de fusion" : correlated > 0 ? "Double détection" : "—"}
-        hintColor={fusionWarning ? status.warning : undefined}
+        label="À réviser (Expert AI)"
+        value={toReview}
+        hint={toReview > 0 ? "Épisodes incertains · déportés" : "Rien à réviser"}
       />
     </div>
   );

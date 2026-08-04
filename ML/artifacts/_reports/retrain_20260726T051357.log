@@ -1,0 +1,14 @@
+2026-07-26 06:14:06  INFO    ==================================================================
+2026-07-26 06:14:06  INFO      CYCLE DE REENTRAINEMENT -- branche CNN
+2026-07-26 06:14:06  INFO    ==================================================================
+2026-07-26 06:14:06  INFO    [0/7] Preflight
+2026-07-26 06:14:06  INFO    RAM disponible : 6892 Mo (minimum requis 1500 Mo)
+2026-07-26 06:14:06  INFO    Elasticsearch joignable (version 8.13.0)
+2026-07-26 06:14:06  INFO    [1/7] Fenetre glissante : 2026-05-19T05:14:06Z -> 2026-07-19T05:14:06Z (2 mois, embargo 7 jours)
+2026-07-26 06:14:06  INFO          L'embargo laisse a la couche 3 le temps de confirmer les incidents recents avant qu'ils n'entrent dans le corpus.
+2026-07-26 06:14:06  INFO    [2/7] Incidents confirmes (boucle de retroaction Sigma/LLM)
+2026-07-26 06:14:08  INFO    [3/7] Extraction ES en flux -> dataset_snapshot.parquet
+2026-07-26 06:14:09  INFO    [4/7] Controle de volume
+2026-07-26 06:14:09  INFO      total=0 | 
+2026-07-26 06:14:09  ERROR     Extraction anemique : total 0 < 20,000 ; auth 0 < 300 ; syslog 0 < 2,000 ; auditd 0 < 5,000
+2026-07-26 06:14:09  ERROR     Entrainer sur un echantillon non representatif est pire que ne pas reentrainer. Cycle abandonne.

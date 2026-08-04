@@ -1,0 +1,1 @@
+{"episode_id": "EP-822b506773", "verdict": "uncertain", "confidence": 0.55, "severity": "medium", "title": "Chargement d'un module kernel via insmod par root", "mitre": [{"technique_id": "T1547.006", "tactic": "Persistence", "name": "Kernel Modules and Extensions"}]}
