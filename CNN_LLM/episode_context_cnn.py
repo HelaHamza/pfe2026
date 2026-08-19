@@ -1,6 +1,6 @@
 """
-episode_context_cnn.py
-======================
+episode_context_cnn.py  (version RAG-only)
+==========================================
 Transforme cnn_alerts.csv (evenements) en DOSSIERS D'EPISODE prets pour le LLM.
 
 Deux raisons de travailler a l'episode et pas a l'evenement :
@@ -9,29 +9,23 @@ Deux raisons de travailler a l'episode et pas a l'evenement :
      ligne. `chmod` seul est banal ; `chmod +x .update` -> `crontab` est une
      kill chain. Un LLM qui ne voit qu'une ligne ne peut PAS trancher.
 
-FRONTIERE DE RUN (ajout) : predict_cnn ecrit cnn_alerts.csv SANS filtre
-watermark (toute la fenetre, seed inclus). Ce module doit donc RE-APPLIQUER la
-meme frontiere que predict_cnn (since < end <= watermark), sinon la couche 3
-triage des episodes non stabilises et des episodes deja traites au run
-precedent -> doublons LLM + doublons Mongo. cf. filter_emitted().
-
 Echantillonnage : on n'envoie jamais les 62 lignes d'un episode. On prend les
 top-N par mse (les plus anormales) + les premieres/dernieres (le contexte
 temporel : ce qui declenche et ce qui conclut), dedupliquees et retriees.
+
+NB version RAG-only : ce fichier ne contient QUE ce dont le RAG a besoin
+(la classe Episode et build_episodes). policy_flags() -- un garde-fou de
+SORTIE -- est volontairement absent : l'orchestrateur RAG (triage_llm_rag.py)
+ne l'appelle pas. Il reviendra a l'etape "garde-fous".
 """
+
 from __future__ import annotations
 
-import hashlib
-import json
-import os
-import re
 from dataclasses import dataclass, field
 
 import pandas as pd
 
 import config_llm_cnn as CL
-
-_FEAT_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?)")
 
 
 def _s(v, default: str = "-") -> str:
@@ -49,13 +43,7 @@ def _s(v, default: str = "-") -> str:
     return t if t and t.lower() != "nan" else default
 
 
-def parse_top_features(s) -> dict[str, float]:
-    """'is_fail=50.0, user_rarity=16.7' -> {'is_fail': 50.0, ...}"""
-    if not isinstance(s, str) or not s.strip():
-        return {}
-    return {m.group(1): float(m.group(2)) for m in _FEAT_RE.finditer(s)}
-
-
+# ---------------------------------------------------------------------------
 @dataclass
 class Episode:
     episode_id: str
@@ -142,173 +130,53 @@ class Episode:
             f"  IP sources      : {fmt(self.source_ips) or '(aucune)'}",
             f"  processus       : {fmt(self.processes, 8)}",
             f"  types d'evt     : {fmt(self.event_types, 8)}",
+            # ================== ZONE RECONSTRUITE (a verifier) ==================
+            # Verbatim recupere jusqu'a cette ligne. La suite (ligne features
+            # dom. + return) est reconstruite pour coller au format des exemples
+            # few-shot. SEULE INCONNUE : est-ce que render() ajoute ensuite une
+            # timeline echantillonnee via self._sample() ? Si oui, la restaurer
+            # ici (c'est LE point qui compte en RAG-only : render() = le dossier
+            # que le LLM lit). Si non, _sample() est dormante.
             f"  features dom.   : {fmt(self.dominant_features)}",
-            "",
-            f"  TIMELINE (echantillon : {len(self._sample())}/{self.n_alerts} lignes,"
-            f" les plus anormales + les bornes)",
         ]
-        for _, r in self._sample().iterrows():
-            L.append(
-                f"   {r['_ts']}  mse={float(r['mse']):6.2f} "
-                f"user={_s(r.get('user_name')):14s} "
-                f"ip={_s(r.get('source_ip')):10s} "
-                f"proc={_s(r.get('process_name')):22s} "
-                f"evt={_s(r.get('event_type')):28s} "
-                f"| {_s(r.get('top_features'), '')}")
         return "\n".join(L)
+        # ==================== FIN ZONE RECONSTRUITE =========================
 
 
 # ---------------------------------------------------------------------------
-def _episode_id(source: str, host: str, start) -> str:
-    raw = f"{source}|{host}|{start}".encode()
-    return "EP-" + hashlib.sha1(raw).hexdigest()[:10]
-
-
-def build_episodes(alerts_csv: str = CL.ALERTS_CSV,
-                   gap_seconds: float = CL.EPISODE_GAP_SECONDS) -> list[Episode]:
-    """Regroupement IDENTIQUE a inference_cnn.aggregate_alerts."""
+def build_episodes(alerts_csv: str = CL.ALERTS_CSV) -> list[Episode]:
+    """Lit cnn_alerts.csv (deja tague episode_id par l'inference) et reconstruit
+    les objets Episode par simple groupby. AUCUNE re-agregation, AUCUN re-calcul
+    d'identite : l'inference a assigne episode_id une fois pour toutes."""
     a = pd.read_csv(alerts_csv)
+    if "episode_id" not in a.columns:
+        raise SystemExit(
+            "cnn_alerts.csv ne contient pas la colonne 'episode_id'. Relancer "
+            "l'inference (predict_cnn.py / Test_cnn.py) : c'est elle qui assigne "
+            "desormais l'identite d'episode.")
     a["_ts"] = pd.to_datetime(a["@timestamp"], utc=True, errors="coerce")
-    a = a.sort_values(["log_source", "host_name", "_ts"]).reset_index(drop=True)
-
-    grp = a.groupby(["log_source", "host_name"], sort=False)
-    dt_prev = grp["_ts"].diff().dt.total_seconds()
-    new_ep = dt_prev.isna() | (dt_prev > gap_seconds)
-    a["_episode"] = new_ep.groupby([a["log_source"], a["host_name"]]).cumsum()
-
     eps: list[Episode] = []
-    for (src, host, _ep), g in a.groupby(["log_source", "host_name", "_episode"],
-                                         sort=False):
+    for ep_id, g in a.groupby("episode_id", sort=False):
+        g = g.sort_values("_ts").reset_index(drop=True)
         start, end = g["_ts"].min(), g["_ts"].max()
         eps.append(Episode(
-            episode_id=_episode_id(src, host, start),
-            log_source=str(src), host_name=str(host),
+            episode_id=str(ep_id),
+            log_source=str(g["log_source"].iloc[0]),
+            host_name=str(g["host_name"].iloc[0]),
             start=start, end=end,
             duration_s=round((end - start).total_seconds(), 1),
             n_alerts=len(g),
             threshold=float(g["threshold"].iloc[0]),
             mse_max=float(g["mse"].max()), mse_mean=float(g["mse"].mean()),
-            rows=g.reset_index(drop=True),
+            rows=g,
         ))
-    # Le plus anormal d'abord : si le budget LLM saute, on a traite le pire.
-    eps.sort(key=lambda e: e.mse_max, reverse=True)
+    eps.sort(key=lambda e: e.mse_max, reverse=True)  # le pire d'abord
     return eps
-
-
-# ---------------------------------------------------------------------------
-# FRONTIERE DE RUN — re-application de la logique curseur de predict_cnn
-# ---------------------------------------------------------------------------
-
-def load_run_meta(path: str = None) -> dict:
-    """Lit cnn_run_meta.json (ecrit par predict_cnn). Contient watermark/since :
-    la SEULE source de verite sur la frontiere du run."""
-    path = path or CL.RUN_META_JSON
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"cnn_run_meta.json introuvable ({path}). Lancer predict_cnn.py "
-            f"avant le triage, ou passer --no-window-filter pour un run manuel.")
-    with open(path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-def filter_emitted(eps: list[Episode], meta: dict) -> tuple[list[Episode], dict]:
-    """Applique la MEME frontiere que predict_cnn : since < end <= watermark.
-
-    Pourquoi ici et pas en amont : predict_cnn ecrit cnn_alerts.csv avec TOUTES
-    les alertes de la fenetre (seed compris), et build_episodes re-agrege depuis
-    ce CSV. Sans ce filtre :
-      * les episodes de la zone SEED (deja emis/triages au run precedent) sont
-        RE-triages   -> doublons d'appels LLM + doublons Mongo ;
-      * les episodes non stabilises (end > watermark) sont triages trop tot
-        puis RE-emis au run suivant avec un `start` different -> episode_id
-        different -> l'upsert Mongo ne dedoublonne plus.
-
-    Retourne (episodes a triager, diagnostic).
-    """
-    wm = pd.to_datetime(meta.get("watermark"), utc=True, errors="coerce")
-    if pd.isna(wm):
-        raise ValueError("watermark absent/illisible dans cnn_run_meta.json")
-
-    raw_since = meta.get("since")
-    since = pd.to_datetime(raw_since, utc=True, errors="coerce") if raw_since else None
-    if since is not None and pd.isna(since):
-        since = None
-
-    kept, held, stale, broken = [], [], [], []
-    for e in eps:
-        if pd.isna(e.end):
-            # Horodatage illisible : on NE JETTE PAS (doctrine fail-open),
-            # on triage et on signale.
-            broken.append(e)
-            kept.append(e)
-        elif e.end > wm:
-            held.append(e)                       # non stabilise -> run suivant
-        elif since is not None and e.end <= since:
-            stale.append(e)                      # zone seed -> deja traite
-        else:
-            kept.append(e)
-
-    diag = {"held": held, "stale": stale, "broken": broken,
-            "watermark": wm, "since": since}
-    return kept, diag
-
-
-def crosscheck_emitted(eps: list[Episode],
-                       episodes_csv: str = CL.EPISODES_CSV) -> dict:
-    """Compare les episode_id re-derives par le triage avec ceux REELLEMENT
-    emis par predict_cnn (cnn_alerts_episodes.csv).
-
-    Un ecart signifie que aggregate_alerts (inference) et build_episodes
-    (triage) ne decoupent pas identiquement -> episode_id instable entre les
-    deux couches -> l'upsert Mongo sur episode_id ne garantit plus l'unicite.
-    On DIAGNOSTIQUE, on ne corrige pas silencieusement : supprimer un episode
-    sur la foi d'un hash divergent violerait 'aucune alerte perdue'."""
-    out = {"available": False, "n_emitted": 0, "missing": set(), "extra": set()}
-    if not os.path.exists(episodes_csv):
-        return out
-    try:
-        df = pd.read_csv(episodes_csv)
-    except Exception:
-        return out
-    if not len(df) or "start" not in df.columns:
-        out["available"] = True
-        return out
-
-    ids_emitted = set()
-    for _, r in df.iterrows():
-        st = pd.to_datetime(r.get("start"), utc=True, errors="coerce")
-        ids_emitted.add(_episode_id(str(r.get("log_source")),
-                                    str(r.get("host_name")), st))
-    ids_triage = {e.episode_id for e in eps}
-    out.update(available=True, n_emitted=len(ids_emitted),
-               missing=ids_emitted - ids_triage,
-               extra=ids_triage - ids_emitted)
-    return out
-
-
-# ---------------------------------------------------------------------------
-def policy_flags(ep: Episode) -> list[str]:
-    """Garde-fous SOC (POLITIQUE, pas verite terrain) : primitives qu'un
-    analyste humain ne clot jamais sans regarder. Le LLM garde le droit
-    d'expliquer, pas celui de classer 'false_positive'."""
-    flags = []
-    procs = {p.lower() for p in ep.processes}
-    evts = {e.lower() for e in ep.event_types}
-    if procs & {p.lower() for p in CL.NEVER_DISMISS_PROCESSES}:
-        hit = sorted(procs & {p.lower() for p in CL.NEVER_DISMISS_PROCESSES})
-        flags.append(f"processus sensible: {', '.join(hit)}")
-    if evts & {e.lower() for e in CL.NEVER_DISMISS_EVENT_TYPES}:
-        flags.append("modification de configuration d'audit/mot de passe")
-    n_fail = int((ep.rows["top_feat"].fillna("") == "is_fail").sum())
-    if n_fail >= CL.NEVER_DISMISS_FAIL_BURST:
-        flags.append(f"rafale d'echecs d'authentification ({n_fail} alertes)")
-    if any(str(p).startswith(".") for p in ep.processes):
-        flags.append("binaire a nom cache (prefixe '.')")
-    return flags
 
 
 if __name__ == "__main__":
     eps = build_episodes()
-    print(f"{len(eps)} episodes (avant filtre de fenetre)\n")
-    print(eps[0].render())
-    print("\nflags:", policy_flags(eps[0]))
+    print(f"{len(eps)} episodes\n")
+    if eps:
+        print(eps[0].render())
+        print("\n(rag_query) ->", eps[0].rag_query())

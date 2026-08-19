@@ -1,21 +1,26 @@
 """
-rag_cnn.py  --  v2 (revue du 17/07/2026)
-=========================================
+rag_cnn.py
+==========
 Retriever HYBRIDE pour la base de connaissances Sentinel/CNN.
 
 Pourquoi hybride et pas "juste des embeddings" :
-  * La KB est petite (~13 chunks). Un index vectoriel seul se trompe sur les
-    entites RARES : "cups-browsed" et "crontab" sont proches dans l'espace
-    semantique ("processus systeme Linux"), alors qu'ils separent exactement
-    faux positif et vrai positif. Un match EXACT sur process_name est plus
-    fiable que n'importe quel cosinus.
+  * La KB est PETITE (une dizaine de chunks -- le compte exact est affiche a
+    l'execution par KBIndex). Un index vectoriel seul se trompe sur les entites
+    RARES : "cups-browsed" et "crontab" sont proches dans l'espace semantique
+    ("processus systeme Linux"), alors qu'ils separent exactement faux positif
+    et vrai positif. Un match EXACT sur process_name est plus fiable que
+    n'importe quel cosinus.
   * Inversement, le lexical seul rate les reformulations.
   -> score = ALPHA * cosinus(embeddings) + (1-ALPHA) * recouvrement de cles.
 
 Le tout est hors-ligne : aucune donnee de log ne sort de la machine pour le
 retrieval.
 
--- CORRECTIONS v2 ----------------------------------------------------------
+Ce module est l'UNIQUE brique "RAG" du pipeline RAG-only : il selectionne les
+chunks pertinents et fournit la liste MITRE fermee. Il n'exerce AUCUN controle
+sur la sortie du LLM (ca, c'est le role des garde-fous, ajoutes plus tard).
+
+-- Notes de conception (revue du 17/07/2026) --------------------------------
 
 [MESURE] Le terme lexical etait ecrase par le terme "semantique".
     v1 : score = hits / max(3.0, len(ep_keys))
@@ -24,41 +29,34 @@ retrieval.
     dans processes/users/event_types -- donc des cles structurellement
     INCAPABLES de matcher, qui gonflaient le denominateur sans jamais pouvoir
     contribuer au numerateur.
-    Chiffrage : ~15 cles par episode, 3 process_name en match parfait ->
-    3/15 = 0.20, pondere (1-0.6) = 0.4 -> contribution 0.08. Face a un cosinus
-    TF-IDF de 0.3-0.5 pondere 0.6 -> 0.18-0.30. Le terme presente comme
-    DECISIF dans le docstring pesait TROIS FOIS MOINS que celui qu'il etait
-    cense corriger.
-    v2 : normalisation par les seules cles MATCHABLES (ep_keys ∩ cles de la KB).
+    -> normalisation par les seules cles MATCHABLES (ep_keys inter cles KB).
 
 [HONNETETE] Avec RAG_BACKEND='tfidf', le terme "semantique" EST DEJA lexical
     (TF-IDF + IDF surpondere exactement les tokens rares : 'cups-browsed',
     'crontab', '.rk_beacon'). C'est probablement la vraie raison pour laquelle
-    TF-IDF bat les embeddings -- pas l'hybridation. Le resultat negatif reste
-    juste, l'explication doit etre : "lexical > vectoriel sur un corpus de 13
-    chunks a entites rares", et non "hybride > vectoriel".
-    -> lancer l'ablation RAG_ALPHA (1.0 / 0.6 / 0.0) avant de l'ecrire.
+    TF-IDF bat les embeddings -- pas l'hybridation. L'explication a defendre :
+    "lexical > vectoriel sur un petit corpus a entites rares", pas
+    "hybride > vectoriel". -> lancer l'ablation RAG_ALPHA (1.0 / 0.6 / 0.0).
 
-[SILENCIEUX] load_kb ignorait sans un mot tout chunk sans 'id'.
-    Une coquille de front-matter faisait disparaitre un chunk -> allowed_mitre
-    retrecissait -> le garde-fou 5 se mettait a rejeter des techniques VALIDES,
-    et rien nulle part ne le signalait. v2 : chaque fichier ignore est affiche.
+[SILENCIEUX] load_kb ignorait sans un mot tout chunk sans 'id'. Une coquille
+    de front-matter faisait disparaitre un chunk -> allowed_mitre retrecissait
+    -> des techniques VALIDES devenaient soudain non citables, sans aucun
+    signe. Desormais : chaque fichier ignore est affiche.
 
-[BUG] render() faisait `break` au premier chunk depassant le budget.
-    Les chunks 'reference' sont TOUJOURS injectes en tete : si l'un d'eux est
-    volumineux, il pouvait evincer tous les suivants. v2 : `continue`.
+[BUG] render() faisait `break` au premier chunk depassant le budget. Les
+    chunks 'reference' sont TOUJOURS injectes en tete : si l'un d'eux est
+    volumineux, il pouvait evincer tous les suivants. Corrige : `continue`.
 
 [FIABILITE] Repli silencieux sur TF-IDF meme quand le backend etait demande
     EXPLICITEMENT. Un run 'sentence-transformers' pouvait etre en realite un
-    run TF-IDF -- et donc une ablation qui ne mesure rien. v2 : echec dur si
-    le backend est explicite, repli uniquement en mode 'auto'.
+    run TF-IDF. Corrige : echec dur si backend explicite, repli seulement en
+    mode 'auto'.
 
-[MORT] `import pickle` et CL.RAG_INDEX_CACHE n'etaient jamais utilises.
-    Supprimes : l'index se construit en moins d'une seconde sur 13 chunks.
-
-[FIABILITE] allowed_mitre est desormais un dict {id: {tactic, name}} : le LLM
-    ne produit plus que l'identifiant, tactique et nom viennent de la KB.
+[FIABILITE] allowed_mitre est un dict {id: {tactic, name}} : le LLM ne produit
+    que l'identifiant ; tactique et nom viennent de la KB.
 """
+
+
 from __future__ import annotations
 
 import os
@@ -132,10 +130,8 @@ def load_kb(kb_dir: str = CL.KB_DIR) -> list[Chunk]:
             with open(path, encoding="utf-8") as f:
                 meta, body = _parse_front_matter(f.read())
             if not meta.get("id"):
-                # v1 : `continue` muet. Une coquille de front-matter faisait
-                # disparaitre un chunk du corpus ET de allowed_mitre, sans
-                # aucun signe -- puis le garde-fou 5 rejetait des techniques
-                # parfaitement valides. Un chunk perdu doit crier.
+                # Un chunk sans 'id' disparaitrait du corpus ET de allowed_mitre
+                # sans aucun signe. Un chunk perdu doit crier.
                 ignores.append(path)
                 continue
             chunks.append(Chunk(
@@ -155,8 +151,7 @@ def load_kb(kb_dir: str = CL.KB_DIR) -> list[Chunk]:
     ids = [c.id for c in chunks]
     doublons = {i for i in ids if ids.count(i) > 1}
     if doublons:
-        # Deux chunks de meme id -> kb_refs devient ambigu et la tracabilite
-        # de l'explication tombe.
+        # Deux chunks de meme id -> kb_refs devient ambigu, tracabilite perdue.
         print(f"  [rag] /!\\ ids DUPLIQUES dans la KB : {sorted(doublons)}")
     return chunks
 
@@ -164,18 +159,16 @@ def load_kb(kb_dir: str = CL.KB_DIR) -> list[Chunk]:
 def allowed_mitre_ids(chunks: Iterable[Chunk]) -> dict[str, dict]:
     """Ensemble FERME des techniques citables, avec tactique et nom.
 
-    Le LLM ne peut pas en inventer d'autres : tout ID hors de cet ensemble est
-    rejete au post-traitement, et en mode strict:true il devient un enum,
-    donc impossible a generer.
+    Le LLM ne peut pas en inventer d'autres : tout ID hors de cet ensemble
+    n'est PAS present dans le prompt. (Le rejet effectif d'un ID hallucine,
+    lui, releve des garde-fous de SORTIE -- absents de la version RAG-only.)
 
     Deux formats de front-matter acceptes :
         mitre: T1053.003
         mitre: T1053.003|Persistence|Scheduled Task/Job: Cron
     Le second est RECOMMANDE : il permet au systeme de remplir tactic/name
-    lui-meme. Sans lui, le LLM devait les deviner de memoire et v1 les
-    acceptait sans controle -- un T1053.003 etiquete "Defense Evasion" passait.
-    (Le separateur est '|' et non ',' : les noms MITRE contiennent des
-    virgules, le front-matter splitte sur la virgule.)
+    lui-meme. (Le separateur est '|' et non ',' : les noms MITRE contiennent
+    des virgules, sur lesquelles le front-matter splitte deja.)
     """
     out: dict[str, dict] = {}
     for c in chunks:
@@ -194,9 +187,6 @@ def allowed_mitre_ids(chunks: Iterable[Chunk]) -> dict[str, dict]:
                 info["name"] = parts[2]
     # Repli sur la table versionnee pour les techniques que la KB n'annote pas.
     # La KB reste PRIORITAIRE : on ne remplit que les trous.
-    # Mesure du 17/07/2026 : les 13 chunks ne stockent que des IDs -> les 20
-    # techniques sortaient avec tactic/name vides, et le dashboard affichait
-    # des cases blanches. Voir mitre_names_cnn.py pour le raisonnement.
     from mitre_names_cnn import lookup
     comble, orphelines = [], []
     for tid, info in out.items():
@@ -212,15 +202,10 @@ def allowed_mitre_ids(chunks: Iterable[Chunk]) -> dict[str, dict]:
     if comble:
         print(f"  [rag] {len(comble)} technique(s) completee(s) depuis la table "
               f"de repli (mitre_names_cnn.py) -- la KB ne fournit que les IDs")
-        print("        -> a porter dans le front-matter apres la soutenance : "
-              "mitre: T1053.003|Persistence|Scheduled Task/Job: Cron")
     if orphelines:
-        # Ni la KB ni la table ne connaissent ces IDs. On ne devine PAS : elles
-        # sortiront avec tactic/name vides. Mais il faut le voir maintenant.
+        # Ni la KB ni la table ne connaissent ces IDs. On ne devine PAS.
         print(f"  [rag] /!\\ technique(s) SANS tactique ni nom (ni KB ni table) : "
               f"{sorted(orphelines)}")
-        print("        -> le dashboard affichera un mapping incomplet pour "
-              "celles-ci. Verifier qu'elles existent bien dans ATT&CK.")
     return out
 
 
@@ -246,10 +231,6 @@ class _Encoder:
                 return self._model.encode(corpus, normalize_embeddings=True)
             except Exception as e:                      # noqa: BLE001
                 if CL.RAG_BACKEND == "sentence-transformers":
-                    # v1 repliait en silence : un run etiquete
-                    # 'sentence-transformers' dans le memoire pouvait etre en
-                    # realite un run TF-IDF. Une ablation qui ne mesure pas ce
-                    # qu'elle annonce est pire qu'une ablation absente.
                     raise SystemExit(
                         f"RAG_BACKEND='sentence-transformers' demande "
                         f"EXPLICITEMENT mais indisponible ({e}).\n"
@@ -316,9 +297,8 @@ class KBIndex:
               f"{len(self.allowed_mitre)} techniques MITRE autorisees")
         if self.kb_chars <= CL.RAG_MAX_CHARS:
             print(f"  [rag] NB : la KB entiere ({self.kb_chars} car.) tient sous "
-                  f"RAG_MAX_CHARS ({CL.RAG_MAX_CHARS}).")
-            print(f"        Le retrieval ne peut donc rien filtrer d'utile a ce "
-                  f"volume -> lancer l'ablation `--no-rag` pour le CHIFFRER.")
+                  f"RAG_MAX_CHARS ({CL.RAG_MAX_CHARS}) -> le retrieval ne filtre "
+                  f"rien d'utile a ce volume. Ablation `--no-rag` pour le chiffrer.")
 
     # -- scoring lexical structurel -----------------------------------------
     def _lexical(self, chunk: Chunk, ep_keys: set[str], source: str) -> float:
@@ -326,14 +306,8 @@ class KBIndex:
 
         Un match exact de process_name vaut plus que n'importe quelle
         similarite de texte -> c'est la que se joue la separation
-        cups-browsed (FP) / crontab (TP).
-
-        v2 -- normalisation corrigee : le denominateur ne compte que les cles
-        de l'episode SUSCEPTIBLES de matcher un chunk (ep_keys ∩ cles de la
-        KB). En v1 il comptait toutes les cles, dont les noms de features
-        ('is_fail', 'proc_rarity') qu'aucun chunk ne liste -> elles gonflaient
-        le denominateur sans jamais pouvoir contribuer au numerateur, ce qui
-        divisait mecaniquement le terme lexical par ~5.
+        cups-browsed (FP) / crontab (TP). Denominateur = seules cles de
+        l'episode SUSCEPTIBLES de matcher un chunk (ep_keys inter cles KB).
         """
         ck = chunk.keys
         if not ck:
@@ -361,6 +335,10 @@ class KBIndex:
 
         # La reference sur la semantique des features est TOUJOURS injectee :
         # sans elle le LLM surinterprete inter_arrival_log et ip_is_external.
+        # -> consequence importante pour ta question "hors KB" : meme sans aucun
+        #    bon match, le LLM recoit AU MOINS ce chunk 'reference'. Il n'est
+        #    donc jamais totalement sans contexte, mais il n'a aucun EXEMPLAIRE
+        #    de comportement (baseline/threat) sur lequel s'appuyer.
         forced = [i for i, c in enumerate(self.chunks) if c.kind == "reference"]
         order = list(np.argsort(-score))
         picked, seen = [], set()
@@ -377,21 +355,20 @@ class KBIndex:
     def retrieve_all(self) -> list[tuple[Chunk, float]]:
         """Ablation `--no-rag` : toute la KB, aucun retrieval.
 
-        A 13 chunks (~9000 car.), la KB tient dans le prompt. Si les resultats
-        sont identiques a ceux du RAG, la conclusion defendable n'est pas de
-        cacher le RAG mais de le documenter pour ce qu'il est : une brique de
-        passage a l'echelle, inutile a ce volume -- preuve a l'appui.
+        A ce volume, la KB tient dans le prompt. Si les resultats sont
+        identiques a ceux du RAG, la conclusion defendable n'est pas de cacher
+        le RAG mais de le documenter pour ce qu'il est : une brique de passage
+        a l'echelle, inutile a ce volume -- preuve a l'appui.
         """
         return [(c, 1.0) for c in self.chunks]
 
     def render(self, hits: list[tuple[Chunk, float]],
                max_chars: int = CL.RAG_MAX_CHARS) -> str:
         """Rend les chunks dans le prompt AVEC leur id -> le LLM doit citer ses
-        sources dans kb_refs, ce qui rend l'explication verifiable (anti-
-        hallucination : une affirmation sans kb_ref est suspecte).
+        sources dans kb_refs, ce qui rend l'explication verifiable.
 
-        v2 : `continue` et non `break` -- un chunk 'reference' volumineux
-        (toujours injecte en tete) pouvait evincer tous les suivants.
+        `continue` et non `break` : un chunk 'reference' volumineux (toujours
+        injecte en tete) ne doit pas evincer tous les suivants.
         """
         out, total = [], 0
         for c, s in hits:

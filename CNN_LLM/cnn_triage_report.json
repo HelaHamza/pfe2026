@@ -4,17 +4,19 @@
   "temperature": 0.0,
   "rag_backend": "tfidf",
   "n_kb_chunks": 13,
-  "n_episodes_reaggregated": 13,
-  "n_episodes_in": 4,
-  "n_alerts_in": 18,
+  "n_episodes_reaggregated": 25,
+  "n_episodes_in": 18,
+  "n_alerts_in": 128,
   "verdicts": {
-    "false_positive": 4
+    "false_positive": 9,
+    "uncertain": 5,
+    "true_positive": 4
   },
   "n_fail_open": 0,
   "n_kb_ref_hallucinated": 0,
   "n_evidence_fabricated": 0,
   "n_closure_refused_grounding": 0,
-  "n_episodes_to_analyst": 0,
-  "noise_reduction_pct": 100.0,
-  "elapsed_s": 156.5
+  "n_episodes_to_analyst": 9,
+  "noise_reduction_pct": 50.0,
+  "elapsed_s": 1511.4
 }

@@ -1,0 +1,1 @@
+{"episode_id": "EP-c5edd4490c", "verdict": "true_positive", "confidence": 0.85, "severity": "high", "title": "Tentatives de connexion SSH avec comptes inconnus (brute‑force)", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}
