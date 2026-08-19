@@ -32,6 +32,14 @@ reentrainement par decontaminate.load_incidents(). Sans cela, le candidat
 serait entraine sur ses propres reponses d'examen et le test (a) ne
 prouverait plus rien.
 
+CHOIX DE LA SOURCE
+------------------
+Le golden set doit etre construit a partir d'un snapshot qui CONTIENT
+reellement les scenarios d'attaque (typiquement le snapshot d'entrainement
+fige avec les injections red-team), et NON a partir d'un snapshot de cycle
+CT recent qui, lui, peut ne pas couvrir la periode des attaques. Un slicing
+sur une periode absente produit des tranches vides, signalees ci-dessous.
+
 USAGE
 -----
     # 1. ecrire golden/incidents.json et golden/reference.json (cf. gabarits)
@@ -40,6 +48,8 @@ USAGE
     # 3. verifier
     python -m retraining.build_golden --verify
 """
+
+
 from __future__ import annotations
 
 import json
@@ -64,13 +74,21 @@ GOLDEN_MANIFEST = GOLDEN_DIR / "manifest.json"
 CONTEXT_SECONDS = 3600
 
 
+def _host_eq(series: pd.Series, host_name: str) -> pd.Series:
+    """Egalite de nom d'hote INSENSIBLE A LA CASSE -- meme raison et meme
+    normalisation que decontaminate._host_eq. Golden set et decontamination
+    DOIVENT voir le meme sous-ensemble, sinon un scenario present dans l'un
+    manquerait dans l'autre."""
+    return series.fillna("").astype(str).str.lower() == str(host_name).lower()
+
+
 def _slice(df: pd.DataFrame, start, end, log_source=None, host_name=None):
     ts = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
     m = (ts >= start) & (ts <= end)
     if log_source:
         m &= df["log_source"] == log_source
     if host_name and "host_name" in df.columns:
-        m &= df["host_name"] == host_name
+        m &= _host_eq(df["host_name"], host_name)
     return df.loc[m.fillna(False)]
 
 
@@ -98,7 +116,8 @@ def build(source_parquet, context_seconds: int = CONTEXT_SECONDS) -> dict:
         print(f"    {inc.id:28s} {len(sl):>7,} evenements")
         if len(sl) == 0:
             print(f"      ! ATTENTION : tranche VIDE. Verifie les bornes, "
-                  f"log_source et host_name de cet incident.")
+                  f"log_source et host_name de cet incident -- ou la SOURCE "
+                  f"(ce snapshot couvre-t-il la periode de l'attaque ?).")
         parts.append(sl)
     golden = pd.concat(parts).drop_duplicates().reset_index(drop=True)
     golden.to_parquet(GOLDEN_PARQUET, index=False)
@@ -107,14 +126,19 @@ def build(source_parquet, context_seconds: int = CONTEXT_SECONDS) -> dict:
     with open(REFERENCE_JSON) as f:
         ref = json.load(f)
     ref_df = _slice(df, pd.Timestamp(ref["start"]), pd.Timestamp(ref["end"]))
-    # Securite : la fenetre de reference doit etre VIERGE d'incident.
-    from retraining.decontaminate import mask_contaminated
-    bad = mask_contaminated(ref_df, incidents)
+    # Securite : la fenetre de reference doit etre VIERGE de TOUT incident
+    # confirme -- pas seulement des scenarios du golden set. Un true_positive
+    # Mongo ou un incident de quarantaine tombant dans la reference la rendrait
+    # faussement "benigne" et fausserait les tests 3 (taux d'alerte) et 4 (KS).
+    # include_reference=False evite que la fenetre ne se masque elle-meme.
+    from retraining.decontaminate import mask_contaminated, load_incidents
+    all_incidents = load_incidents(include_golden=True, include_reference=False)
+    bad = mask_contaminated(ref_df, all_incidents)
     if bad.any():
         raise SystemExit(
             f"La fenetre de reference chevauche {int(bad.sum())} evenement(s) "
-            f"d'incident. Elle doit etre strictement benigne : choisis une "
-            f"autre periode dans golden/reference.json.")
+            f"d'incident confirme. Elle doit etre strictement benigne : choisis "
+            f"une autre periode dans golden/reference.json.")
     ref_df = ref_df.reset_index(drop=True)
     ref_df.to_parquet(REFERENCE_PARQUET, index=False)
     print(f"  reference_events : {len(ref_df):,} evenements "

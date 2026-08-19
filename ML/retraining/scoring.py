@@ -11,7 +11,19 @@ figees. D'ou ce module, qui prend le repertoire d'artefacts en parametre.
 La logique de scoring reproduit exactement _score_df() de train_eval_cnn.py :
 fenetrage W.build_windows, erreur de reconstruction, comparaison au seuil.
 Aucune divergence de semantique entre l'entrainement et la validation.
+
+PASSE AVANT PAR LOTS
+--------------------
+La passe avant est decoupee en lots de SCORE_BATCH fenetres (cf.
+_batched_scores). C'est SANS EFFET sur les scores -- reconstruction_error est
+independante d'une fenetre a l'autre et le modele tourne en eval() (BatchNorm
+en statistiques figees) -- mais cela borne le pic memoire des activations. Sur
+une fenetre de reference volumineuse, une passe unique sur Xs [N, Fs, W]
+pouvait faire ressortir l'OOM que l'extraction en flux cherche justement a
+eviter cote donnees. Meme esprit, applique cette fois cote inference.
 """
+
+
 from __future__ import annotations
 
 import inspect
@@ -29,6 +41,10 @@ import thresholding as TH
 from autoencoder_cnn import PerSourceHybridConvAE
 
 DEVICE = torch.device("cpu")     # le gate tourne sur CPU : reproductible
+
+# Nombre de fenetres traitees par passe avant. Borne le pic memoire des
+# activations sans changer le resultat. Surchargeable via config_cnn.SCORE_BATCH.
+_SCORE_BATCH = 8192
 
 
 # ===========================================================================
@@ -110,6 +126,31 @@ def build_features(df_raw: pd.DataFrame, novelty_state=None) -> pd.DataFrame:
 # ===========================================================================
 # 3. Scoring
 # ===========================================================================
+def _batched_scores(model, Xs: np.ndarray, Xt: np.ndarray, src: str,
+                    device, batch: int | None = None) -> np.ndarray:
+    """Erreur de reconstruction fenetre par fenetre, calculee par lots.
+
+    Le decoupage n'affecte PAS le resultat : chaque fenetre est scoree
+    independamment et le modele est en eval() (BatchNorm en stats figees). Il
+    ne fait que borner le pic memoire des activations. `del` libere chaque lot
+    avant le suivant.
+    """
+    n = len(Xs)
+    if n == 0:
+        return np.zeros(0, dtype=float)
+    batch = batch or getattr(C, "SCORE_BATCH", _SCORE_BATCH)
+    out = np.empty(n, dtype=float)
+    with torch.no_grad():
+        for i in range(0, n, batch):
+            xs = torch.from_numpy(Xs[i:i + batch]).to(device)
+            xt = torch.from_numpy(Xt[i:i + batch]).to(device)
+            s = model.reconstruction_error(xs, xt, src)
+            s = s.cpu().numpy() if torch.is_tensor(s) else np.asarray(s)
+            out[i:i + batch] = np.asarray(s, dtype=float).reshape(-1)
+            del xs, xt, s
+    return out
+
+
 def score_dataframe(arts: ArtifactSet, df_feat: pd.DataFrame) -> pd.DataFrame:
     """Score evenement par evenement. Schema aligne sur cnn_scored_test.csv."""
     parts = []
@@ -123,12 +164,7 @@ def score_dataframe(arts: ArtifactSet, df_feat: pd.DataFrame) -> pd.DataFrame:
             arts.bundle["vocabs"][src], src)
         if len(d_sorted) == 0:
             continue
-        with torch.no_grad():
-            score = arts.model.reconstruction_error(
-                torch.from_numpy(Xs).to(arts.device),
-                torch.from_numpy(Xt).to(arts.device), src)
-        score = np.asarray(score.cpu() if torch.is_tensor(score) else score,
-                           dtype=float)
+        score = _batched_scores(arts.model, Xs, Xt, src, arts.device)
         thr = arts.threshold(src)
         parts.append(pd.DataFrame({
             "@timestamp": pd.to_datetime(d_sorted.get("@timestamp"),

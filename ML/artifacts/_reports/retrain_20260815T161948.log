@@ -1,0 +1,8 @@
+2026-08-15 17:19:48  ERROR   Cycle interrompu par une exception
+Traceback (most recent call last):
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 461, in main
+    return run_cycle(a)
+           ^^^^^^^^^^^^
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 295, in run_cycle
+    from retraining import artifact_store as AS
+ImportError: cannot import name 'artifact_store' from 'retraining' (/home/hala-hamza/pfe-2026/ML/retraining/__init__.py)

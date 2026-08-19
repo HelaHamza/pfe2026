@@ -1,5 +1,14 @@
-log_source,host_name,start,end,duration_s,n_alerts,n_distinct_proc,top_processes,dominant_features,mse_max,mse_mean
-auditd,asus-x415ja,2026-08-04 14:40:16.620000+00:00,2026-08-04 14:45:05.515000+00:00,288.9,8,5,"sigma, uvicorn, uname","parent_child_rarity (5), proc_rarity (3)",43.1084,24.2609
-auditd,asus-x415ja,2026-08-04 13:59:08.181000+00:00,2026-08-04 14:00:19.566000+00:00,71.4,6,3,"snap-update-ns, Chrome_DevTools, snap-seccomp","exe_path_rarity (4), parent_child_rarity (2)",27.4713,19.4027
-auditd,asus-x415ja,2026-08-04 13:52:06.664000+00:00,2026-08-04 13:52:06.664000+00:00,0.0,1,1,uname,parent_child_rarity (1),27.3912,27.3912
-syslog,ASUS-X415JA,2026-08-04 17:44:33.419000+00:00,2026-08-04 17:44:43.896000+00:00,10.5,3,3,"systemd-modules-load, gnome-remote-de, snapd","inter_arrival_log (1), proc_rarity (1), event_type_seq (1)",24.9724,16.1635
+episode_id,log_source,host_name,start,end,duration_s,n_alerts,n_distinct_proc,top_processes,dominant_features,mse_max,mse_mean
+EP-cf4aad6562,auth,ASUS-X415JA,2026-08-18 06:48:56.289000+00:00,2026-08-18 06:48:58.116000+00:00,1.8,6,1,sshd,user_rarity (6),48.0568,20.6276
+EP-155e45bb0f,syslog,ASUS-X415JA,2026-08-18 07:27:36.291000+00:00,2026-08-18 07:27:36.718000+00:00,0.4,5,1,sentinel_7f67de36_daemon2,proc_rarity (5),47.2274,42.4253
+EP-b52d1cb3da,auditd,asus-x415ja,2026-08-18 07:05:32.234000+00:00,2026-08-18 07:05:32.246000+00:00,0.0,2,2,"strace, true","proc_rarity (1), parent_child_rarity (1)",45.1799,36.3168
+EP-ed71fefb8e,auditd,asus-x415ja,2026-08-18 07:49:53.758000+00:00,2026-08-18 07:49:53.758000+00:00,0.0,1,1,sentinel_vb_7f6,proc_rarity (1),45.1792,45.1792
+EP-efb2cd414f,auditd,asus-x415ja,2026-08-18 07:00:00.135000+00:00,2026-08-18 07:00:02.229000+00:00,2.1,11,7,"zqx7f67de36, chmod, sh","parent_child_rarity (7), exe_path_rarity (4)",45.0661,20.1697
+EP-1b009df722,auditd,asus-x415ja,2026-08-18 08:06:29.802000+00:00,2026-08-18 08:06:29.808000+00:00,0.0,4,3,"env, q7f67de36, true","parent_child_rarity (3), exe_path_rarity (1)",45.0313,27.224
+EP-8654bf308f,auditd,asus-x415ja,2026-08-18 07:44:21.725000+00:00,2026-08-18 07:44:21.738000+00:00,0.0,5,2,"sentinel_shm_7f, cp","exe_path_rarity (4), parent_child_rarity (1)",44.9793,21.5269
+EP-4739d5856a,auditd,asus-x415ja,2026-08-18 08:00:38.719000+00:00,2026-08-18 08:00:39.120000+00:00,0.4,9,3,"snap-confine, snap-update-ns, snap-seccomp",exe_path_rarity (9),43.0923,25.9536
+EP-4670b01190,auditd,asus-x415ja,2026-08-18 06:45:58.436000+00:00,2026-08-18 06:48:55.889000+00:00,177.5,7,5,"evinced, ssh, sh","parent_child_rarity (5), exe_path_rarity (2)",27.6604,20.9465
+EP-cacf0290a0,auditd,asus-x415ja,2026-08-18 07:22:04.263000+00:00,2026-08-18 07:22:06.275000+00:00,2.0,3,2,"stat, rm",parent_child_rarity (3),27.4296,16.0057
+EP-378bbf21d8,auditd,asus-x415ja,2026-08-18 07:27:36.286000+00:00,2026-08-18 07:27:36.289000+00:00,0.0,2,1,logger,parent_child_rarity (2),27.4153,18.7115
+EP-a6c04d3195,syslog,ASUS-X415JA,2026-08-18 07:33:08.842000+00:00,2026-08-18 07:33:09.417000+00:00,0.6,10,1,sentinel_7f67de36_flood,proc_rarity (10),25.1585,14.2893
+EP-395f86025a,auth,ASUS-X415JA,2026-08-18 07:38:43.085000+00:00,2026-08-18 07:38:43.085000+00:00,0.0,1,1,sshd,user_rarity (1),12.4571,12.4571

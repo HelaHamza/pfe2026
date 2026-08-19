@@ -23,7 +23,7 @@ Le systeme produit deja les etiquettes qui manquent : les episodes classes
 reentrainement. C'est une vraie boucle de retroaction fermee, et c'est
 defendable devant un jury bien plus que "je relance le training tous les mois".
 
-Trois sources d'incidents, fusionnees :
+Trois sources d'incidents, fusionnees : qui sont eliminé par ce ficheir 
   1. MongoDB       episodes tries true_positive par la couche LLM
   2. quarantine.json  incidents confirmes a la main (red-team, scenarios de
                       validation joues sur la machine, faux negatifs decouverts
@@ -46,7 +46,10 @@ CLI
 ---
     python -m retraining.decontaminate --list
     python -m retraining.decontaminate --check dataset_snapshot.parquet
-"""from __future__ import annotations
+"""
+
+
+from __future__ import annotations
 
 import json
 import os
@@ -238,9 +241,13 @@ def load_incidents(include_golden: bool = True,
     if include_reference:
         incidents += _load_reference_window()
 
+    # Cle de deduplication : inclut source_ip, car mask_contaminated() s'en
+    # sert pour restreindre l'excision. Sans lui, deux incidents ne differant
+    # QUE par l'IP source seraient fusionnes a tort, et l'un des deux ne serait
+    # jamais excise du corpus.
     seen, uniq = set(), []
     for inc in incidents:
-        key = (inc.log_source, inc.host_name, inc.start, inc.end)
+        key = (inc.log_source, inc.host_name, inc.source_ip, inc.start, inc.end)
         if key not in seen:
             seen.add(key)
             uniq.append(inc)
@@ -257,6 +264,19 @@ def load_incidents(include_golden: bool = True,
 # ===========================================================================
 # 2. Masquage
 # ===========================================================================
+def _host_eq(series: pd.Series, host_name: str) -> pd.Series:
+    """Egalite de nom d'hote INSENSIBLE A LA CASSE.
+
+    La collecte produit le meme hote sous deux casses selon le beat
+    (host.name vs FQDN) : on a observe 'ASUS-X415JA' ET 'asus-x415ja' dans le
+    meme corpus. Une egalite stricte laisserait passer la moitie des
+    evenements d'un incident confirme -- donc une attaque NON decontaminee,
+    exactement le scenario d'empoisonnement que cette couche existe pour
+    empecher. La comparaison est donc normalisee des deux cotes.
+    """
+    return series.fillna("").astype(str).str.lower() == str(host_name).lower()
+
+
 def mask_contaminated(df: pd.DataFrame, incidents: list[Incident],
                       margin_seconds: int | None = None,
                       ts_col: str = "timestamp") -> pd.Series:
@@ -299,7 +319,7 @@ def mask_contaminated(df: pd.DataFrame, incidents: list[Incident],
         if inc.log_source and "log_source" in df.columns:
             m &= df["log_source"] == inc.log_source
         if inc.host_name and "host_name" in df.columns:
-            m &= df["host_name"] == inc.host_name
+            m &= _host_eq(df["host_name"], inc.host_name)
         if inc.source_ip and "source_ip" in df.columns:
             m &= df["source_ip"] == inc.source_ip
         bad |= m.fillna(False)

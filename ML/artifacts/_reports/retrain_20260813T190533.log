@@ -1,0 +1,8 @@
+2026-08-13 20:05:33  ERROR   Cycle interrompu par une exception
+Traceback (most recent call last):
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 395, in main
+    return run_cycle(a)
+           ^^^^^^^^^^^^
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 230, in run_cycle
+    from retraining import artifact_store as AS
+ModuleNotFoundError: No module named 'retraining'

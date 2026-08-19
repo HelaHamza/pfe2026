@@ -1,0 +1,12 @@
+2026-08-15 17:07:21  ERROR   Cycle interrompu par une exception
+Traceback (most recent call last):
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 461, in main
+    return run_cycle(a)
+           ^^^^^^^^^^^^
+  File "/home/hala-hamza/pfe-2026/ML/retraining/retrain_cnn.py", line 297, in run_cycle
+    from retraining import validation_gate as VG
+  File "/home/hala-hamza/pfe-2026/ML/retraining/validation_gate.py", line 56, in <module>
+    from retraining import build_golden as BG
+  File "/home/hala-hamza/pfe-2026/ML/retraining/build_golden.py", line 53, in <module>
+    from retraining.artifact_store import sha256_file, _atomic_write_json
+ImportError: cannot import name 'sha256_file' from 'retraining.artifact_store' (/home/hala-hamza/pfe-2026/ML/retraining/artifact_store.py)

@@ -40,10 +40,10 @@ export const feedbackService = {
 }
 
 export const dashboardService = {
-  getDashboard:    ()             => api.get('/dashboard').then(r => r.data),
-  getResults:      (limit = 500)  => api.get('/results', { params: { limit } }).then(r => r.data),
-  getResultDetail: (type, id)     => api.get(`/results/${type}/${id}`).then(r => r.data),
-  launchAnalysis:  ()             => api.post('/analyse/run').then(r => r.data),
+  getDashboard:      ()            => api.get('/dashboard').then(r => r.data),
+  getResults:        (limit = 500) => api.get('/results', { params: { limit } }).then(r => r.data),
+  launchAnalysis:    ()            => api.post('/analyse/run').then(r => r.data),
+  getAnalysisStatus: ()            => api.get('/analyse/status').then(r => r.data),
 }
 
 export const aiDashboardService = {

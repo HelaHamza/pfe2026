@@ -16,6 +16,7 @@ Points cles :
     mineure de l'ancienne version qui voyait la validation).
   * Clip a +/- SCALE_CLIP (assoupli) apres scaling.
 """
+
 from __future__ import annotations
 import numpy as np
 import pandas as pd

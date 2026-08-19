@@ -39,8 +39,18 @@ CODES DE SORTIE
 ---------------
     0  modele promu
     2  candidat refuse par le gate (comportement NORMAL, pas une panne)
-    1  erreur d'execution
+    3  cycle abandonne AVANT l'entrainement -- preflight en echec ou extraction
+       anemique. Environnement / donnees non prets : NORMAL, pas une panne.
+       Un modele un peu vieilli detecte encore ; ce code protege un modele
+       fonctionnel plutot que de le remplacer par un modele non representatif.
+    1  erreur d'execution (exception non prevue)
+
+    NB systemd : ajouter `SuccessExitStatus=2 3` a l'unite de service pour que
+    le timer ne considere pas un rejet du gate ou un abandon propre comme une
+    defaillance.
 """
+
+
 from __future__ import annotations
 
 import argparse
@@ -48,8 +58,10 @@ import fcntl
 import json
 import logging
 import os
+import shutil
 import subprocess
 import sys
+import threading
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -113,7 +125,7 @@ class Lock:
 # Etape 0 : preflight
 # ===========================================================================
 def preflight() -> list[str]:
-    """Verifie ce qui rendrait le cycle inutile AVANT de bruler 4 heures."""
+    """Verifie ce qui rendrait le cycle inutile AVANT de bruler plusieurs heures."""
     import config_cnn as C
     import data_loader as DL
     from retraining import artifact_store as AS
@@ -131,6 +143,21 @@ def preflight() -> list[str]:
                 f"RAM disponible insuffisante ({ram} Mo < "
                 f"{RC.MIN_AVAILABLE_RAM_MB} Mo). Arrete la stack ELK ou "
                 f"abaisse MAX_DOCS_BY_SOURCE.")
+
+    # Espace disque : le snapshot parquet et les artefacts du candidat sont
+    # ecrits sur ARTIFACTS_ROOT. Un disque plein ferait echouer le cycle en
+    # pleine ecriture, sans garde-fou -- symetrique du controle RAM.
+    min_disk = getattr(RC, "MIN_FREE_DISK_MB", 2000)
+    try:
+        free_mb = shutil.disk_usage(RC.ARTIFACTS_ROOT).free // (1024 * 1024)
+        log.info("Espace disque libre : %d Mo (minimum requis %d Mo)",
+                 free_mb, min_disk)
+        if free_mb < min_disk:
+            problems.append(
+                f"Espace disque insuffisant ({free_mb} Mo < {min_disk} Mo) "
+                f"pour ecrire le snapshot et les artefacts du candidat.")
+    except Exception as e:
+        log.warning("Controle d'espace disque impossible : %s", e)
 
     if not C.ES_PASS:
         problems.append("ELASTIC_PWD absent de l'environnement (.env).")
@@ -204,16 +231,56 @@ def run_training(candidate: Path, window: tuple[str, str]) -> None:
     log.info("Lancement du sous-processus d'entrainement "
              "(CNN_ARTIFACT_DIR=%s)", candidate)
     t0 = time.time()
+    timed_out = {"hit": False}
+
     with open(logfile, "w") as fh:
         proc = subprocess.Popen(
             [sys.executable, RC.TRAIN_ENTRYPOINT],
             cwd=RC.ML_ROOT, env=env, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT, text=True, bufsize=1)
-        for line in proc.stdout:
-            fh.write(line)
-            sys.stdout.write("      | " + line)
-        rc = proc.wait(timeout=RC.TRAIN_TIMEOUT_SECONDS)
+
+        # --- Chien de garde wall-clock ------------------------------------
+        # La boucle de lecture ci-dessous bloque tant que le sous-processus
+        # tient le pipe ouvert. Un `proc.wait(timeout=...)` place APRES la
+        # boucle ne s'executerait qu'une fois l'entrainement DEJA fini : le
+        # delai ne bornerait donc jamais un entrainement fige qui n'emet plus
+        # aucune ligne (deadlock, verrou GPU/CPU). Ce minuteur, lui, tue le
+        # processus au depassement, ce qui ferme le pipe et debloque la
+        # lecture. Garde anti-course : s'il est deja termine, on ne fait rien.
+        def _kill_on_timeout():
+            if proc.poll() is not None:
+                return
+            timed_out["hit"] = True
+            log.error("Delai d'entrainement depasse (%d s) : arret force du "
+                      "sous-processus.", RC.TRAIN_TIMEOUT_SECONDS)
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+            time.sleep(10)
+            try:
+                if proc.poll() is None:
+                    proc.kill()
+            except Exception:
+                pass
+
+        watchdog = threading.Timer(RC.TRAIN_TIMEOUT_SECONDS, _kill_on_timeout)
+        watchdog.daemon = True
+        watchdog.start()
+        try:
+            for line in proc.stdout:
+                fh.write(line)
+                sys.stdout.write("      | " + line)
+            rc = proc.wait()
+        finally:
+            watchdog.cancel()
+
     dt = time.time() - t0
+    if timed_out["hit"]:
+        raise RuntimeError(
+            f"Entrainement interrompu : delai de "
+            f"{RC.TRAIN_TIMEOUT_SECONDS / 3600:.1f} h depasse, sous-processus "
+            f"tue. Journal : {logfile}")
     if rc != 0:
         raise RuntimeError(
             f"Entrainement echoue (code {rc}) apres {dt / 60:.1f} min. "
@@ -244,8 +311,9 @@ def run_cycle(args) -> int:
         for p in problems:
             log.error("  ! %s", p)
         if not args.force:
-            log.error("Cycle abandonne. (--force pour passer outre)")
-            return 1
+            log.error("Cycle abandonne : environnement non pret (non une "
+                      "panne). (--force pour passer outre)")
+            return 3
         log.warning("--force : on continue malgre %d probleme(s).", len(problems))
 
     # --- 1. fenetre -------------------------------------------------------
@@ -290,12 +358,12 @@ def run_cycle(args) -> int:
     if volume_problems:
         log.error("  Extraction anemique : %s", " ; ".join(volume_problems))
         log.error("  Entrainer sur un echantillon non representatif est pire "
-                  "que ne pas reentrainer. Cycle abandonne.")
+                  "que ne pas reentrainer. Cycle abandonne (non une panne).")
         if not args.force:
             AS.reject(candidate, AS.new_version_id(),
                       {"raison": "extraction_anemique",
                        "details": volume_problems})
-            return 1
+            return 3
         log.warning("--force : on continue.")
 
     # --- 5. entrainement --------------------------------------------------

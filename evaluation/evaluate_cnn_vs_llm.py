@@ -45,7 +45,6 @@ Entrées :
   --threshold    seuil POT du CNN (float). Sinon lu dans --scored (colonne
                  'threshold') si présente.
 """
-
 import argparse
 import json
 import math
@@ -55,13 +54,16 @@ import pandas as pd
 
 # --------------------------------------------------------------------------- #
 #  Alias de colonnes : on tolère les schémas de sortie différents             #
+#  NB : 'mse' RETIRÉ de l'alias de mse_max -> un fichier d'alertes brutes      #
+#  (1 ligne/événement) ne doit JAMAIS passer pour un fichier d'épisodes.       #
+#  Entrée attendue : cnn_alerts_episodes.csv (colonne mse_max native).         #
 # --------------------------------------------------------------------------- #
 _ALIASES = {
     "episode_id": ["episode_id", "ep_id", "id", "episode"],
     "host_name":  ["host_name", "host.name", "host", "agent_name", "hostname"],
     "start":      ["start", "t_start", "window_start", "ep_start", "first_seen"],
     "end":        ["end", "t_end", "window_end", "ep_end", "last_seen"],
-    "mse_max":    ["mse_max", "score", "score_max", "anomaly_score", "mse"],
+    "mse_max":    ["mse_max", "score", "score_max", "anomaly_score"],
 }
 
 
@@ -70,7 +72,8 @@ _ALIASES = {
 # --------------------------------------------------------------------------- #
 def _norm_id(v) -> str:
     """Normalise un episode_id : 123.0 -> '123', sinon str strippée.
-    Évite l'échec silencieux de jointure quand pandas lit l'id en float."""
+    Évite l'échec silencieux de jointure quand pandas lit l'id en float.
+    Les episode_id du pipeline sont des chaînes 'EP-xxxxxxxxxx' -> intacts."""
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
     s = str(v).strip()
@@ -130,8 +133,13 @@ def load_scored(path: str) -> pd.DataFrame:
     if missing:
         raise SystemExit(
             f"Colonnes manquantes dans {path}: {missing}. "
-            f"Colonnes trouvées: {list(df.columns)}. "
-            f"Renomme-les ou complète _ALIASES en tête de script.")
+            f"Colonnes trouvées: {list(df.columns)}.\n"
+            f"  Entrée attendue : cnn_alerts_episodes.csv produit par "
+            f"l'inférence (predict_cnn.py / Test_cnn.py). Depuis le "
+            f"refactoring, ce fichier porte 'episode_id' — c'est l'inférence "
+            f"qui assigne l'identité, le triage la lit.\n"
+            f"  Ne PAS passer cnn_scored_*.csv ici : ces fichiers ne sont pas "
+            f"découpés en épisodes et n'ont pas d'episode_id.")
     df["start"] = pd.to_datetime(df["start"], utc=True, errors="coerce", format="mixed")
     df["end"]   = pd.to_datetime(df["end"],   utc=True, errors="coerce", format="mixed")
     df["host_name"] = df["host_name"].astype(str)
@@ -206,9 +214,11 @@ def label_episodes(scored: pd.DataFrame, gt: list[dict]) -> pd.DataFrame:
 #  Détection au NIVEAU ATTAQUE (robuste à la troncature)                       #
 # --------------------------------------------------------------------------- #
 def detect_per_attack(scored: pd.DataFrame, gt: list[dict],
-                      thr: float, kept_ids: set[str]) -> pd.DataFrame:
+                      thr: float, kept_ids: set[str],
+                      conf_ids: set[str]) -> pd.DataFrame:
     """Pour chaque attaque injectée : a-t-elle >=1 alerte CNN qui la chevauche ?
-    Et parmi elles, >=1 conservée par le LLM (cascade) ?"""
+    Et parmi elles, >=1 conservée par le LLM (cascade = TP∪uncertain) ?
+    Et >=1 activement CONFIRMÉE par le LLM (true_positive seul) ?"""
     rows = []
     for g in gt:
         same_host = scored[scored["host_name"].str.lower() == g["host_name"].lower()]
@@ -220,64 +230,13 @@ def detect_per_attack(scored: pd.DataFrame, gt: list[dict],
         alerts = overlap[overlap["mse_max"] >= thr]
         cnn_det = len(alerts) > 0
         casc_det = any(ep in kept_ids for ep in alerts["ep"])
+        conf_det = any(ep in conf_ids for ep in alerts["ep"])
         rows.append({
             "attack_id": g["attack_id"], "technique": g["technique"],
             "n_overlap": len(overlap), "n_alerts": len(alerts),
-            "cnn": cnn_det, "cascade": casc_det,
+            "cnn": cnn_det, "cascade": casc_det, "confirmed": conf_det,
         })
     return pd.DataFrame(rows)
-
-
-# --------------------------------------------------------------------------- #
-#  Métriques épisode (mode COMPLET seulement)                                  #
-# --------------------------------------------------------------------------- #
-def auc_rank(scores: list[float], labels: list[int]) -> float:
-    """AUC = P(score(positif) > score(négatif)), formule de Mann-Whitney U.
-    Transparente et exacte, sans sklearn -> vérifiable par un jury."""
-    pairs = sorted(zip(scores, labels), key=lambda x: x[0])
-    ranks = [0.0] * len(pairs)
-    i = 0
-    while i < len(pairs):
-        j = i
-        while j + 1 < len(pairs) and pairs[j + 1][0] == pairs[i][0]:
-            j += 1
-        avg = (i + j) / 2.0 + 1.0
-        for k in range(i, j + 1):
-            ranks[k] = avg
-        i = j + 1
-    n_pos = sum(labels)
-    n_neg = len(labels) - n_pos
-    if n_pos == 0 or n_neg == 0:
-        return float("nan")
-    sum_ranks_pos = sum(r for r, (_, y) in zip(ranks, pairs) if y == 1)
-    return (sum_ranks_pos - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
-
-
-def roc_points(scores: list[float], labels: list[int]) -> list[tuple[float, float]]:
-    n_pos = sum(labels)
-    n_neg = len(labels) - n_pos
-    if n_pos == 0 or n_neg == 0:
-        return []
-    pts = [(0.0, 0.0)]
-    for thr in sorted(set(scores), reverse=True):
-        tp = sum(1 for s, y in zip(scores, labels) if s >= thr and y == 1)
-        fp = sum(1 for s, y in zip(scores, labels) if s >= thr and y == 0)
-        pts.append((fp / n_neg, tp / n_pos))
-    pts.append((1.0, 1.0))
-    return pts
-
-
-def confusion(pred_pos: list[bool], labels: list[int]) -> dict:
-    tp = sum(1 for p, y in zip(pred_pos, labels) if p and y == 1)
-    fp = sum(1 for p, y in zip(pred_pos, labels) if p and y == 0)
-    fn = sum(1 for p, y in zip(pred_pos, labels) if not p and y == 1)
-    tn = sum(1 for p, y in zip(pred_pos, labels) if not p and y == 0)
-    prec = tp / (tp + fp) if (tp + fp) else float("nan")
-    rec = tp / (tp + fn) if (tp + fn) else float("nan")
-    f1 = (2 * prec * rec / (prec + rec)
-          if prec == prec and rec == rec and (prec + rec) else float("nan"))
-    return {"tp": tp, "fp": fp, "fn": fn, "tn": tn,
-            "precision": prec, "recall": rec, "f1": f1}
 
 
 # --------------------------------------------------------------------------- #
@@ -286,17 +245,24 @@ def confusion(pred_pos: list[bool], labels: list[int]) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--groundtruth", default="groundtruth.jsonl")
-    ap.add_argument("--scored", default="scored_episodes.csv")
+    ap.add_argument("--scored", default="cnn_alerts_episodes.csv",
+                    help="Fichier d'épisodes taggés produit par l'inférence "
+                         "(cnn_alerts_episodes.csv). Porte episode_id + mse_max.")
     ap.add_argument("--triage", default="cnn_triage.jsonl")
     ap.add_argument("--threshold", type=float, default=None)
     ap.add_argument("--window", default="run_window.json",
                     help="run_window.json d'inject.py (filtre le GT sur la fenêtre)")
     ap.add_argument("--run-id", default=None,
                     help="ne garder que les attaques de ce run (prioritaire sur --window)")
-    ap.add_argument("--mode", choices=("auto", "complet", "alertes"), default="auto",
-                    help="force le mode d'entrée (défaut: auto-détecté)")
     ap.add_argument("--kept-verdicts", default="true_positive,uncertain",
                     help="verdicts considérés comme CONSERVÉS (positifs LLM)")
+    ap.add_argument("--strict-coverage", action="store_true", default=True,
+                    help="échoue si la couverture triage < 100%% (jointure cassée). "
+                         "Activé par défaut depuis le partage d'episode_id "
+                         "inférence/triage.")
+    ap.add_argument("--no-strict-coverage", dest="strict_coverage",
+                    action="store_false",
+                    help="rétrograde le contrôle de couverture en avertissement.")
     ap.add_argument("--out-prefix", default="eval")
     a = ap.parse_args()
 
@@ -305,6 +271,9 @@ def main() -> None:
     verdicts = load_triage(a.triage)
     kept = {v.strip().lower() for v in a.kept_verdicts.split(",")}
     kept_ids = {ep for ep, v in verdicts.items() if v in kept}
+    # TP seuls = le LLM a ACTIVEMENT confirmé (par opposition à 'uncertain',
+    # qui est conservé par prudence mais n'est pas une confirmation).
+    conf_ids = {ep for ep, v in verdicts.items() if v == "true_positive"}
 
     # ---- FILTRAGE DU GROUND-TRUTH sur le run courant -----------------------
     win = load_run_window(a.window) if a.window else None
@@ -324,23 +293,15 @@ def main() -> None:
     thr = a.threshold
     if thr is None and "threshold" in scored.columns:
         thr = float(pd.to_numeric(scored["threshold"], errors="coerce").iloc[0])
-    alerts_only_auto = False
     if thr is None:
-        # Pas de seuil : on suppose --scored = alertes seules (seuillage
-        # per-source déjà appliqué en amont par predict_cnn). Toute ligne
-        # fournie est alors une alerte. Évite d'avoir à passer --threshold 0.
+        # Pas de seuil : --scored = épisodes déjà seuillés en amont
+        # (predict_cnn applique le POT PAR SOURCE avant d'émettre). Chaque
+        # ligne fournie EST donc une alerte. -inf = « tout est alerte ».
+        # C'est le cas nominal avec cnn_alerts_episodes.csv, qui ne contient
+        # que des épisodes au-dessus du seuil et n'a pas de colonne threshold.
         thr = float("-inf")
-        alerts_only_auto = True
 
     labelled = label_episodes(scored, gt)
-
-    # ---- détection du mode --------------------------------------------------
-    has_sub = bool((labelled["mse_max"] < thr).any())
-    if a.mode == "auto":
-        mode = "complet" if has_sub else "alertes"
-    else:
-        mode = a.mode
-    complet = (mode == "complet")
 
     n_attacks = len(gt)
     n_ep = len(labelled)
@@ -348,56 +309,76 @@ def main() -> None:
     print("=" * 70)
     print("  ÉVALUATION  CNN seul  vs  cascade CNN+LLM")
     print("=" * 70)
-    print(f"  mode d'entrée        : {mode.upper()}"
-          + ("" if complet else "  (ROC/AUC + rappel-épisode désactivés)"))
     print(f"  épisodes fournis     : {n_ep}"
           f"   (>= seuil: {int((labelled['mse_max'] >= thr).sum())},"
           f"  < seuil: {int((labelled['mse_max'] < thr).sum())})")
     print(f"  attaques injectées   : {n_attacks}")
     thr_str = "n/a (alertes en amont)" if thr == float("-inf") else f"{thr:.2f}"
     print(f"  seuil POT (CNN)      : {thr_str}")
-    if not complet:
-        print("  /!\\ Entrée ALERTES seules : rappel-par-attaque et précision "
-              "restent valides,\n      mais fournis TOUS les épisodes pour une "
-              "ROC/AUC.")
 
-    # ---- diagnostic couverture triage --------------------------------------
+    # ---- alertes = épisodes au-dessus du seuil -----------------------------
     alerts = labelled[labelled["mse_max"] >= thr].copy()
     n_alerts = len(alerts)
+
+    # ---- CONTRÔLE DE COUVERTURE TRIAGE (jointure episode_id) ---------------
+    # Depuis le refactoring, inférence et triage partagent le même episode_id :
+    # la couverture DOIT être 100 %. Une couverture partielle = jointure cassée
+    # -> tous les chiffres cascade seraient faux. On échoue plutôt que mentir.
     cov = alerts["ep"].isin(set(verdicts)).mean() if n_alerts else float("nan")
     if n_alerts and cov < 1.0:
         manquants = int(round((1 - cov) * n_alerts))
-        print(f"  /!\\ COUVERTURE TRIAGE {_pct(cov)} : {manquants} alerte(s) sans "
-              "verdict LLM.\n      Sans verdict -> traitée comme FILTRÉE : "
-              "vérifie l'appariement des episode_id.")
+        msg = (f"COUVERTURE TRIAGE {_pct(cov)} : {manquants} alerte(s) sans "
+               f"verdict LLM. Depuis le partage d'episode_id "
+               f"inférence/triage, la couverture DOIT être 100 %. Une "
+               f"couverture partielle signale une jointure cassée : vérifie "
+               f"que --scored (cnn_alerts_episodes.csv) et --triage "
+               f"(cnn_triage.jsonl) proviennent du MÊME run.")
+        if a.strict_coverage:
+            raise SystemExit("ERREUR : " + msg)
+        print(f"  /!\\ {msg}")
 
-    # ---- Précision (niveau alerte) : valide dans les deux modes ------------
+    # ---- Précision (niveau alerte) -----------------------------------------
     tp_alerts = int((alerts["label"] == 1).sum())
     fp_alerts = n_alerts - tp_alerts
     cnn_prec = tp_alerts / n_alerts if n_alerts else float("nan")
 
+    # cascade CONSERVATRICE : TP ∪ uncertain (ce qui remonte à l'analyste)
     casc = alerts[alerts["ep"].isin(kept_ids)]
     n_casc = len(casc)
     tp_casc = int((casc["label"] == 1).sum())
     fp_casc = n_casc - tp_casc
     casc_prec = tp_casc / n_casc if n_casc else float("nan")
 
-    # ---- Rappel (niveau attaque) : valide dans les deux modes --------------
-    per_attack = detect_per_attack(labelled, gt, thr, kept_ids)
-    cnn_rec_atk = per_attack["cnn"].mean() if n_attacks else float("nan")
-    casc_rec_atk = per_attack["cascade"].mean() if n_attacks else float("nan")
+    # cascade STRICTE : true_positive seuls (le LLM a CONFIRMÉ)
+    conf = alerts[alerts["ep"].isin(conf_ids)]
+    n_conf = len(conf)
+    tp_conf = int((conf["label"] == 1).sum())
+    fp_conf = n_conf - tp_conf
+    conf_prec = tp_conf / n_conf if n_conf else float("nan")
 
-    print("\n  [CNN seul]  (entête = niveau attaque)")
+    # ---- Rappel (niveau attaque) -------------------------------------------
+    per_attack = detect_per_attack(labelled, gt, thr, kept_ids, conf_ids)
+    cnn_rec_atk  = per_attack["cnn"].mean() if n_attacks else float("nan")
+    casc_rec_atk = per_attack["cascade"].mean() if n_attacks else float("nan")
+    conf_rec_atk = per_attack["confirmed"].mean() if n_attacks else float("nan")
+
+    print("\n  [CNN seul]  (précision=alerte, rappel=attaque)")
     print(f"    précision (alerte) : {_fmt(cnn_prec)}   "
           f"(TP={tp_alerts}  FP={fp_alerts}  alertes={n_alerts})")
     print(f"    rappel   (attaque) : {_fmt(cnn_rec_atk)}   "
           f"({int(per_attack['cnn'].sum())}/{n_attacks} attaques détectées)")
 
-    print("\n  [Cascade CNN+LLM]")
+    print("\n  [Cascade CNN+LLM — conservatrice : TP ∪ uncertain]")
     print(f"    précision (alerte) : {_fmt(casc_prec)}   "
-          f"(TP={tp_casc}  FP={fp_casc}  alertes conservées={n_casc})")
+          f"(TP={tp_casc}  FP={fp_casc}  conservées={n_casc})")
     print(f"    rappel   (attaque) : {_fmt(casc_rec_atk)}   "
-          f"({int(per_attack['cascade'].sum())}/{n_attacks} attaques détectées)")
+          f"({int(per_attack['cascade'].sum())}/{n_attacks} attaques conservées)")
+
+    print("\n  [Cascade stricte — LLM a CONFIRMÉ : true_positive seuls]")
+    print(f"    précision (alerte) : {_fmt(conf_prec)}   "
+          f"(TP={tp_conf}  FP={fp_conf}  confirmées={n_conf})")
+    print(f"    rappel   (attaque) : {_fmt(conf_rec_atk)}   "
+          f"({int(per_attack['confirmed'].sum())}/{n_attacks} attaques confirmées)")
 
     # ---- Le message ---------------------------------------------------------
     fp_removed = fp_alerts - fp_casc
@@ -417,47 +398,23 @@ def main() -> None:
         print(f"    -> /!\\ le LLM a fermé {lost} attaque(s) : "
               f"{list(fermees['attack_id'])}")
 
-    # ---- ROC / AUC + confusion épisode : mode COMPLET seulement ------------
-    auc = float("nan")
-    ep_cnn = ep_pipe = None
-    if complet:
-        scores = labelled["mse_max"].astype(float).tolist()
-        labels = labelled["label"].astype(int).tolist()
-        auc = auc_rank(scores, labels)
-        cnn_pred = [s >= thr for s in scores]
-        pipe_pred = [bool(f) and (ep in kept_ids)
-                     for f, ep in zip(cnn_pred, labelled["ep"])]
-        ep_cnn = confusion(cnn_pred, labels)
-        ep_pipe = confusion(pipe_pred, labels)
-        print("\n  [Niveau ÉPISODE — mode COMPLET]")
-        print(f"    ROC AUC (mse)      : {_fmt(auc)}")
-        print(f"    CNN     épisode    : précision={_fmt(ep_cnn['precision'])}  "
-              f"rappel={_fmt(ep_cnn['recall'])}  "
-              f"TP={ep_cnn['tp']} FP={ep_cnn['fp']} FN={ep_cnn['fn']} TN={ep_cnn['tn']}")
-        print(f"    Cascade épisode    : précision={_fmt(ep_pipe['precision'])}  "
-              f"rappel={_fmt(ep_pipe['recall'])}  "
-              f"TP={ep_pipe['tp']} FP={ep_pipe['fp']} FN={ep_pipe['fn']} TN={ep_pipe['tn']}")
-        pts = roc_points(scores, labels)
-        pd.DataFrame(pts, columns=["fpr", "tpr"]).to_csv(
-            f"{a.out_prefix}_roc_points.csv", index=False)
-    else:
-        print("\n  [Niveau ÉPISODE] désactivé (entrée ALERTES) : "
-              "pas de ROC/AUC ni de rappel-épisode fiables.")
-
     # ---- Rappel par technique ----------------------------------------------
-    print("\n  [Détection par technique]  (CNN alerte ? / LLM conserve ?)")
+    print("\n  [Détection par technique]  (CNN alerte / LLM conserve / LLM confirme)")
     if per_attack.empty:
         print("    (aucune attaque dans le ground-truth)")
     else:
         for tech in sorted(per_attack["technique"].unique()):
             sub = per_attack[per_attack["technique"] == tech]
             print(f"    {tech:14s} : CNN={sub['cnn'].sum()}/{len(sub)}   "
-                  f"cascade={sub['cascade'].sum()}/{len(sub)}")
+                  f"cascade={sub['cascade'].sum()}/{len(sub)}   "
+                  f"confirmées={sub['confirmed'].sum()}/{len(sub)}")
 
     # ---- Sorties ------------------------------------------------------------
     per_attack.to_csv(f"{a.out_prefix}_per_attack.csv", index=False)
     summary = {
-        "mode": mode,
+        # 'mode' conservé pour compat dashboard : plus de ROC, entrée toujours
+        # « épisodes déjà seuillés » -> valeur figée à 'alertes'.
+        "mode": "alertes",
         "n_episodes": n_ep, "n_attacks": n_attacks,
         "threshold": None if thr == float("-inf") else thr,
         "triage_coverage": None if cov != cov else round(cov, 4),
@@ -466,30 +423,41 @@ def main() -> None:
                         "tp": tp_alerts, "fp": fp_alerts},
             "cascade": {"precision": casc_prec, "n_alerts": n_casc,
                         "tp": tp_casc, "fp": fp_casc, "fp_removed": fp_removed},
+            # NOUVEAU : cascade stricte (TP seuls). N'écrase aucun champ existant.
+            "confirmed": {"precision": conf_prec, "n_alerts": n_conf,
+                          "tp": tp_conf, "fp": fp_conf},
         },
         "attack_level": {
             "cnn_recall": cnn_rec_atk, "cascade_recall": casc_rec_atk,
+            # NOUVEAU : rappel des attaques ACTIVEMENT confirmées par le LLM.
+            "confirmed_recall": conf_rec_atk,
             "attacks_detected_cnn": int(per_attack["cnn"].sum()) if not per_attack.empty else 0,
             "attacks_detected_cascade": int(per_attack["cascade"].sum()) if not per_attack.empty else 0,
+            "attacks_confirmed": int(per_attack["confirmed"].sum()) if not per_attack.empty else 0,
         },
-        "episode_level": None if not complet else {
-            "auc": auc,
-            "cnn": ep_cnn, "cascade": ep_pipe,
+        # Conservé (=null) pour ne PAS casser le dashboard analyste IA qui lit
+        # cette clé. La ROC/AUC sera réintroduite ici ultérieurement.
+        "episode_level": None,
+        # NOUVEAU : santé de la jointure episode_id (traçabilité / repro).
+        "join_health": {
+            "triage_coverage": None if cov != cov else round(cov, 4),
+            "n_scored_episodes": int(n_ep),
+            "n_triaged_episodes": int(len(verdicts)),
+            "ids_matched": int(len(set(scored["ep"]) & set(verdicts))),
         },
     }
+
     def _clean(o):
         if isinstance(o, dict):
             return {k: _clean(v) for k, v in o.items()}
         if isinstance(o, float) and math.isnan(o):
             return None
         return o
+
     with open(f"{a.out_prefix}_summary.json", "w", encoding="utf-8") as f:
         json.dump(_clean(summary), f, indent=2, ensure_ascii=False)
 
-    outs = [f"{a.out_prefix}_summary.json", f"{a.out_prefix}_per_attack.csv"]
-    if complet:
-        outs.append(f"{a.out_prefix}_roc_points.csv")
-    print(f"\n  -> {'  |  '.join(outs)}")
+    print(f"\n  -> {a.out_prefix}_summary.json  |  {a.out_prefix}_per_attack.csv")
     print("=" * 70)
 
 

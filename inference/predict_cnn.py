@@ -16,6 +16,9 @@ Sémantique du curseur (watermark de stabilisation)
 Invariant : un épisode complet est émis/triagé EXACTEMENT une fois (0 doublon
 SOC, 0 double appel LLM) et aucun épisode n'est perdu à la frontière du run.
 """
+
+
+
 from __future__ import annotations
 import argparse
 import json
@@ -34,7 +37,8 @@ import pandas as pd
 import config_cnn as CC
 import cnn_features as FE
 from live_loader import load_live
-from Test_cnn import load_artifacts_cnn, aggregate_alerts
+from Test_cnn import (load_artifacts_cnn, aggregate_alerts,
+                      assign_episodes, summarize_episodes)
 from train_eval_cnn import _score_df
 
 SCORED_LIVE_CSV = os.path.join(_HERE, "cnn_scored_live.csv")
@@ -43,8 +47,8 @@ CONTEXT_CSV     = os.path.join(_HERE, "cnn_alerts_context.csv")
 EPISODES_CSV    = os.path.join(_HERE, "cnn_alerts_episodes.csv")
 RUN_META_JSON   = os.path.join(_HERE, "cnn_run_meta.json")
 
-_EP_COLS = ["log_source", "host_name", "start", "end", "duration_s", "n_alerts",
-            "n_distinct_proc", "top_processes", "dominant_features",
+_EP_COLS = ["episode_id", "log_source", "host_name", "start", "end", "duration_s",
+            "n_alerts", "n_distinct_proc", "top_processes", "dominant_features",
             "mse_max", "mse_mean"]
 
 
@@ -61,7 +65,6 @@ def _parse_ts(value, name, required):
         print(f"ERREUR : --{name} invalide (ISO attendu) : {value!r}")
         sys.exit(2)
     return ts
-
 
 def main():
     p = argparse.ArgumentParser()
@@ -122,7 +125,9 @@ def main():
     else:
         primary = context = scored
 
-    episodes = aggregate_alerts(primary)
+    # --- Identité d'épisode assignée ICI, une seule fois -------------------
+    primary_tagged = assign_episodes(primary)      # tague CHAQUE alerte (episode_id)
+    episodes = summarize_episodes(primary_tagged)  # résumé 1 ligne/épisode (avec episode_id)
 
     # [4] Curseur + watermark : émettre uniquement les épisodes STABILISÉS ET
     #     NOUVEAUX. Si end <= watermark, aucun événement t > until ne peut
@@ -130,7 +135,7 @@ def main():
     #     DÉFINITIF. Si end > watermark, tronqué → retenu.
     held = 0
     if len(episodes):
-        end     = episodes["end"]  # tz-aware UTC (cf. aggregate_alerts)
+        end     = episodes["end"]  # tz-aware UTC (cf. summarize_episodes)
         settled = end <= watermark
         fresh   = (end > since_ts) if since_ts is not None else pd.Series(True, index=episodes.index)
         emit    = episodes[settled & fresh].reset_index(drop=True)
@@ -141,11 +146,28 @@ def main():
         emit = episodes
         print("\n[4] Aucun épisode dans la fenêtre.")
 
-    scored.to_csv(SCORED_LIVE_CSV, index=False) # ici on sauvegarde le dataframe scored dans un fichier CSV pour référence
-    if len(primary):
-        primary.to_csv(ALERTS_CSV, index=False)
+    # --- Écritures ---------------------------------------------------------
+    emitted_ids = set(emit["episode_id"]) if len(emit) else set()
+
+    scored.to_csv(SCORED_LIVE_CSV, index=False)  # dataframe scoré complet, pour référence
+
+    # cnn_alerts.csv = SEULEMENT les lignes des épisodes ÉMIS, déjà taguées.
+    # Le triage n'a donc plus à re-filtrer par fenêtre ni à re-agréger :
+    # ce fichier EST la liste exacte des épisodes à trier, avec leur identité.
+    if len(primary_tagged):
+        alerts_out = primary_tagged[primary_tagged["episode_id"].isin(emitted_ids)]
+        alerts_out = alerts_out.drop(columns=[c for c in ("_ts", "_episode")
+                                              if c in alerts_out.columns])
+        if len(alerts_out):
+            alerts_out.to_csv(ALERTS_CSV, index=False)
+        else:
+            pd.DataFrame().to_csv(ALERTS_CSV, index=False)
+    else:
+        pd.DataFrame().to_csv(ALERTS_CSV, index=False)
+
     if len(context):
         context.to_csv(CONTEXT_CSV, index=False)
+
     if emit is None or emit.shape[1] == 0:
         pd.DataFrame(columns=_EP_COLS).to_csv(EPISODES_CSV, index=False)
     else:

@@ -1,29 +1,43 @@
 {
   "mode": "alertes",
-  "n_episodes": 10,
-  "n_attacks": 7,
+  "n_episodes": 13,
+  "n_attacks": 12,
   "threshold": null,
   "triage_coverage": 1.0,
   "alert_level": {
     "cnn": {
-      "precision": 0.9,
-      "n_alerts": 10,
-      "tp": 9,
+      "precision": 0.9230769230769231,
+      "n_alerts": 13,
+      "tp": 12,
       "fp": 1
     },
     "cascade": {
       "precision": 1.0,
-      "n_alerts": 7,
-      "tp": 7,
+      "n_alerts": 6,
+      "tp": 6,
       "fp": 0,
       "fp_removed": 1
+    },
+    "confirmed": {
+      "precision": 1.0,
+      "n_alerts": 3,
+      "tp": 3,
+      "fp": 0
     }
   },
   "attack_level": {
-    "cnn_recall": 1.0,
-    "cascade_recall": 0.7142857142857143,
-    "attacks_detected_cnn": 7,
-    "attacks_detected_cascade": 5
+    "cnn_recall": 0.8333333333333334,
+    "cascade_recall": 0.5,
+    "confirmed_recall": 0.25,
+    "attacks_detected_cnn": 10,
+    "attacks_detected_cascade": 6,
+    "attacks_confirmed": 3
   },
-  "episode_level": null
+  "episode_level": null,
+  "join_health": {
+    "triage_coverage": 1.0,
+    "n_scored_episodes": 13,
+    "n_triaged_episodes": 13,
+    "ids_matched": 13
+  }
 }

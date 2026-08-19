@@ -10,6 +10,8 @@ Le lancement est ASYNCHRONE : la requête rend la main immédiatement, le
 pipeline tourne dans un thread et le front interroge /status. Un pipeline
 de plusieurs minutes ne peut pas tenir dans un cycle requête/réponse.
 """
+
+
 from fastapi import APIRouter, BackgroundTasks, Depends
 
 from controllers import analyse_controller

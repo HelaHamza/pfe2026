@@ -14,6 +14,8 @@ Architecture : auto-encodeur convolutif 1D par source, DEUX tetes :
                     sequence / co-occurrence / densite automatiquement.
   * tete SCALAIRE : rarete longue-portee + timing + flags.
 """
+
+
 from __future__ import annotations
 
 import os

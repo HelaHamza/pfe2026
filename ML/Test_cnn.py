@@ -13,6 +13,8 @@ Usage :
   python Test_cnn.py      # 2) infere sur le test -> alertes / episodes
   python evaluation.py --from-csv cnn_scored_test.csv   # 3) A/B chiffre
 """
+
+
 from __future__ import annotations
 import os, json
 import numpy as np
@@ -20,6 +22,7 @@ import pandas as pd
 from scipy.stats import skew, kurtosis
 import torch
 import joblib
+import hashlib
 
 import config_cnn as CC
 import data_loader as DL
@@ -44,34 +47,44 @@ def load_artifacts_cnn():
     thresholds = joblib.load(CC.THRESH_PATH)
     return model, b["scalers"], b["vocabs"], b["feats"], thresholds
 
+def episode_id_for(source: str, host: str, start) -> str:
+    """Identite STABLE d'un episode. Calculee UNE SEULE FOIS, ici, cote
+    inference. Le triage la LIT, il ne la recalcule jamais -> plus aucune
+    divergence d'agregation possible entre les deux couches."""
+    raw = f"{source}|{host}|{start}".encode()
+    return "EP-" + hashlib.sha1(raw).hexdigest()[:10]
 
-# ---------------------------------------------------------------------------
-def aggregate_alerts(alerts, gap_seconds=None):
-    """Regroupe les alertes en EPISODES : au sein d'une meme (source, hote),
-    des alertes separees de moins de gap_seconds forment un seul episode.
-    Un reboot (des centaines de lignes en rafale) devient ainsi 1 episode,
-    pas 300 -> charge analyste realiste."""
-    import pandas as pd
+
+def assign_episodes(alerts, gap_seconds=None):
+    """Decoupe les alertes en episodes ET tague CHAQUE ligne avec son
+    episode_id. C'est la sortie unique dont partent l'inference ET le triage."""
     gap = gap_seconds or CC.EPISODE_GAP_SECONDS
     if len(alerts) == 0:
-        return pd.DataFrame()
+        return alerts.assign(episode_id=pd.Series(dtype=str))
     a = alerts.copy()
     a["_ts"] = pd.to_datetime(a["@timestamp"], utc=True, errors="coerce")
     a = a.sort_values(["log_source", "host_name", "_ts"]).reset_index(drop=True)
     grp = a.groupby(["log_source", "host_name"], sort=False)
-    # Nouvel episode quand l'ecart au precedent (meme cle) depasse gap.
     dt_prev = grp["_ts"].diff().dt.total_seconds()
-    new_ep = (dt_prev.isna()) | (dt_prev > gap)
+    new_ep = dt_prev.isna() | (dt_prev > gap)
     a["_episode"] = new_ep.groupby([a["log_source"], a["host_name"]]).cumsum()
+    # debut de chaque episode = min(_ts) du groupe -> graine du hash
+    starts = a.groupby(["log_source", "host_name", "_episode"])["_ts"] \
+              .transform("min")
+    a["episode_id"] = [episode_id_for(s, h, st)
+                       for s, h, st in zip(a["log_source"], a["host_name"], starts)]
+    return a
 
+
+def summarize_episodes(tagged):
+    """Resume 1 ligne / episode A PARTIR des alertes deja taguees. Ne redecoupe
+    RIEN : il groupe par l'episode_id assigne par assign_episodes."""
+    if len(tagged) == 0:
+        return pd.DataFrame()
     rows = []
-    for (src, host, ep), g in a.groupby(["log_source", "host_name", "_episode"],
-                                        sort=False):
+    for ep_id, g in tagged.groupby("episode_id", sort=False):
         procs = g["process_name"].fillna("").astype(str)
         top = procs[procs != ""].value_counts().head(3).index.tolist()
-
-        # Features dominantes de l'episode : driver #1 le plus frequent.
-        # C'est le "pourquoi" statistique agrege -> tri Sigma/LLM et debug FP.
         if "top_feat" in g.columns:
             tf = g["top_feat"].fillna("").astype(str)
             tf = tf[tf != ""]
@@ -79,20 +92,29 @@ def aggregate_alerts(alerts, gap_seconds=None):
                             for name, cnt in tf.value_counts().head(3).items())
         else:
             dom = ""
-
         rows.append({
-            "log_source": src, "host_name": host,
+            "episode_id": ep_id,
+            "log_source": str(g["log_source"].iloc[0]),
+            "host_name": str(g["host_name"].iloc[0]),
             "start": g["_ts"].min(), "end": g["_ts"].max(),
             "duration_s": round((g["_ts"].max() - g["_ts"].min()).total_seconds(), 1),
             "n_alerts": len(g),
             "n_distinct_proc": int(procs[procs != ""].nunique()),
             "top_processes": ", ".join(top),
-            "dominant_features": dom,           # <-- attribution au niveau episode
+            "dominant_features": dom,
             "mse_max": round(float(g["mse"].max()), 4),
             "mse_mean": round(float(g["mse"].mean()), 4),
         })
-    episodes = pd.DataFrame(rows).sort_values("mse_max", ascending=False)
-    return episodes.reset_index(drop=True)
+    return pd.DataFrame(rows).sort_values("mse_max", ascending=False) \
+                            .reset_index(drop=True)
+
+
+def aggregate_alerts(alerts, gap_seconds=None):
+    """Compat : tague puis resume, en une passe. (Ancien comportement + colonne
+    episode_id dans le resume.)"""
+    return summarize_episodes(assign_episodes(alerts, gap_seconds))
+
+
 
 def main():
     print("=" * 64)
@@ -148,7 +170,8 @@ def main():
     else:
         primary = context = scored
 
-    episodes = aggregate_alerts(primary)   # reutilise l'agregation en episodes
+    primary_tagged = assign_episodes(primary)
+    episodes = summarize_episodes(primary_tagged)
 
     # --- diagnostics legers (forme de la distribution des scores) -----------
     print("\n[3] Diagnostics (test)...")
@@ -170,12 +193,15 @@ def main():
 
     # --- ecritures ----------------------------------------------------------
     scored.to_csv(CC.SCORED_TEST_CSV, index=False)
-    if len(primary):
-        primary.to_csv("cnn_alerts.csv", index=False)
-    if len(context):
-        context.to_csv("cnn_alerts_context.csv", index=False)
+    if len(primary_tagged):
+        primary_tagged.drop(columns=[c for c in ("_ts", "_episode")
+                                     if c in primary_tagged.columns]) \
+                      .to_csv("cnn_alerts.csv", index=False)
     if len(episodes):
         episodes.to_csv("cnn_alerts_episodes.csv", index=False)
+    if len(context):
+        context.to_csv("cnn_alerts_context.csv", index=False)
+    
 
     report = {
         "test_window_by_source": bounds,

@@ -1,17 +1,39 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// src/components/dashboard/MitreTopTactics.jsx
-// Liste classée des tactiques MITRE (au lieu du donut illisible)
-// Garde une mini-bar à droite pour la lecture rapide
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { mitre as mitreColors, neutral } from "../../theme/colors";
+
+// Techniques ATT&CK produites par tes règles Sigma → nom lisible (FR).
+// Le code reste affiché en secondaire pour la rigueur.
+// Complète cette table au fil de tes règles ; toute technique absente
+// retombe proprement sur son code brut.
+const ATTCK = {
+  "T1078":     { name: "Comptes valides",             tactic: "Accès initial" },
+  "T1078.003": { name: "Comptes valides — locaux",    tactic: "Accès initial" },
+  "T1110":     { name: "Force brute",                 tactic: "Accès aux identifiants" },
+  "T1110.001": { name: "Force brute — mot de passe",  tactic: "Accès aux identifiants" },
+  "T1021.004": { name: "Service distant — SSH",       tactic: "Mouvement latéral" },
+  "T1046":     { name: "Scan de services réseau",     tactic: "Découverte" },
+  "T1548":     { name: "Élévation via mécanisme",     tactic: "Élévation de privilèges" },
+  "T1548.003": { name: "Abus de sudo",                tactic: "Élévation de privilèges" },
+  "T1070":     { name: "Effacement de traces",        tactic: "Évasion défensive" },
+  "T1070.006": { name: "Horodatage falsifié",         tactic: "Évasion défensive" },
+  "T1059":     { name: "Interpréteur de commandes",   tactic: "Exécution" },
+  "T1543":     { name: "Service système créé/modifié", tactic: "Persistance" },
+  "T1053":     { name: "Tâche planifiée",             tactic: "Exécution" },
+  "T1136":     { name: "Création de compte",          tactic: "Persistance" },
+};
+
+function describe(code) {
+  const key = String(code || "").trim();
+  const meta = ATTCK[key] || ATTCK[key.split(".")[0]];   // fallback sur la technique parente
+  return meta || { name: null, tactic: null };
+}
 
 export default function MitreTopTactics({ data, limit = 8 }) {
   const items = (data || [])
-    .map((d) => ({
-      label: d.tactic || d.level || "Inconnu",
-      count: d.count ?? 0,
-    }))
+    .map((d) => {
+      const code = d.tactic || d.level || "Inconnu";
+      const { name, tactic } = describe(code);
+      return { code, name, tactic, count: d.count ?? 0 };
+    })
     .filter((d) => d.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);
@@ -26,9 +48,9 @@ export default function MitreTopTactics({ data, limit = 8 }) {
       padding: "16px 18px",
       minHeight: 220,
     }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
         <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text }}>
-          MITRE ATT&CK · top tactiques
+          MITRE ATT&amp;CK · top techniques
         </h3>
         {items.length > 0 && (
           <span style={{ fontSize: 11, color: neutral.textFaint }}>
@@ -36,48 +58,66 @@ export default function MitreTopTactics({ data, limit = 8 }) {
           </span>
         )}
       </div>
+      <p style={{ margin: "0 0 14px", fontSize: 11, color: neutral.textMuted }}>
+        Techniques détectées, classées par nombre d'alertes
+      </p>
 
       {items.length === 0 ? (
         <div style={{
           fontSize: 12, color: neutral.textFaint,
           textAlign: "center", padding: "30px 0",
         }}>
-          Aucune tactique détectée
+          Aucune technique détectée sur ce run
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.map((d, i) => (
-            <div key={d.label} style={{
-              display: "flex", alignItems: "center", gap: 10,
-              fontSize: 12, color: neutral.text,
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: 2, flexShrink: 0,
-                background: mitreColors[i % mitreColors.length],
-              }} />
-              <span style={{
-                flex: 1, whiteSpace: "nowrap",
-                overflow: "hidden", textOverflow: "ellipsis",
-              }} title={d.label}>
-                {d.label}
-              </span>
-              <div style={{
-                width: 70, height: 4, background: neutral.bgMuted, flexShrink: 0,
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {items.map((d, i) => {
+            const color = mitreColors[i % mitreColors.length];
+            return (
+              <div key={d.code} style={{
+                display: "flex", alignItems: "center", gap: 10,
+                fontSize: 12, color: neutral.text,
               }}>
-                <div style={{
-                  width: `${(d.count / max) * 100}%`, height: "100%",
-                  background: mitreColors[i % mitreColors.length],
+                <span style={{
+                  width: 8, height: 8, borderRadius: 2, flexShrink: 0,
+                  background: color,
                 }} />
+
+                {/* Nom lisible en principal, code + tactique en secondaire */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                    fontWeight: 500,
+                  }} title={d.name ? `${d.name} (${d.code})` : d.code}>
+                    {d.name || d.code}
+                  </div>
+                  <div style={{
+                    fontSize: 10, color: neutral.textFaint,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                  }}>
+                    {d.code}{d.tactic ? ` · ${d.tactic}` : ""}
+                  </div>
+                </div>
+
+                <div style={{
+                  width: 70, height: 4, background: neutral.bgMuted, flexShrink: 0,
+                  borderRadius: 2, overflow: "hidden",
+                }}>
+                  <div style={{
+                    width: `${(d.count / max) * 100}%`, height: "100%",
+                    background: color,
+                  }} />
+                </div>
+                <span style={{
+                  fontWeight: 600, color: neutral.textMuted,
+                  fontVariantNumeric: "tabular-nums",
+                  width: 28, textAlign: "right",
+                }}>
+                  {d.count}
+                </span>
               </div>
-              <span style={{
-                fontWeight: 600, color: neutral.textMuted,
-                fontVariantNumeric: "tabular-nums",
-                width: 28, textAlign: "right",
-              }}>
-                {d.count}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

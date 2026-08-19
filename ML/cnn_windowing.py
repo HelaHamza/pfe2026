@@ -1,30 +1,38 @@
 """
 cnn_windowing.py
 ================
-Construit l'entree du CNN hybride : pour chaque source, des fenetres
-glissantes CAUSALES de W evenements, sous DEUX formes alignees :
-  * scalaires : tenseur [N, Fs, W]  (rarete, timing, is_fail, ...)
-  * tokens    : tenseur [N, W] (int) (id d'event_type -> embedding appris)
+Construction des fenetres glissantes CAUSALES consommees par le CNN.
 
-Chaine :
-  fit_vocab(d_train, src)              -> vocab event_type -> id (TRAIN seul)
-  fit_scaler(d_train, feats)           -> StandardScaler (TRAIN seul)
-  build_windows(d, feats, scaler, vocab, src) -> (Xs, Xt, d_sorted)
+ROLE
+----
+A partir d'un sous-DataFrame d'UNE source (auth / syslog / auditd), ce module
+produit les deux tenseurs d'entree du reseau :
 
-Le canal atomique is_fail est ajoute EN AMONT par cnn_features.build_features
-(via add_atomic_channels) : ce module ne s'occupe QUE du fenetrage, il n'a
-plus sa propre copie de add_atomic_channels (c'etait un doublon mort).
+    Xs [N, Fs, W]   fenetres des features SCALAIRES (branche convolutive)
+    Xt [N, W]       fenetres des identifiants d'event_type (branche sequentielle)
 
-[FIX] Ce module utilise cnn_features.raw_matrix (implementation AUTONOME,
-sans dependance a preprocessing.py / config.py, l'ancien module MLP) pour la
-matrice scalaire brute avant scaling. Il importait auparavant `preprocessing`
-(module MLP proscrit par l'architecture CNN, cf. config_cnn.py) et referencait
-un alias `C` jamais importe ici (seul `CC` l'est) -> NameError certain des que
-_scaled_matrix etait appelee.
+ou W = CC.WINDOW_SIZE et N = nombre d'evenements. La fenetre de l'evenement i
+couvre [i-W+1 .. i] : elle ne regarde QUE le passe (pad a gauche). Aucune
+information future ne fuite dans le score -- condition indispensable a une
+detection en ligne honnete, et au fait que les scores hors ligne (gate,
+evaluation) soient comparables a ceux de la production.
 
-Stride 1 : une fenetre par evenement -> score PAR EVENEMENT -> GPD-POT et
-episodes se reutilisent tels quels. Fenetre finissant a t = [t-W+1 .. t],
-padding en tete de chaque cle (PAD_ID pour les tokens, 0 pour les scalaires).
+CLE DE FENETRAGE
+----------------
+Les fenetres sont construites PAR CLE (_window_key), et non sur le flux global :
+selon la source, la cle est l'IP source (auth) ou l'hote (syslog / auditd).
+Deux evenements de cles differentes ne partagent jamais une fenetre -- la
+rafale d'une IP ne contamine pas la sequence d'une autre. Le decoupage par cle
+est realise en un seul balayage sur le df trie par (cle, temps).
+
+COHERENCE ENTRAINEMENT / INFERENCE / GATE
+-----------------------------------------
+fit_vocab et fit_scaler sont ajustes sur le TRAIN seul ; _token_ids et
+_scaled_matrix rejouent EXACTEMENT la meme transformation en inference et dans
+le gate. Un token inconnu -> UNK_ID (doctrine "inconnu = nouveau"), une valeur
+hors echelle -> clip a +/- SCALE_CLIP. C'est ce qui permet a scoring.py de
+faire tourner candidat et courant sur des donnees figees sans aucune divergence
+de semantique.
 """
 from __future__ import annotations
 import numpy as np

@@ -1,12 +1,12 @@
 {
-  "until": "2026-08-04T17:52:43.932100+00:00",
-  "since": "2026-08-04T13:43:56.915105+00:00",
-  "watermark": "2026-08-04T17:47:43.932100+00:00",
-  "next_cursor": "2026-08-04T17:47:43.932100+00:00",
+  "until": "2026-08-18T08:12:34.812487+00:00",
+  "since": "2026-08-18T06:42:52.873839+00:00",
+  "watermark": "2026-08-18T08:07:34.812487+00:00",
+  "next_cursor": "2026-08-18T08:07:34.812487+00:00",
   "episode_gap_seconds": 300,
   "seed_seconds": 21600,
-  "n_logs_scored": 58109,
-  "n_episodes_window": 13,
-  "n_episodes_emitted": 4,
-  "n_episodes_held": 1
+  "n_logs_scored": 18230,
+  "n_episodes_window": 17,
+  "n_episodes_emitted": 13,
+  "n_episodes_held": 0
 }

@@ -1,0 +1,15 @@
+2026-08-15 23:29:11  INFO    ==================================================================
+2026-08-15 23:29:11  INFO      CYCLE DE REENTRAINEMENT -- branche CNN
+2026-08-15 23:29:11  INFO    ==================================================================
+2026-08-15 23:29:11  INFO    [0/7] Preflight
+2026-08-15 23:29:11  INFO    RAM disponible : 6755 Mo (minimum requis 1500 Mo)
+2026-08-15 23:29:11  INFO    Espace disque libre : 19214 Mo (minimum requis 2000 Mo)
+2026-08-15 23:29:11  INFO    Elasticsearch joignable (version 8.13.0)
+2026-08-15 23:29:11  INFO    [1/7] Fenetre glissante : 2026-06-08T22:29:11Z -> 2026-08-08T22:29:11Z (2 mois, embargo 7 jours)
+2026-08-15 23:29:11  INFO          L'embargo laisse a la couche 3 le temps de confirmer les incidents recents avant qu'ils n'entrent dans le corpus.
+2026-08-15 23:29:11  INFO    [2/7] Incidents confirmes (boucle de retroaction Sigma/LLM)
+2026-08-15 23:29:14  INFO    [3/7] Extraction ES en flux -> dataset_snapshot.parquet
+2026-08-15 23:31:03  INFO    [4/7] Controle de volume
+2026-08-15 23:31:03  INFO      total=580,416 | auditd=377,249, auth=3,167, syslog=200,000
+2026-08-15 23:31:03  INFO    [5/7] Entrainement du candidat (sous-processus isole)
+2026-08-15 23:31:03  INFO      --dry-run : entrainement non lance. Arret ici.

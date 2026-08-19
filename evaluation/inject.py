@@ -66,38 +66,51 @@ def _u(name: str) -> str:
 #  'needs' = binaires requis (sinon SKIP propre).                             #
 # --------------------------------------------------------------------------- #
 def build_registry():
+    # ================= VARIABLES LOCALES (toutes AVANT le return) ============
     user   = _u("u")[:31]
     hidden = f"/tmp/.{_u('h')}"
-    rbin   = f"{hidden}/zqx{_RID}"          # binaire au nom rare, chemin caché neuf
+    rbin   = f"{hidden}/zqx{_RID}"          # binaire au nom rare, chemin cache neuf
     capf   = f"/tmp/{_u('cap')}"
     tsf    = f"/tmp/{_u('ts')}"
     # argument long + forte entropie -> cmd_entropy + cmd_length_log + arg_count
     entarg = "$(head -c 24 /dev/urandom | base64 | tr -d =) a1 b2 c3 d4 e5 f6 g7 h8"
+    # --- variables des 8 nouvelles anomalies (etaient a tort dans le return) --
+    shmbin  = f"/dev/shm/{_u('shm')}"          # execution depuis tmpfs (TTP reel)
+    vtdir   = f"/var/tmp/.{_u('vt')}"
+    vtbin   = f"{vtdir}/{_u('vb')}"
+    lindir2 = f"/tmp/.{_u('lin2')}"            # 2e lignee (dir propre, non couple)
+    lin_p2  = f"{lindir2}/q{_RID}"
+    bigarg  = " ".join(f"a{i}" for i in range(100))   # arg_count EXTREME (vs 40)
+    hient   = "$(head -c 64 /dev/urandom | base64 | tr -d =)"   # entropie EXTREME
 
     return {
+        # ===================== 7 ANOMALIES EXISTANTES ========================
         # -- AUTH : is_fail + user_rarity + inter_arrival(ip) -----------------
         "auth_fail_burst": dict(
-            technique="T1110.001", needs_sudo=False, needs=["ssh"],
-            desc="AUTH is_fail + user_rarity + inter_arrival : 6 échecs SSH (users invalides) sur 127.0.0.1  [sshd requis]",
+            technique="T1110.001", needs_sudo=False, needs=["ssh"], source="auth",
+            desc="AUTH is_fail + user_rarity + inter_arrival : 6 echecs SSH "
+                 "(users invalides) sur 127.0.0.1  [sshd requis]",
             run=[f"bash -c 'for i in $(seq 1 6); do ssh -o BatchMode=yes "
                  f"-o ConnectTimeout=2 -o StrictHostKeyChecking=no "
                  f"nouser_{_RID}_$i@127.0.0.1 true 2>/dev/null; done'"],
             cleanup=[]),
 
-        # -- AUTH/AUDITD : user_rarity (compte jamais vu) ---------------------
+        # -- AUTH/AUDITD (DUAL) : user_rarity (compte jamais vu) --------------
         "new_user_session": dict(
             technique="T1136.001", needs_sudo=True, needs=["useradd", "usermod", "su"],
-            desc="AUTH/AUDITD user_rarity : nouveau compte + ajout sudo + session su",
+            source="auditd",
+            desc="AUTH/AUDITD user_rarity (DUAL) : nouveau compte + ajout sudo + session su",
             run=[f"useradd -M -N -s /bin/bash {user}",
                  f"usermod -aG sudo {user}",
                  f"su - {user} -c 'id; whoami' 2>/dev/null",
                  f"id {user}"],
             cleanup=[f"gpasswd -d {user} sudo 2>/dev/null", f"userdel {user}"]),
 
-        # -- AUDITD : exe_path_rarity + proc_rarity + lignée + burst + forme --
+        # -- AUDITD : exe_path_rarity + proc_rarity + lignee + burst + forme --
         "rare_binary_burst": dict(
-            technique="T1059.004", needs_sudo=False, needs=[],
-            desc="AUDITD exe_path_rarity + proc_rarity + parent_child_rarity + inter_arrival + cmd_entropy/length/arg_count",
+            technique="T1059.004", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD exe_path_rarity + proc_rarity + parent_child_rarity + "
+                 "inter_arrival + cmd_entropy/length/arg_count",
             run=[f"mkdir -p {hidden}",
                  f"cp /bin/true {rbin}",
                  f"chmod +x {rbin}",
@@ -106,35 +119,112 @@ def build_registry():
 
         # -- AUDITD : syscall_rarity (syscalls quasi absents du baseline) -----
         "ptrace_probe": dict(
-            technique="T1055", needs_sudo=False, needs=["strace"],
+            technique="T1055", needs_sudo=False, needs=["strace"], source="auditd",
             desc="AUDITD syscall_rarity : ptrace via strace (syscall quasi jamais vu)",
             run=["strace -o /dev/null /bin/true 2>/dev/null"],
             cleanup=[]),
 
         "kmod_load_attempt": dict(
-            technique="T1547.006", needs_sudo=True, needs=["insmod"],
-            desc="AUDITD syscall_rarity : finit_module tenté (insmod /bin/true, rejeté -> rien chargé)",
+            technique="T1547.006", needs_sudo=True, needs=["insmod"], source="auditd",
+            desc="AUDITD syscall_rarity : finit_module tente (insmod /bin/true, rejete)",
             run=["insmod /bin/true 2>/dev/null || true"],
             cleanup=[]),
 
         "capability_set": dict(
-            technique="T1548", needs_sudo=True, needs=["setcap", "getcap"],
-            desc="AUDITD syscall_rarity(capset) + proc_rarity(setcap) : capability sur un leurre",
+            technique="T1548", needs_sudo=True, needs=["setcap", "getcap"], source="auditd",
+            desc="AUDITD syscall_rarity(capset) + proc_rarity(setcap) : capability sur leurre",
             run=[f"cp /bin/true {capf}",
                  f"setcap cap_net_raw+ep {capf}",
                  f"getcap {capf}"],
             cleanup=[f"rm -f {capf}"]),
 
-        # -- AUDITD : signal faible (touch commun), gardé pour couverture -----
+        # -- AUDITD : signal FAIBLE (touch commun), controle negatif ----------
         "timestomp_decoy": dict(
-            technique="T1070.006", needs_sudo=False, needs=["touch"],
-            desc="AUDITD (signal FAIBLE) : utimensat via touch -t date passée sur un leurre",
+            technique="T1070.006", needs_sudo=False, needs=["touch"], source="auditd",
+            desc="AUDITD (signal FAIBLE) : utimensat via touch -t date passee sur leurre",
             run=[f"touch {tsf}",
                  f"touch -t 202001010000.00 {tsf}",
                  f"stat {tsf} >/dev/null"],
             cleanup=[f"rm -f {tsf}"]),
-    }
 
+        # ===================== 8 NOUVELLES ANOMALIES =========================
+        # -- SYSLOG proc_rarity : 2e programme distinct (leve le point unique) -
+        "syslog_second_program": dict(
+            technique="T1569.002", needs_sudo=False, needs=["logger"], source="syslog",
+            desc="SYSLOG proc_rarity : 5 messages sous un 2e programme jamais vu "
+                 "(2e positif syslog distinct -> plus de points de mesure)",
+            run=[f"bash -c 'for i in $(seq 1 5); do "
+                 f"logger -t sentinel_{_RID}_daemon2 \"init step $i\"; sleep 0.1; done'"],
+            cleanup=[]),
+
+        # -- SYSLOG inter_arrival + msg_length : flood rapide de messages longs -
+        "syslog_burst_flood": dict(
+            technique="T1499", needs_sudo=False, needs=["logger"], source="syslog",
+            desc="SYSLOG inter_arrival(EXTREME) + msg_length : 30 messages longs en "
+                 "rafale serree (sleep 0.05) -> forte deviation de la rafale",
+            run=[f"bash -c 'for i in $(seq 1 30); do "
+                 f"logger -t sentinel_{_RID}_flood \"tick $i {hient} {hient}\"; "
+                 f"sleep 0.05; done'"],
+            cleanup=[]),
+
+        # -- AUTH is_fail + inter_arrival(EXTREME) : variante intense (vs 6) ---
+        "auth_fail_heavy": dict(
+            technique="T1110.001", needs_sudo=False, needs=["ssh"], source="auth",
+            desc="AUTH is_fail + inter_arrival(EXTREME) : 20 echecs SSH en rafale "
+                 "(intensite forte -> point haut de la ROC auth, complete le 6-echecs)",
+            run=[f"bash -c 'for i in $(seq 1 20); do ssh -o BatchMode=yes "
+                 f"-o ConnectTimeout=2 -o StrictHostKeyChecking=no "
+                 f"bad_{_RID}_$i@127.0.0.1 true 2>/dev/null; done'"],
+            cleanup=[]),
+
+        # -- AUDITD exe_path_rarity + proc_rarity : execution depuis /dev/shm --
+        "devshm_exec": dict(
+            technique="T1620", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD exe_path_rarity + proc_rarity : binaire execute depuis "
+                 "/dev/shm (tmpfs, localisation malware classique)",
+            run=[f"cp /bin/true {shmbin}",
+                 f"chmod +x {shmbin}",
+                 f"bash -c 'for i in $(seq 1 5); do {shmbin}; done'"],
+            cleanup=[f"rm -f {shmbin}"]),
+
+        # -- AUDITD exe_path_rarity : execution depuis /var/tmp (2e chemin) ----
+        "vartmp_exec": dict(
+            technique="T1036.005", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD exe_path_rarity + proc_rarity : execution depuis /var/tmp "
+                 "cache (2e chemin rare distinct -> variete d'exe_path)",
+            run=[f"mkdir -p {vtdir}",
+                 f"cp /bin/true {vtbin}",
+                 f"chmod +x {vtbin}",
+                 f"{vtbin}"],
+            cleanup=[f"rm -rf {vtdir}"]),
+
+        # -- AUDITD arg_count EXTREME : 100 args (vs 40 dans argcount_only) ----
+        "argcount_extreme": dict(
+            technique="T1059.004", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD arg_count(EXTREME) : /bin/true + 100 args courts "
+                 "-> point extreme du canal arg_count (gradue vs 40)",
+            run=[f"/bin/true {bigarg} >/dev/null 2>&1"],
+            cleanup=[]),
+
+        # -- AUDITD cmd_entropy + cmd_length EXTREME : 64B haute entropie ------
+        "entropy_extreme": dict(
+            technique="T1027", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD cmd_entropy + cmd_length(EXTREME) : /bin/echo + 64B haute "
+                 "entropie -> point extreme (gradue vs entropy_only_probe 32B)",
+            run=[f"/bin/echo {hient} {hient} >/dev/null"],
+            cleanup=[]),
+
+        # -- AUDITD parent_child_rarity : 2e lignee rare distincte ------------
+        "deep_lineage_probe": dict(
+            technique="T1059", needs_sudo=False, needs=[], source="auditd",
+            desc="AUDITD parent_child_rarity : 2e parent RARE -> enfant env "
+                 "-> lignee 'parent2>env' jamais vue (2e positif lignee)",
+            run=[f"mkdir -p {lindir2}",
+                 f"cp /bin/bash {lin_p2}",
+                 f"chmod +x {lin_p2}",
+                 f"{lin_p2} -c '/usr/bin/env true >/dev/null 2>&1'"],
+            cleanup=[f"rm -rf {lindir2}"]),
+    }
 
 # Actions BÉNIGNES pour --noise : lecture/inventaire système, aucune mutation.
 # Volontairement variées pour créer des épisodes bénins non triviaux.
@@ -147,6 +237,15 @@ BENIGN_NOISE = [
     "bash -c 'id; uptime; who > /dev/null 2>&1'",
     "bash -c 'stat /bin/* > /dev/null 2>&1'",
     "bash -c 'du -sh /var/log > /dev/null 2>&1'",
+    "bash -c 'free -h; df -h; uptime > /dev/null 2>&1'",
+    "bash -c 'wc -l /etc/services /etc/protocols > /dev/null 2>&1'",
+    "bash -c 'cat /proc/loadavg /proc/uptime /proc/meminfo > /dev/null 2>&1'",
+    "bash -c 'ss -tan > /dev/null 2>&1'",
+    "bash -c 'date; whoami; groups; pwd > /dev/null 2>&1'",
+    "bash -c 'sort /etc/passwd | head > /dev/null 2>&1'",
+    "bash -c 'head -n 20 /var/log/dpkg.log > /dev/null 2>&1'",
+    "bash -c 'env > /dev/null 2>&1'",
+    "bash -c 'logger \"routine health check ok\"'",
 ]
 
 
