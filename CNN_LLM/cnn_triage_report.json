@@ -3,20 +3,20 @@
   "provider": "groq",
   "temperature": 0.0,
   "rag_backend": "tfidf",
-  "n_kb_chunks": 13,
-  "n_episodes_reaggregated": 25,
-  "n_episodes_in": 18,
-  "n_alerts_in": 128,
+  "n_kb_chunks": 14,
+  "n_episodes_in": 5,
+  "n_alerts_in": 25,
   "verdicts": {
-    "false_positive": 9,
-    "uncertain": 5,
-    "true_positive": 4
+    "true_positive": 5
+  },
+  "severities": {
+    "medium": 1,
+    "high": 2,
+    "info": 2
   },
   "n_fail_open": 0,
-  "n_kb_ref_hallucinated": 0,
-  "n_evidence_fabricated": 0,
-  "n_closure_refused_grounding": 0,
-  "n_episodes_to_analyst": 9,
-  "noise_reduction_pct": 50.0,
-  "elapsed_s": 1511.4
+  "n_episodes_to_analyst": 5,
+  "noise_reduction_pct": 0.0,
+  "elapsed_s": 174.4,
+  "mode": "explication_seule"
 }

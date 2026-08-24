@@ -4,7 +4,6 @@ llm_sigma/config_sigma.py
 Configuration AUTONOME de la couche d'explication LLM des alertes Sigma.
 
 Frontière stricte (cahier des charges, point 8 — indépendance des dossiers) :
-  * CNN_LLM/config_llm_cnn.py  = triage LLM des épisodes CNN     → NE CHANGE PAS
   * llm_sigma/config_sigma.py  = explication LLM des alertes Sigma → CE FICHIER
 Aucun des deux n'importe l'autre : chacun lit SA clé / SON modèle.
 

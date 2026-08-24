@@ -14,6 +14,8 @@ Avant, `CNN_LLM/persist_cnn.py` importait `ReportRepository` avec un
 sys.path en dur vers le backend : le pipeline dépendait du backend qui
 dépendait du pipeline. Cycle supprimé.
 """
+
+
 import json
 import logging
 import subprocess
@@ -47,10 +49,10 @@ class CNNAdapter:
     """Inférence CNN de production + triage LLM/RAG."""
 
     _TRIAGE_KEEP = (
-        "model", "provider", "temperature", "rag_backend", "n_kb_chunks",
-        "n_episodes_reaggregated", "n_episodes_in", "n_alerts_in", "verdicts",
-        "n_fail_open", "n_episodes_to_analyst", "noise_reduction_pct",
-        "elapsed_s")
+    "model", "provider", "temperature", "rag_backend", "n_kb_chunks",
+    "n_episodes_reaggregated", "n_episodes_in", "n_alerts_in", "verdicts",
+    "n_fail_open", "n_episodes_to_analyst", "noise_reduction_pct",
+    "elapsed_s", "grounding", "mode")            # <-- ajout
 
     @staticmethod
     def _read_next_cursor() -> str:

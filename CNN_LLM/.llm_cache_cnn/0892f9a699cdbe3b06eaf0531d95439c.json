@@ -1,1 +1,0 @@
-{"episode_id": "EP-e8d9d1ddfa", "verdict": "true_positive", "confidence": 0.85, "severity": "high", "title": "Exécution d'un binaire caché (hex) ouvrant un socket réseau", "mitre": [{"technique_id": "T1564.001", "tactic": "Defense Evasion", "name": "Hide Artifacts: Hidden Files and Directories"}]}

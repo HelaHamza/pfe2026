@@ -141,6 +141,21 @@ if RAG_BACKEND not in ("tfidf", "sentence-transformers", "lexical", "auto"):
     raise SystemExit(f"RAG_BACKEND='{RAG_BACKEND}' inconnu.")
 
 # =====================================================================
+# ↓↓↓  MODE EXPLICATION SEULE (repositionnement du LLM)             ↓↓↓
+# =====================================================================
+# Le CNN DECIDE ce qui est une alerte ; le LLM n'exerce plus aucun triage, il
+# EXPLIQUE. Toute alerte levee par le CNN est conservee et presentee : le
+# verdict du dossier n'est donc plus produit par le LLM, il est FIXE ici.
+#
+# Choix de 'true_positive' : c'est la valeur que le dashboard SOC affiche
+# comme alerte. En la fixant, chaque episode remonte a l'analyste, rien n'est
+# jamais clos, et AUCUN changement backend / front n'est necessaire (contrat
+# de sortie identique). Le tri utile cote analyste devient la SEVERITE, pas le
+# verdict. Consequence attendue : le bucket 'uncertain' du dashboard IA reste
+# structurellement en place mais vide.
+ALERT_VERDICT = "true_positive"
+
+# =====================================================================
 # ↓↓↓  A PARTIR D'ICI : garde-fous de SORTIE. INERTES en RAG-only.  ↓↓↓
 #      Conserves car episode_context_cnn.policy_flags() les importe,
 #      et l'etape "garde-fous" les reactivera.

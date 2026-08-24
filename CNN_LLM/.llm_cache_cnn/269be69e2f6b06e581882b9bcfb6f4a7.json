@@ -1,1 +1,0 @@
-{"episode_id": "EP-efb2cd414f", "verdict": "true_positive", "confidence": 0.78, "severity": "high", "title": "Exécution d'un binaire inconnu avec modification de permissions", "mitre": [{"technique_id": "T1222.002", "tactic": "Defense Evasion", "name": "File and Directory Permissions Modification: Linux and Mac"}]}

@@ -1,1 +1,0 @@
-{"episode_id": "EP-b8cacdb9b5", "verdict": "true_positive", "confidence": 0.92, "severity": "high", "title": "Création, modification et suppression rapide d'un compte local", "mitre": [{"technique_id": "T1136.001", "tactic": "Persistence", "name": "Create Account: Local Account"}, {"technique_id": "T1098", "tactic": "Persistence", "name": "Account Manipulation"}]}
