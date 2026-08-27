@@ -23,7 +23,7 @@ import '../styles/tokens.css'
 export default function DashboardPage() {
   const [selected,  setSelected]  = useState(null)
   const [showModal, setShowModal] = useState(false)
-  const { theme, toggle: toggleTheme } = useTheme('light')
+  const { theme } = useTheme()
 
   const data = useDashboardData()
   const {
@@ -75,7 +75,7 @@ export default function DashboardPage() {
     display: 'flex',
     alignItems: 'stretch',
   }}>
-    <Sidebar theme={theme} />
+    <Sidebar />
 
     <div style={{ flex: 1, minWidth: 0, overflowX: 'hidden' }}>
 
@@ -99,8 +99,6 @@ export default function DashboardPage() {
         onDownloadReport={downloadReport}
         lastReport={lastReport}
         statsReady={!!stats}
-        theme={theme}
-        onToggleTheme={toggleTheme}
       />
 
       <ErrorBanner message={error} />

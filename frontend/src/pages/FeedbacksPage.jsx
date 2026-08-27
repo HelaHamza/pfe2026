@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar.jsx'
 import { feedbackService } from '../services/api.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import styles from './FeedbacksPage.module.css'
+import '../styles/tokens.css'
 
 const STATUS_COLORS = {
-  pending:  { bg: 'rgba(251,191,36,0.1)',  color: '#fbbf24', border: 'rgba(251,191,36,0.3)' },
-  approved: { bg: 'rgba(74,222,128,0.1)',  color: '#4ade80', border: 'rgba(74,222,128,0.3)' },
-  rejected: { bg: 'rgba(248,113,113,0.1)', color: '#f87171', border: 'rgba(248,113,113,0.3)' },
+  pending:  { bg: 'color-mix(in srgb, var(--warn) 10%, transparent)', color: 'var(--warn)', border: 'color-mix(in srgb, var(--warn) 30%, transparent)' },
+  approved: { bg: 'color-mix(in srgb, var(--up) 10%, transparent)',   color: 'var(--up)',   border: 'color-mix(in srgb, var(--up) 30%, transparent)' },
+  rejected: { bg: 'color-mix(in srgb, var(--down) 10%, transparent)', color: 'var(--down)', border: 'color-mix(in srgb, var(--down) 30%, transparent)' },
 }
 
 export default function FeedbacksPage() {
+  const { theme } = useTheme()
   const [feedbacks, setFeedbacks] = useState([])
   const [loading, setLoading]     = useState(true)
   const [filter, setFilter]       = useState('all')
@@ -49,7 +52,7 @@ export default function FeedbacksPage() {
   }
 
   return (
-    <div className={styles.layout}>
+    <div className={`${styles.layout} dash-theme`} data-theme={theme}>
       <Sidebar />
       <main className={styles.main}>
         {/* Header */}
@@ -151,8 +154,10 @@ export default function FeedbacksPage() {
                           width="14"
                           height="14"
                           viewBox="0 0 24 24"
-                          fill={s <= fb.rating ? '#4ade80' : 'none'}
-                          stroke={s <= fb.rating ? '#4ade80' : '#3a4055'}
+                          style={{
+                            fill: s <= fb.rating ? 'var(--accent)' : 'none',
+                            stroke: s <= fb.rating ? 'var(--accent)' : 'var(--border-strong)',
+                          }}
                           strokeWidth="1.8"
                           strokeLinejoin="round"
                         >

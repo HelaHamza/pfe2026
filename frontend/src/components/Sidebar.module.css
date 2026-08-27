@@ -122,6 +122,18 @@
   gap: 0.6rem;
 }
 
+/* Bouton global de bascule thème — unique, visible sur toutes les pages
+   authentifiées puisque Sidebar y est toujours rendu. */
+.themeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
 /* Bloc user en carte — même surface que les sous-cartes du dashboard */
 .userRow {
   display: flex;

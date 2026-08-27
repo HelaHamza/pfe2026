@@ -1,13 +1,15 @@
 /* ═══════════════════════════════════════════════════════════
-   SignUpPage.module.css — Sentinel/IDS dark theme
-   Operator access request flow
+   SignUpPage.module.css — Sentinel/IDS, thème clair/sombre
+   Operator access request flow.
+   Couleurs en tokens (styles/tokens.css, scopés .dash-theme) : data-theme
+   posé sur .page par SignUpPage.jsx (pas d'AuthShell partagé sur cette page).
    ═══════════════════════════════════════════════════════════ */
 
 .page {
   display: flex;
   min-height: 100vh;
-  background: #0a0e1a;
-  color: #e8eaf0;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
@@ -15,8 +17,8 @@
 .sidebar {
   width: 340px;
   flex-shrink: 0;
-  background: linear-gradient(180deg, #0d1322 0%, #0a0e1a 100%);
-  border-right: 1px solid rgba(74, 222, 128, 0.08);
+  background: linear-gradient(180deg, var(--surface-2) 0%, var(--bg) 100%);
+  border-right: 1px solid color-mix(in srgb, var(--accent) 8%, transparent);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -29,8 +31,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(74, 222, 128, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74, 222, 128, 0.03) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--accent) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 3%, transparent) 1px, transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at center, black 40%, transparent 80%);
@@ -50,7 +52,7 @@
 .logoMark {
   width: 38px;
   height: 38px;
-  background: #4ade80;
+  background: var(--accent);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -62,7 +64,7 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #4ade80;
+  color: var(--accent);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   line-height: 1;
@@ -72,7 +74,7 @@
 .logoTag {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.68rem;
-  color: #5a6478;
+  color: var(--text-faint);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -80,7 +82,7 @@
 .sidebarTitle {
   font-size: 1.55rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   line-height: 1.25;
   letter-spacing: -0.015em;
   margin: 0 0 0.65rem;
@@ -88,7 +90,7 @@
 
 .sidebarSub {
   font-size: 0.825rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   line-height: 1.55;
   margin: 0;
 }
@@ -107,23 +109,23 @@
   align-items: flex-start;
   gap: 14px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: 8px;
   transition: border-color 0.2s, background 0.2s;
 }
 
 .step:hover {
-  border-color: rgba(74, 222, 128, 0.18);
-  background: rgba(74, 222, 128, 0.03);
+  border-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 .stepNum {
   width: 28px;
   height: 28px;
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 0.5px solid rgba(74, 222, 128, 0.25);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 25%, transparent);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -143,7 +145,7 @@
 
 .stepTitle {
   font-size: 0.825rem;
-  color: #e8eaf0;
+  color: var(--text);
   font-weight: 500;
   line-height: 1.3;
 }
@@ -151,7 +153,7 @@
 .stepSub {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.65rem;
-  color: #5a6478;
+  color: var(--text-faint);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -164,7 +166,7 @@
   gap: 8px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.68rem;
-  color: #5a6478;
+  color: var(--text-faint);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   margin: 0;
@@ -174,15 +176,15 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
   animation: pulseDot 1.8s ease-in-out infinite;
   flex-shrink: 0;
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15); }
-  50%      { opacity: 0.6; box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.05); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+  50%      { opacity: 0.6; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 5%, transparent); }
 }
 
 /* ─────────────── Main (right) ─────────────── */
@@ -192,7 +194,7 @@
   align-items: center;
   justify-content: center;
   padding: 2.5rem 2rem;
-  background: #0f1525;
+  background: var(--surface);
   overflow-y: auto;
 }
 
@@ -215,14 +217,14 @@
 .cardTitle {
   font-size: 1.7rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   letter-spacing: -0.015em;
   margin: 0 0 0.4rem;
 }
 
 .cardSub {
   font-size: 0.875rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   margin: 0;
 }
 
@@ -248,13 +250,13 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.65rem;
   font-weight: 500;
-  color: #8a93a8;
+  color: var(--text-faint);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .labelHint {
-  color: #4a5165;
+  color: var(--text-faint);
   text-transform: none;
   letter-spacing: 0;
   font-size: 0.7rem;
@@ -269,7 +271,7 @@
   left: 11px;
   top: 50%;
   transform: translateY(-50%);
-  color: #5a6478;
+  color: var(--text-faint);
   pointer-events: none;
   display: flex;
 }
@@ -280,10 +282,10 @@
   padding: 10px 12px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.85rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
   border-radius: 8px;
-  color: #e8eaf0;
+  color: var(--text);
   outline: none;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   box-sizing: border-box;
@@ -291,39 +293,41 @@
 
 .inputWithIcon { padding-left: 34px; }
 
-.input::placeholder { color: #4a5165; }
+.input::placeholder { color: var(--text-faint); }
 
 .input:hover,
-.select:hover { border-color: rgba(255, 255, 255, 0.18); }
+.select:hover { border-color: var(--border-strong); }
 
 .input:focus,
 .select:focus {
-  border-color: rgba(74, 222, 128, 0.45);
-  background: rgba(74, 222, 128, 0.03);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 3%, var(--surface-2));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
+/* Flèche du select : couleur figée (data URI SVG, ne lit pas les variables
+   CSS) — un gris moyen reste lisible sur fond clair comme sombre. */
 .select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6478' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23808a9c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 34px;
 }
 
 .select option {
-  background: #0f1525;
-  color: #e8eaf0;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .inputError {
-  border-color: rgba(248, 113, 113, 0.5) !important;
+  border-color: color-mix(in srgb, var(--down) 50%, transparent) !important;
 }
 
 .errorMsg {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.68rem;
-  color: #fca5a5;
+  color: var(--down);
   letter-spacing: 0.02em;
 }
 
@@ -335,7 +339,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: #5a6478;
+  color: var(--text-faint);
   display: flex;
   align-items: center;
   padding: 6px;
@@ -344,8 +348,8 @@
 }
 
 .togglePw:hover {
-  color: #e8eaf0;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
 }
 
 /* Password strength */
@@ -365,17 +369,17 @@
 
 .strengthBars span {
   flex: 1;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border);
   border-radius: 2px;
   transition: background 0.2s;
 }
 
-.strengthBars .barOn { background: #4ade80; }
+.strengthBars .barOn { background: var(--accent); }
 
 .strengthLabel {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.62rem;
-  color: #4ade80;
+  color: var(--accent);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -394,16 +398,16 @@
   align-items: flex-start;
   gap: 4px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .specialtyOption:hover {
-  border-color: rgba(74, 222, 128, 0.3);
-  background: rgba(74, 222, 128, 0.03);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 .specialtyIcon {
@@ -412,39 +416,39 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--text) 4%, transparent);
   border-radius: 6px;
-  color: #8a93a8;
+  color: var(--text-faint);
   margin-bottom: 4px;
   transition: all 0.15s;
 }
 
 .specialtyLabel {
   font-size: 0.85rem;
-  color: #e8eaf0;
+  color: var(--text);
   font-weight: 500;
 }
 
 .specialtyDesc {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.62rem;
-  color: #5a6478;
+  color: var(--text-faint);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .specialtyActive {
-  background: rgba(74, 222, 128, 0.06);
-  border-color: rgba(74, 222, 128, 0.5);
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.08);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .specialtyActive .specialtyIcon {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
 }
 
-.specialtyActive .specialtyLabel { color: #4ade80; }
+.specialtyActive .specialtyLabel { color: var(--accent); }
 
 /* Alert */
 .alert {
@@ -452,20 +456,20 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: rgba(248, 113, 113, 0.08);
-  border: 0.5px solid rgba(248, 113, 113, 0.25);
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--down) 25%, transparent);
   border-radius: 8px;
   margin-bottom: 1rem;
   font-size: 0.8rem;
-  color: #fca5a5;
+  color: var(--down);
 }
 
-/* Submit */
+/* Submit — texte en var(--bg) : contraste correct dans les 2 thèmes */
 .submitBtn {
   width: 100%;
   padding: 12px 16px;
-  background: #4ade80;
-  color: #052e16;
+  background: var(--accent);
+  color: var(--bg);
   border: none;
   border-radius: 8px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -478,13 +482,13 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  transition: filter 0.15s, transform 0.1s, box-shadow 0.15s;
   margin: 0.5rem 0 1.25rem;
 }
 
 .submitBtn:hover:not(:disabled) {
-  background: #86efac;
-  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .submitBtn:active:not(:disabled) { transform: scale(0.98); }
@@ -493,8 +497,8 @@
 .spinner {
   width: 13px;
   height: 13px;
-  border: 2px solid rgba(5, 46, 22, 0.3);
-  border-top-color: #052e16;
+  border: 2px solid color-mix(in srgb, var(--bg) 30%, transparent);
+  border-top-color: var(--bg);
   border-radius: 50%;
   animation: spin 0.65s linear infinite;
 }
@@ -504,19 +508,19 @@
 .loginLink {
   text-align: center;
   font-size: 0.8rem;
-  color: #5a6478;
+  color: var(--text-faint);
   margin: 0;
 }
 
 .loginLink a {
-  color: #4ade80;
+  color: var(--accent);
   font-weight: 500;
   text-decoration: none;
   margin-left: 4px;
-  transition: color 0.15s;
+  transition: filter 0.15s;
 }
 
-.loginLink a:hover { color: #86efac; }
+.loginLink a:hover { filter: brightness(1.25); }
 
 /* ─────────────── Success state ─────────────── */
 .successCard {
@@ -531,13 +535,13 @@
 .successIcon {
   width: 60px;
   height: 60px;
-  background: rgba(74, 222, 128, 0.12);
-  border: 0.5px solid rgba(74, 222, 128, 0.35);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 35%, transparent);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4ade80;
+  color: var(--accent);
   margin-bottom: 1.25rem;
 }
 
@@ -546,13 +550,13 @@
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  background: rgba(74, 222, 128, 0.08);
-  border: 0.5px solid rgba(74, 222, 128, 0.2);
+  background: var(--accent-soft);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: 20px;
   margin-bottom: 1rem;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.65rem;
-  color: #4ade80;
+  color: var(--accent);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -561,27 +565,27 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #4ade80;
+  background: var(--accent);
 }
 
 .successTitle {
   font-size: 1.65rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   letter-spacing: -0.015em;
   margin: 0 0 0.75rem;
 }
 
 .successText {
   font-size: 0.9rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   line-height: 1.6;
   margin: 0 0 1.75rem;
 }
 
 .successEmail {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  color: #4ade80;
+  color: var(--accent);
   font-size: 0.85rem;
 }
 
@@ -590,8 +594,8 @@
   align-items: center;
   gap: 8px;
   padding: 11px 24px;
-  background: #4ade80;
-  color: #052e16;
+  background: var(--accent);
+  color: var(--bg);
   border: none;
   border-radius: 8px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -600,12 +604,12 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  transition: filter 0.15s, box-shadow 0.15s, transform 0.1s;
 }
 
 .backBtn:hover {
-  background: #86efac;
-  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 .backBtn:active { transform: scale(0.98); }

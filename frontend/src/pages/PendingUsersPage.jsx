@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar.jsx'
 import { adminService } from '../services/api.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import styles from './PendingUsersPage.module.css'
+import '../styles/tokens.css'
 
 const SPECIALTY_INFO = {
-  ia_user:  { label: 'IA User',  color: '#6aa8e6', bg: 'rgba(106,168,230,0.1)', border: 'rgba(106,168,230,0.3)' },
-  soc_user: { label: 'SOC User', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',  border: 'rgba(74,222,128,0.3)' },
-  admin:    { label: 'Admin',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)' },
+  ia_user:  { label: 'IA User',  color: 'var(--new)',    bg: 'color-mix(in srgb, var(--new) 10%, transparent)',    border: 'color-mix(in srgb, var(--new) 30%, transparent)' },
+  soc_user: { label: 'SOC User', color: 'var(--accent)', bg: 'color-mix(in srgb, var(--accent) 10%, transparent)', border: 'color-mix(in srgb, var(--accent) 30%, transparent)' },
+  admin:    { label: 'Admin',    color: 'var(--warn)',   bg: 'color-mix(in srgb, var(--warn) 10%, transparent)',   border: 'color-mix(in srgb, var(--warn) 30%, transparent)' },
 }
 
 export default function PendingUsersPage() {
+  const { theme } = useTheme()
   const [users, setUsers]     = useState([])
   const [loading, setLoading] = useState(true)
   const [acting, setActing]   = useState(null)
@@ -45,7 +48,7 @@ export default function PendingUsersPage() {
   }
 
   return (
-    <div className={styles.layout}>
+    <div className={`${styles.layout} dash-theme`} data-theme={theme}>
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.header}>
@@ -75,7 +78,7 @@ export default function PendingUsersPage() {
           <div className={styles.empty}>Loading…</div>
         ) : users.length === 0 ? (
           <div className={styles.empty}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{color:'#4ade80', marginBottom:'1rem', opacity:0.6}}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" style={{color:'var(--accent)', marginBottom:'1rem', opacity:0.6}}>
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
             </svg>
             <p>No pending requests</p>
@@ -109,9 +112,9 @@ export default function PendingUsersPage() {
                   </div>
                   <span
                     className={styles.specialtyBadge}
-                    style={sp ? { color: sp.color, background: sp.bg, borderColor: sp.border } : { color: '#8a93a8', background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
+                    style={sp ? { color: sp.color, background: sp.bg, borderColor: sp.border } : { color: 'var(--text-faint)', background: 'var(--surface-2)', borderColor: 'var(--border)' }}
                   >
-                    <span className={styles.specialtyDot} style={{ background: sp?.color || '#8a93a8' }} />
+                    <span className={styles.specialtyDot} style={{ background: sp?.color || 'var(--text-faint)' }} />
                     {sp?.label || u.specialty || '—'}
                   </span>
                   <span className={styles.cell}>{u.phone || '—'}</span>

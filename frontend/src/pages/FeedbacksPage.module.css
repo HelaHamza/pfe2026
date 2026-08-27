@@ -6,8 +6,8 @@
 .layout {
   display: flex;
   min-height: 100vh;
-  background: #0a0e1a;
-  color: #e8eaf0;
+  background: var(--bg);
+  color: var(--text);
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
@@ -24,8 +24,8 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(74, 222, 128, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(74, 222, 128, 0.025) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--accent) 2.5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 2.5%, transparent) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
   mask-image: radial-gradient(ellipse at top, black 0%, transparent 70%);
@@ -45,41 +45,41 @@
   gap: 8px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.7rem;
-  color: #5a6478;
+  color: var(--text-faint);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 1rem;
 }
 
-.crumbSep { color: #3a4055; }
-.crumbActive { color: #4ade80; }
+.crumbSep { color: var(--text-faint); }
+.crumbActive { color: var(--accent); }
 
 .dotGreen {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
   animation: pulseDot 1.8s ease-in-out infinite;
   flex-shrink: 0;
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15); }
-  50%      { opacity: 0.6; box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.05); }
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+  50%      { opacity: 0.6; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 5%, transparent); }
 }
 
 .title {
   font-size: 1.85rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   letter-spacing: -0.015em;
   margin: 0 0 0.4rem;
 }
 
 .sub {
   font-size: 0.9rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   margin: 0;
 }
 
@@ -92,8 +92,8 @@
 }
 
 .statCard {
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: 10px;
   padding: 0.85rem 1rem;
   display: flex;
@@ -102,7 +102,7 @@
   transition: border-color 0.15s;
 }
 
-.statCard:hover { border-color: rgba(255, 255, 255, 0.18); }
+.statCard:hover { border-color: var(--border-strong); }
 
 .statLabelRow {
   display: flex;
@@ -113,7 +113,7 @@
 .statLabel {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.65rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -122,30 +122,30 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fbbf24;
-  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+  background: var(--warn);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 15%, transparent);
   animation: pulseAmber 1.8s ease-in-out infinite;
 }
 
 @keyframes pulseAmber {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15); }
-  50%      { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0.05); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 15%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--warn) 5%, transparent); }
 }
 
 .statValue {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #e8eaf0;
+  color: var(--text);
   letter-spacing: -0.01em;
   margin: 0;
   line-height: 1;
 }
 
-.stat_warning .statValue { color: #fbbf24; }
-.stat_success .statValue { color: #4ade80; }
-.stat_danger  .statValue { color: #f87171; }
-.stat_neutral .statValue { color: #e8eaf0; }
+.stat_warning .statValue { color: var(--warn); }
+.stat_success .statValue { color: var(--up); }
+.stat_danger  .statValue { color: var(--down); }
+.stat_neutral .statValue { color: var(--text); }
 
 /* ─────────────── Tabs ─────────────── */
 .tabs {
@@ -163,9 +163,9 @@
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.7rem;
   font-weight: 500;
-  color: #8a93a8;
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.15s;
@@ -174,27 +174,27 @@
 }
 
 .tab:hover {
-  background: rgba(255, 255, 255, 0.04);
-  color: #e8eaf0;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  color: var(--text);
 }
 
 .tabActive {
-  background: rgba(74, 222, 128, 0.1) !important;
-  color: #4ade80 !important;
-  border-color: rgba(74, 222, 128, 0.4) !important;
+  background: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+  color: var(--accent) !important;
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent) !important;
 }
 
 .tabCount {
   font-size: 0.65rem;
   padding: 1px 7px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--text) 5%, transparent);
   border-radius: 10px;
   color: inherit;
   letter-spacing: 0;
 }
 
 .tabActive .tabCount {
-  background: rgba(74, 222, 128, 0.15);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 
 /* ─────────────── Toast ─────────────── */
@@ -214,15 +214,15 @@
 }
 
 .toast_approve {
-  background: rgba(74, 222, 128, 0.08);
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.3);
+  background: color-mix(in srgb, var(--up) 8%, transparent);
+  color: var(--up);
+  border-color: color-mix(in srgb, var(--up) 30%, transparent);
 }
 
 .toast_reject {
-  background: rgba(248, 113, 113, 0.08);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+  color: var(--down);
+  border-color: color-mix(in srgb, var(--down) 30%, transparent);
 }
 
 @keyframes fadeUp {
@@ -238,8 +238,8 @@
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -250,7 +250,7 @@
 }
 
 .card:hover {
-  border-color: rgba(74, 222, 128, 0.2);
+  border-color: color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .cardTop {
@@ -270,9 +270,9 @@
 .avatar {
   width: 36px;
   height: 36px;
-  background: rgba(74, 222, 128, 0.1);
-  color: #4ade80;
-  border: 0.5px solid rgba(74, 222, 128, 0.3);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 30%, transparent);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -291,7 +291,7 @@
 .userName {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   margin: 0 0 2px;
   letter-spacing: -0.01em;
   white-space: nowrap;
@@ -302,7 +302,7 @@
 .userEmail {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.7rem;
-  color: #5a6478;
+  color: var(--text-faint);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -341,20 +341,20 @@
 .ratingNum {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.7rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   margin-left: 6px;
   letter-spacing: 0.04em;
 }
 
 .message {
   font-size: 0.88rem;
-  color: #b8c0d0;
+  color: var(--text-soft);
   line-height: 1.6;
   font-style: italic;
   margin: 0;
   position: relative;
   padding-left: 12px;
-  border-left: 2px solid rgba(74, 222, 128, 0.2);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 /* Card footer */
@@ -370,7 +370,7 @@
 .date {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.7rem;
-  color: #5a6478;
+  color: var(--text-faint);
   margin: 0;
   display: flex;
   align-items: center;
@@ -398,27 +398,27 @@
   transition: all 0.15s;
 }
 
+/* background/color en var(--up)/var(--bg) : contraste correct dans les 2 thèmes */
 .approveBtn {
-  background: #4ade80;
-  color: #052e16;
-  border-color: #4ade80;
+  background: var(--up);
+  color: var(--bg);
+  border-color: var(--up);
 }
 
 .approveBtn:hover:not(:disabled) {
-  background: #86efac;
-  border-color: #86efac;
-  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+  filter: brightness(1.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--up) 15%, transparent);
 }
 
 .rejectBtn {
   background: transparent;
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
+  color: var(--down);
+  border-color: color-mix(in srgb, var(--down) 30%, transparent);
 }
 
 .rejectBtn:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.08);
-  border-color: rgba(248, 113, 113, 0.5);
+  background: color-mix(in srgb, var(--down) 8%, transparent);
+  border-color: color-mix(in srgb, var(--down) 50%, transparent);
 }
 
 .approveBtn:disabled,
@@ -430,8 +430,8 @@
 .btnSpinner {
   width: 10px;
   height: 10px;
-  border: 1.5px solid rgba(5, 46, 22, 0.3);
-  border-top-color: #052e16;
+  border: 1.5px solid color-mix(in srgb, var(--bg) 30%, transparent);
+  border-top-color: var(--bg);
   border-radius: 50%;
   animation: spin 0.65s linear infinite;
 }
@@ -451,8 +451,8 @@
 .spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(74, 222, 128, 0.15);
-  border-top-color: #4ade80;
+  border: 2px solid color-mix(in srgb, var(--accent) 15%, transparent);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -463,42 +463,42 @@
   align-items: center;
   text-align: center;
   padding: 3.5rem 2rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 0.5px dashed rgba(255, 255, 255, 0.1);
+  background: var(--surface);
+  border: 0.5px dashed var(--border);
   border-radius: 12px;
 }
 
 .emptyIcon {
   width: 56px;
   height: 56px;
-  background: rgba(74, 222, 128, 0.06);
-  border: 0.5px solid rgba(74, 222, 128, 0.2);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: 0.5px solid color-mix(in srgb, var(--accent) 20%, transparent);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #4ade80;
+  color: var(--accent);
   margin-bottom: 1rem;
 }
 
 .emptyTitle {
   font-size: 1rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   margin: 0 0 0.4rem;
   letter-spacing: -0.01em;
 }
 
 .emptyText {
   font-size: 0.85rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   margin: 0;
   max-width: 320px;
   line-height: 1.5;
 }
 
 .empty {
-  color: #5a6478;
+  color: var(--text-faint);
   padding: 2rem 0;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.8rem;

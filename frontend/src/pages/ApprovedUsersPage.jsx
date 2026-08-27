@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar.jsx'
 import { adminService } from '../services/api.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import styles from './UsersPage.module.css'
+import '../styles/tokens.css'
 
 const SPECIALTY_INFO = {
-  ia_user:  { label: 'IA User',  color: '#6aa8e6', bg: 'rgba(106,168,230,0.1)',  border: 'rgba(106,168,230,0.3)' },
-  soc_user: { label: 'SOC User', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.3)' },
-  admin:    { label: 'Admin',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)' },
+  ia_user:  { label: 'IA User',  color: 'var(--new)',    bg: 'color-mix(in srgb, var(--new) 10%, transparent)',    border: 'color-mix(in srgb, var(--new) 30%, transparent)' },
+  soc_user: { label: 'SOC User', color: 'var(--accent)', bg: 'color-mix(in srgb, var(--accent) 10%, transparent)', border: 'color-mix(in srgb, var(--accent) 30%, transparent)' },
+  admin:    { label: 'Admin',    color: 'var(--warn)',   bg: 'color-mix(in srgb, var(--warn) 10%, transparent)',   border: 'color-mix(in srgb, var(--warn) 30%, transparent)' },
 }
 
 export default function ApprovedUsersPage() {
+  const { theme } = useTheme()
   const [users, setUsers]     = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch]   = useState('')
@@ -26,7 +29,7 @@ export default function ApprovedUsersPage() {
   )
 
   return (
-    <div className={styles.layout}>
+    <div className={`${styles.layout} dash-theme`} data-theme={theme}>
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.header}>
@@ -83,9 +86,9 @@ export default function ApprovedUsersPage() {
                   </div>
                   <span
                     className={styles.specialtyBadge}
-                    style={sp ? { color: sp.color, background: sp.bg, borderColor: sp.border } : { color: '#8a93a8', background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
+                    style={sp ? { color: sp.color, background: sp.bg, borderColor: sp.border } : { color: 'var(--text-faint)', background: 'var(--surface-2)', borderColor: 'var(--border)' }}
                   >
-                    <span className={styles.specialtyDot} style={{ background: sp?.color || '#8a93a8' }} />
+                    <span className={styles.specialtyDot} style={{ background: sp?.color || 'var(--text-faint)' }} />
                     {sp?.label || u.specialty || '—'}
                   </span>
                   <span className={styles.cell}>{u.phone || '—'}</span>

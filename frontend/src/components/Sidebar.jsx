@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme, ThemeToggle } from '../context/ThemeContext.jsx'
 import styles from './Sidebar.module.css'
 import '../styles/tokens.css'
 
@@ -38,8 +39,9 @@ const NAV_ADMIN = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
 ]
 
-export default function Sidebar({ theme }) {
+export default function Sidebar() {
   const { user, logout } = useAuth()
+  const { theme, toggle } = useTheme()
   const navigate = useNavigate()
   const role     = user?.role
   const specialty = user?.specialty
@@ -92,6 +94,10 @@ export default function Sidebar({ theme }) {
         </nav>
 
         <div className={styles.bottom}>
+          <div className={styles.themeRow}>
+            <span>Theme</span>
+            <ThemeToggle theme={theme} onToggle={toggle} />
+          </div>
           <div className={styles.userRow}>
             <div className={styles.avatar}>{initials}</div>
             <div className={styles.userInfo}>

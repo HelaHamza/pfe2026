@@ -1,122 +1,170 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext.jsx'
 import { feedbackService } from '../services/api.js'
+import linuxSecurityImg from '../assets/linux-security.jpg'
 import styles from './Homepage.module.css'
+import '../styles/tokens.css'
 
-const NAV_LINKS = ['About', 'Testimonials', 'Contact']
-
-/* ───────────────────────────────────────────────────────────
-   Aperçu du dashboard — construit en JSX/CSS, aucune image
-   externe (rien à casser le jour de la soutenance).
-
-   ▸ POUR UTILISER UNE VRAIE CAPTURE À LA PLACE :
-     1. Place l'image dans   src/assets/dashboard-soc.png
-     2. En haut de ce fichier :
-          import dashboardImg from '../assets/dashboard-soc.png'
-     3. Dans le héros, remplace  <DashboardPreview />  par :
-          <img
-            src={dashboardImg}
-            alt="Console SOC de Sentinel/IDS"
-            className={styles.previewImg}
-          />
-   ─────────────────────────────────────────────────────────── */
-const PREVIEW_ALERTS = [
-  { sev: 'high', name: 'Brute-force SSH · T1110.001',   host: 'web-01', time: '12s' },
-  { sev: 'med',  name: 'Élévation de privilèges',        host: 'db-02',  time: '1m'  },
-  { sev: 'low',  name: 'Arbre de processus anormal',     host: 'api-03', time: '3m'  },
-  { sev: 'high', name: 'Journaux d’audit purgés · T1070.006', host: 'web-01', time: '4m' },
+// Explicit anchor map instead of auto-lowercasing labels.
+// "About" now correctly points at the system explainer section
+// (id="about-system"), not the hero itself (id="about" is only used
+// as the hero's own landmark id).
+const NAV_LINKS = [
+  { label: 'About', href: '#about-system' },
+  { label: 'Testimonials', href: '#testimonials' },
+  { label: 'Contact', href: '#contact' },
 ]
-
-function DashboardPreview() {
-  const bars = [42, 63, 51, 78, 60, 71, 88, 47]
-  return (
-    <div className={styles.previewFrame} role="img" aria-label="Aperçu de la console SOC de Sentinel">
-      <div className={styles.previewBar}>
-        <span className={styles.previewDots}><i /><i /><i /></span>
-        <span className={styles.previewTitle}>sentinel — soc console</span>
-        <span className={styles.previewLive}><span className={styles.previewLiveDot} /> live</span>
-      </div>
-
-      <div className={styles.previewBody}>
-        <div className={styles.previewStats}>
-          <div className={styles.previewStat}>
-            <span className={styles.previewStatNum}>1 284</span>
-            <span className={styles.previewStatLbl}>events / min</span>
-          </div>
-          <div className={styles.previewStat}>
-            <span className={styles.previewStatNum} data-tone="sky">7</span>
-            <span className={styles.previewStatLbl}>anomalies</span>
-          </div>
-          <div className={styles.previewStat}>
-            <span className={styles.previewStatNum} data-tone="crit">2</span>
-            <span className={styles.previewStatLbl}>critiques</span>
-          </div>
-        </div>
-
-        <div className={styles.previewChart} aria-hidden="true">
-          {bars.map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
-        </div>
-
-        <div className={styles.previewAlerts}>
-          {PREVIEW_ALERTS.map((a, i) => (
-            <div key={i} className={styles.previewAlert}>
-              <span className={styles.sevDot} data-sev={a.sev} />
-              <span className={styles.previewAlertName}>{a.name}</span>
-              <span className={styles.previewAlertHost}>{a.host}</span>
-              <span className={styles.previewAlertTime}>{a.time}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <span className={styles.previewBadge}>aperçu</span>
-    </div>
-  )
-}
 
 export default function HomePage() {
   const { user, logout } = useAuth()
-  const navigate  = useNavigate()
-  const isAdmin   = user?.role === 'admin'
+  const { theme } = useTheme()
+  const navigate = useNavigate()
+
+  const isAdmin = user?.role === 'admin'
   const specialty = user?.specialty
 
-  const ia_user  = specialty === 'ia_user'
+  const ia_user = specialty === 'ia_user'
   const soc_user = specialty === 'soc_user'
 
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [testimonials, setTestimonials] = useState([])
-  const [feedback, setFeedback]         = useState('')
-  const [rating, setRating]             = useState(0)
-  const [hoverRating, setHoverRating]   = useState(0)
-  const [fbStatus, setFbStatus]         = useState(null)
-  const [fbLoading, setFbLoading]       = useState(false)
-  const dropdownRef = useRef(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const [testimonials, setTestimonials] = useState([])
+  const [testimonialsState, setTestimonialsState] = useState('loading') // 'loading' | 'ok' | 'error'
+
+  const [feedback, setFeedback] = useState('')
+  const [rating, setRating] = useState(0)
+  const [hoverRating, setHoverRating] = useState(0)
+  const [fbStatus, setFbStatus] = useState(null)
+  const [fbLoading, setFbLoading] = useState(false)
+
+  const [contactName, setContactName] = useState('')
+  const [contactEmail, setContactEmail] = useState('')
+  const [contactMessage, setContactMessage] = useState('')
+  const [contactStatus, setContactStatus] = useState(null)
+
+  const dropdownRef = useRef(null)
+  const avatarBtnRef = useRef(null)
+
+  /*
+   * ============================================================
+   * Load approved testimonials
+   * Distinguish "failed to load" from "genuinely empty" so the
+   * empty state never lies about what happened.
+   * ============================================================
+   */
   useEffect(() => {
-    feedbackService.getApproved().then(setTestimonials).catch(() => {})
+    let cancelled = false
+
+    setTestimonialsState('loading')
+
+    feedbackService
+      .getApproved()
+      .then(data => {
+        if (cancelled) return
+        setTestimonials(data)
+        setTestimonialsState('ok')
+      })
+      .catch(() => {
+        if (cancelled) return
+        setTestimonialsState('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
+  /*
+   * ============================================================
+   * Close dropdown when clicking outside, or on Escape.
+   * Return focus to the trigger button on close for keyboard users.
+   * ============================================================
+   */
   useEffect(() => {
     function handleClick(e) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target))
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target)
+      ) {
         setDropdownOpen(false)
+      }
     }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && dropdownOpen) {
+        setDropdownOpen(false)
+        avatarBtnRef.current?.focus()
+      }
+    }
+
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
+    document.addEventListener('keydown', handleKeyDown)
 
-  function handleLogout() { logout(); navigate('/login', { replace: true }) }
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [dropdownOpen])
 
+  /*
+   * ============================================================
+   * Navigation
+   * ============================================================
+   */
+  function handleLogout() {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
+  const handleOpenDashboard = useCallback(() => {
+    if (isAdmin) {
+      navigate('/admin/pending')
+    } else if (ia_user) {
+      navigate('/ai-dashboard')
+    } else if (soc_user) {
+      navigate('/dashboard')
+    } else {
+      navigate('/dashboard')
+    }
+  }, [isAdmin, ia_user, soc_user, navigate])
+
+  function handleProfile() {
+    navigate('/profile')
+    setDropdownOpen(false)
+  }
+
+  function handleMobileNavClick() {
+    setMobileMenuOpen(false)
+  }
+
+  /*
+   * ============================================================
+   * Feedback submission
+   * ============================================================
+   */
   async function handleFeedbackSubmit(e) {
     e.preventDefault()
-    if (!feedback.trim()) return
+
+    if (!feedback.trim()) {
+      return
+    }
+
     setFbLoading(true)
+    setFbStatus(null)
+
     try {
-      await feedbackService.submit(feedback, rating || null)
+      await feedbackService.submit(
+        feedback,
+        rating || null
+      )
+
       setFbStatus('sent')
       setFeedback('')
       setRating(0)
+      setHoverRating(0)
     } catch {
       setFbStatus('error')
     } finally {
@@ -124,389 +172,1454 @@ export default function HomePage() {
     }
   }
 
-  function handleOpenDashboard() {
-    if (isAdmin) navigate('/admin/pending')
-    else if (ia_user) navigate('/ai-dashboard')
-    else if (soc_user) navigate('/dashboard')
+  /*
+   * ============================================================
+   * Contact form
+   *
+   * This still opens the user's mail client. That approach fails
+   * silently on machines with no configured mail client (common on
+   * shared/work devices and some mobile browsers), so we can't
+   * treat it as a confirmed delivery — the success message is
+   * worded to reflect that, and the fields reset afterwards so the
+   * form doesn't look "stuck" if the person wants to send another.
+   *
+   * TODO(product): route this through feedbackService or a real
+   * /contact API endpoint once one exists, so failures can be
+   * detected and reported like the feedback form does.
+   * ============================================================
+   */
+  const CONTACT_EMAIL = 'contact@sentinel-ids.com'
+
+  function handleContactSubmit(e) {
+    e.preventDefault()
+
+    if (
+      !contactName.trim() ||
+      !contactEmail.trim() ||
+      !contactMessage.trim()
+    ) {
+      return
+    }
+
+    const subject = encodeURIComponent(
+      `Sentinel/IDS contact from ${contactName}`
+    )
+
+    const body = encodeURIComponent(
+      `Name: ${contactName}\n` +
+      `Email: ${contactEmail}\n\n` +
+      `${contactMessage}`
+    )
+
+    window.location.href =
+      `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`
+
+    setContactStatus('sent')
+    setContactName('')
+    setContactEmail('')
+    setContactMessage('')
   }
 
-  const initials = user?.email?.[0]?.toUpperCase() ?? 'A'
-  const navLinks = isAdmin ? ['About', 'Testimonials'] : NAV_LINKS
+  /*
+   * ============================================================
+   * User information
+   * ============================================================
+   */
+  const initials =
+    user?.email?.[0]?.toUpperCase() ?? 'A'
 
-  // Libellé de rôle lisible pour le dropdown
-  const roleLabel = isAdmin ? 'Administrator'
-                   : soc_user ? 'SOC Operator'
-                   : ia_user  ? 'IA Analyst'
-                   : (user?.role || 'Operator')
+  const roleLabel =
+    isAdmin
+      ? 'Administrator'
+      : soc_user
+        ? 'SOC Operator'
+        : ia_user
+          ? 'IA Analyst'
+          : user?.role || 'Operator'
 
-  // Variété d'icônes maîtrisée : Sigma (vert) · ML (bleu) · Explication (neutre)
-  const features = [
+  const dashboardLabel = isAdmin
+    ? 'Admin dashboard'
+    : ia_user
+      ? 'AI dashboard'
+      : 'Dashboard'
+
+  /*
+   * ============================================================
+   * System capabilities
+   * ============================================================
+   */
+  const capabilities = [
     {
-      iconClass: styles.featureIcon,
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 13 11 15 15 11"/></svg>,
-      title: 'Sigma rule detection',
-      desc:  'Known attack patterns — brute force, privilege escalation, suspicious execution — matched against your logs using the open Sigma standard.'
+      type: 'detection',
+      title: 'Anomaly Detection',
+      description:
+        'Identify unusual behaviour that deviates from normal Linux system activity and may indicate a potential security threat.',
+      icon: (
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 12h4l2-8 4 16 2-8h6" />
+        </svg>
+      ),
     },
     {
-      iconClass: `${styles.featureIcon} ${styles.featureIconSky}`,
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-      title: 'Unsupervised ML detection',
-      desc:  'Per-source autoencoders learn what normal looks like on each host and surface anomalies automatically — no labelled attack data required.'
+      type: 'attack',
+      title: 'Attack Detection',
+      description:
+        'Detect suspicious patterns associated with known attacks and malicious activities targeting Linux environments.',
+      icon: (
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
+        </svg>
+      ),
     },
     {
-      iconClass: `${styles.featureIcon} ${styles.featureIconSlate}`,
-      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>,
-      title: 'Explained alerts',
-      desc:  'Every detection ships with a plain-language explanation of why it fired, turning raw signals into context an analyst can act on.'
+      type: 'explanation',
+      title: 'Explained Alerts',
+      description:
+        'Turn detected events into clear and contextual explanations that help analysts understand what happened.',
+      icon: (
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          <line x1="8" y1="9" x2="16" y2="9" />
+          <line x1="8" y1="13" x2="14" y2="13" />
+        </svg>
+      ),
     },
   ]
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} dash-theme`} data-theme={theme}>
 
-      {/* ═══════════ Navbar ═══════════ */}
+      {/* ======================================================
+          NAVBAR
+      ======================================================= */}
       <header className={styles.navbar}>
+
         <div className={styles.navLogo}>
           <div className={styles.logoMark}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#052e16" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="M9 12l2 2 4-4"/>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#052e16"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="M9 12l2 2 4-4" />
             </svg>
           </div>
+
           <div className={styles.logoTextWrap}>
-            <span className={styles.logoText}>SENTINEL/IDS</span>
-            <span className={styles.logoTag}>v2.4</span>
+            <span className={styles.logoText}>
+              SENTINEL/IDS
+            </span>
+
+            <span className={styles.logoTag}>
+              Linux Security
+            </span>
           </div>
         </div>
 
         <nav className={styles.navLinks}>
-          {navLinks.map(link => (
-            <a key={link} href={`#${link.toLowerCase()}`} className={styles.navLink}>{link}</a>
+          {NAV_LINKS.map(link => (
+            <a
+              key={link.label}
+              href={link.href}
+              className={styles.navLink}
+            >
+              {link.label}
+            </a>
           ))}
         </nav>
 
-        <div className={styles.navRight} ref={dropdownRef}>
-          <button className={styles.avatarBtn} onClick={() => setDropdownOpen(v => !v)} aria-label="User menu">
-            <span className={styles.avatarWrap}>
-              <span className={styles.avatar}>{initials}</span>
-              <span className={styles.statusPing} aria-hidden="true" />
-            </span>
-            <svg className={`${styles.chevron} ${dropdownOpen ? styles.chevronOpen : ''}`} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 12 15 18 9"/>
-            </svg>
+        <div className={styles.navRightGroup}>
+
+          {/* Primary action for returning, authenticated users: get
+              straight to their workspace instead of hunting for it
+              inside the account dropdown. */}
+          {user && (
+            <button
+              className={styles.dashboardBtn}
+              onClick={handleOpenDashboard}
+            >
+              {dashboardLabel}
+            </button>
+          )}
+
+          <div
+            className={styles.navRight}
+            ref={dropdownRef}
+          >
+            <button
+              ref={avatarBtnRef}
+              className={styles.avatarBtn}
+              onClick={() =>
+                setDropdownOpen(value => !value)
+              }
+              aria-label="User menu"
+              aria-haspopup="menu"
+              aria-expanded={dropdownOpen}
+            >
+              <span className={styles.avatarWrap}>
+                <span className={styles.avatar}>
+                  {initials}
+                </span>
+
+                <span
+                  className={styles.statusPing}
+                  aria-hidden="true"
+                />
+              </span>
+
+              <svg
+                className={`${styles.chevron} ${
+                  dropdownOpen
+                    ? styles.chevronOpen
+                    : ''
+                }`}
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {dropdownOpen && (
+              <div className={styles.dropdown} role="menu">
+
+                <div className={styles.dropdownHeader}>
+                  <span className={styles.dropdownEmail}>
+                    {user?.email}
+                  </span>
+
+                  <span className={styles.dropdownRole}>
+                    <span className={styles.roleDot} />
+                    {roleLabel}
+                  </span>
+                </div>
+
+                <div className={styles.dropdownDivider} />
+
+                <button
+                  className={styles.dropdownItem}
+                  onClick={handleProfile}
+                  role="menuitem"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+
+                  Profile
+                </button>
+
+                {isAdmin && (
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      navigate('/admin/pending')
+                      setDropdownOpen(false)
+                    }}
+                    role="menuitem"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="7" height="9" />
+                      <rect x="14" y="3" width="7" height="5" />
+                      <rect x="14" y="12" width="7" height="9" />
+                      <rect x="3" y="16" width="7" height="5" />
+                    </svg>
+
+                    Admin dashboard
+                  </button>
+                )}
+
+                {ia_user && (
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      navigate('/ai-dashboard')
+                      setDropdownOpen(false)
+                    }}
+                    role="menuitem"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0-.34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+                    </svg>
+
+                    AI Dashboard
+                  </button>
+                )}
+
+                {soc_user && (
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      navigate('/dashboard')
+                      setDropdownOpen(false)
+                    }}
+                    role="menuitem"
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="3" width="7" height="9" />
+                      <rect x="14" y="3" width="7" height="5" />
+                      <rect x="14" y="12" width="7" height="9" />
+                      <rect x="3" y="16" width="7" height="5" />
+                    </svg>
+
+                    SOC Dashboard
+                  </button>
+                )}
+
+                <div className={styles.dropdownDivider} />
+
+                <button
+                  className={`${styles.dropdownItem} ${styles.dropdownLogout}`}
+                  onClick={handleLogout}
+                  role="menuitem"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+
+                  Log out
+                </button>
+
+              </div>
+            )}
+          </div>
+
+          {/* Mobile nav toggle — .navLinks is hidden below 640px via
+              CSS, so this is the only way to reach Testimonials /
+              Contact on small screens. */}
+          <button
+            className={styles.mobileMenuBtn}
+            onClick={() => setMobileMenuOpen(v => !v)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            )}
           </button>
 
-          {dropdownOpen && (
-            <div className={styles.dropdown}>
-              <div className={styles.dropdownHeader}>
-                <span className={styles.dropdownEmail}>{user?.email}</span>
-                <span className={styles.dropdownRole}>
-                  <span className={styles.roleDot} />
-                  {roleLabel}
-                </span>
-              </div>
-              <div className={styles.dropdownDivider} />
-              <button className={styles.dropdownItem} onClick={() => { navigate('/profile'); setDropdownOpen(false) }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                Profile
-              </button>
-
-              {isAdmin && (
-                <button className={styles.dropdownItem} onClick={() => { navigate('/admin/pending'); setDropdownOpen(false) }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                  Admin dashboard
-                </button>
-              )}
-
-              {ia_user && (
-                <button className={styles.dropdownItem} onClick={() => { navigate('/ai-dashboard'); setDropdownOpen(false) }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
-                  AI Dashboard
-                </button>
-              )}
-
-              {soc_user && (
-                <button className={styles.dropdownItem} onClick={() => { navigate('/dashboard'); setDropdownOpen(false) }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
-                  SOC Dashboard
-                </button>
-              )}
-
-              <div className={styles.dropdownDivider} />
-              <button className={`${styles.dropdownItem} ${styles.dropdownLogout}`} onClick={handleLogout}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Log out
-              </button>
-            </div>
-          )}
         </div>
+
+        {mobileMenuOpen && (
+          <div className={styles.mobileMenu}>
+            {NAV_LINKS.map(link => (
+              <a
+                key={link.label}
+                href={link.href}
+                className={styles.mobileMenuLink}
+                onClick={handleMobileNavClick}
+              >
+                {link.label}
+              </a>
+            ))}
+
+            {user && (
+              <button
+                className={styles.mobileMenuDashboard}
+                onClick={() => {
+                  handleMobileNavClick()
+                  handleOpenDashboard()
+                }}
+              >
+                {dashboardLabel}
+              </button>
+            )}
+          </div>
+        )}
       </header>
 
-      {/* ═══════════ Hero ═══════════ */}
-      <section className={styles.hero}>
-        <div className={styles.heroGrid} aria-hidden="true" />
-        <div className={styles.heroGlow} aria-hidden="true" />
+
+      {/* ======================================================
+          SECTION 01 — LINUX SECURITY
+      ======================================================= */}
+      <section
+        id="about"
+        className={styles.hero}
+      >
+        <div
+          className={styles.heroGrid}
+          aria-hidden="true"
+        />
+
+        <div
+          className={styles.heroGlow}
+          aria-hidden="true"
+        />
 
         <div className={styles.heroLayout}>
-          {/* Colonne gauche — copie */}
+
           <div className={styles.heroCopy}>
+
             <div className={styles.heroEyebrow}>
               <span className={styles.heroEyebrowDot} />
-              <span>Linux threat detection · PFE 2026</span>
+              <span>LINUX SECURITY</span>
             </div>
+
             <h1 className={styles.heroTitle}>
-              Detect, explain, and investigate <em>Linux-targeted</em> attacks in real time.
+              Securing Linux systems
+              <em> against evolving threats.</em>
             </h1>
+
             <p className={styles.heroSub}>
-              A unified console that pairs unsupervised ML anomaly detection with
-              Sigma rule correlation — surfacing both known and unknown threats
-              across your Linux fleet, with every alert explained in plain language.
+              Linux systems power servers, cloud
+              infrastructures and critical services.
+              Their continuous exposure to cyber threats
+              makes effective monitoring and detection
+              essential.
+            </p>
+
+            <p className={styles.heroSubSecondary}>
+              Sentinel/IDS helps identify abnormal
+              behaviour and potential attacks by
+              continuously analysing Linux system activity.
             </p>
 
             <div className={styles.heroCtas}>
-              <button className={styles.analyseBtn} onClick={handleOpenDashboard}>
-                <span>Open dashboard</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                </svg>
-              </button>
-              <a href="#about" className={styles.secondaryBtn}>
-                Learn more
+
+              {user ? (
+                <button
+                  className={styles.primaryBtn}
+                  onClick={handleOpenDashboard}
+                >
+                  <span>
+                    Open {dashboardLabel.toLowerCase()}
+                  </span>
+
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  className={styles.primaryBtn}
+                  onClick={() => {
+                    document
+                      .getElementById('about-system')
+                      ?.scrollIntoView({
+                        behavior: 'smooth'
+                      })
+                  }}
+                >
+                  <span>
+                    Discover our system
+                  </span>
+
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line
+                      x1="5"
+                      y1="12"
+                      x2="19"
+                      y2="12"
+                    />
+
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </button>
+              )}
+
+              <a
+                href="#contact"
+                className={styles.secondaryBtn}
+              >
+                Contact us
               </a>
+
             </div>
 
-            {/* Stats — architecture, pas de fausses métriques live */}
-            <div className={styles.heroStats}>
-              <div className={styles.heroStat}>
-                <span className={styles.heroStatValue}>3</span>
-                <span className={styles.heroStatLabel}>Log sources unified</span>
-              </div>
-              <div className={styles.heroStatDivider} />
-              <div className={styles.heroStat}>
-                <span className={styles.heroStatValue}>2</span>
-                <span className={styles.heroStatLabel}>Detection engines</span>
-              </div>
-              <div className={styles.heroStatDivider} />
-              <div className={styles.heroStat}>
-                <span className={styles.heroStatValue} style={{ color: 'var(--accent)' }}>0</span>
-                <span className={styles.heroStatLabel}>Labels required</span>
-              </div>
-            </div>
           </div>
 
-          {/* Colonne droite — aperçu produit (remplaçable par une vraie capture) */}
-          <div className={styles.heroPreview}>
-            <DashboardPreview />
+
+          <div className={styles.heroImageSide}>
+
+            <div className={styles.heroImageFrame}>
+
+              <img
+                src={linuxSecurityImg}
+                alt="Linux system security"
+                className={styles.heroImage}
+              />
+
+              <div className={styles.imageOverlay} />
+
+              <div className={styles.imageStatus}>
+                <span
+                  className={styles.imageStatusDot}
+                />
+
+                <span>
+                  Linux security
+                </span>
+              </div>
+
+            </div>
+
           </div>
+
         </div>
       </section>
 
-      {/* ═══════════ About ═══════════ */}
-      <section id="about" className={styles.section}>
+
+      {/* ======================================================
+          SECTION 02 — OUR SYSTEM
+      ======================================================= */}
+      <section
+        id="about-system"
+        className={styles.section}
+      >
         <div className={styles.sectionInner}>
-          <span className={styles.sectionTag}>// About</span>
-          <h2 className={styles.sectionTitle}>What is Sentinel/IDS?</h2>
+
+          <span className={styles.sectionTag}>
+            // Our system
+          </span>
+
+          <h2 className={styles.sectionTitle}>
+            Security monitoring for
+            <span> Linux environments.</span>
+          </h2>
+
           <p className={styles.sectionText}>
-            Sentinel/IDS is a Linux-focused intrusion detection platform built
-            as a final-year engineering project (PFE 2026). It ingests security
-            logs from across your fleet — authentication, system, and audit
-            (auditd) events — through an ELK pipeline, then runs two
-            complementary detection engines on them: Sigma rules to catch known
-            attack patterns, and unsupervised machine-learning models that learn
-            each host's normal behaviour and flag deviations no signature would
-            catch. Every alert is enriched with a natural-language explanation,
-            so operators understand what happened without reverse-engineering
-            raw logs.
+            Sentinel/IDS monitors Linux environments
+            and identifies both abnormal behaviours and
+            suspicious attack patterns. The platform
+            combines automated detection with contextual
+            explanations to help analysts understand
+            security events more effectively.
           </p>
 
+
           <div className={styles.featureGrid}>
-            {features.map((f, i) => (
-              <div key={i} className={styles.featureCard}>
-                <div className={f.iconClass}>{f.icon}</div>
-                <h3 className={styles.featureTitle}>{f.title}</h3>
-                <p className={styles.featureDesc}>{f.desc}</p>
+
+            {capabilities.map((feature, index) => (
+              <div
+                key={feature.type}
+                className={styles.featureCard}
+              >
+
+                <div
+                  className={`${styles.featureIcon} ${
+                    feature.type === 'attack'
+                      ? styles.featureIconWarning
+                      : feature.type === 'explanation'
+                        ? styles.featureIconNeutral
+                        : ''
+                  }`}
+                >
+                  {feature.icon}
+                </div>
+
+                <span className={styles.featureNumber}>
+                  0{index + 1}
+                </span>
+
+                <h3 className={styles.featureTitle}>
+                  {feature.title}
+                </h3>
+
+                <p className={styles.featureDesc}>
+                  {feature.description}
+                </p>
+
               </div>
             ))}
+
           </div>
+
+
+          <div className={styles.systemHighlights}>
+
+            <div className={styles.highlightItem}>
+              <span className={styles.highlightValue}>
+                Linux
+              </span>
+
+              <span className={styles.highlightLabel}>
+                Security focus
+              </span>
+            </div>
+
+            <div className={styles.highlightDivider} />
+
+            <div className={styles.highlightItem}>
+              <span className={styles.highlightValue}>
+                3
+              </span>
+
+              <span className={styles.highlightLabel}>
+                Log sources
+              </span>
+            </div>
+
+            <div className={styles.highlightDivider} />
+
+            <div className={styles.highlightItem}>
+              <span className={styles.highlightValue}>
+                ML
+              </span>
+
+              <span className={styles.highlightLabel}>
+                Behaviour analysis
+              </span>
+            </div>
+
+            <div className={styles.highlightDivider} />
+
+            <div className={styles.highlightItem}>
+              <span className={styles.highlightValue}>
+                AI
+              </span>
+
+              <span className={styles.highlightLabel}>
+                Alert explanation
+              </span>
+            </div>
+
+          </div>
+
         </div>
       </section>
 
-      {/* ═══════════ Testimonials ═══════════ */}
-      <section id="testimonials" className={`${styles.section} ${styles.sectionAlt}`}>
+
+      {/* ======================================================
+          SECTION 03 — TESTIMONIALS
+      ======================================================= */}
+      <section
+        id="testimonials"
+        className={`${styles.section} ${styles.sectionAlt}`}
+      >
         <div className={styles.sectionInner}>
-          <span className={styles.sectionTag}>// Testimonials</span>
-          <h2 className={styles.sectionTitle}>From operators in the field</h2>
-          {testimonials.length === 0 ? (
-            <p className={styles.testimonialEmpty}>
-              No testimonials yet. Be the first to share your feedback!
-            </p>
-          ) : (
+
+          <span className={styles.sectionTag}>
+            // Approved feedback
+          </span>
+
+          <h2 className={styles.sectionTitle}>
+            What users say about
+            <span> Sentinel/IDS.</span>
+          </h2>
+
+          <p className={styles.sectionText}>
+            Feedback from users helps us evaluate the
+            platform and identify opportunities for
+            improvement.
+          </p>
+
+          {testimonialsState === 'loading' && (
             <div className={styles.testimonialGrid}>
-              {testimonials.map(t => (
-                <div key={t.id} className={styles.testimonialCard}>
-                  {t.rating && (
-                    <div className={styles.stars}>
-                      {[1,2,3,4,5].map(s => (
-                        <svg key={s} width="14" height="14" viewBox="0 0 24 24"
-                          fill={s <= t.rating ? '#4ade80' : 'none'}
-                          stroke={s <= t.rating ? '#4ade80' : '#3a4055'}
-                          strokeWidth="1.8" strokeLinejoin="round">
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                        </svg>
-                      ))}
-                    </div>
-                  )}
-                  <p className={styles.testimonialText}>"{t.message}"</p>
-                  <div className={styles.testimonialAuthor}>
-                    <div className={styles.testimonialAvatar}>{t.user_name[0]}</div>
-                    <div>
-                      <p className={styles.testimonialName}>{t.user_name}</p>
-                    </div>
-                  </div>
-                </div>
+              {[0, 1].map(i => (
+                <div
+                  key={i}
+                  className={styles.testimonialSkeleton}
+                  aria-hidden="true"
+                />
               ))}
             </div>
           )}
+
+          {testimonialsState === 'error' && (
+            <div className={styles.testimonialEmpty}>
+              <div className={styles.emptyIcon}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+              </div>
+
+              <h3>
+                Couldn't load testimonials.
+              </h3>
+
+              <p>
+                There was a problem reaching the server.
+                Refresh the page to try again.
+              </p>
+            </div>
+          )}
+
+          {testimonialsState === 'ok' && (
+            testimonials.length === 0 ? (
+
+              <div className={styles.testimonialEmpty}>
+
+                <div className={styles.emptyIcon}>
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                  </svg>
+                </div>
+
+                <h3>
+                  No approved feedback yet.
+                </h3>
+
+                <p>
+                  Your experience can help us improve
+                  the platform.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className={styles.testimonialGrid}>
+
+                {testimonials.map((testimonial) => (
+
+                  <article
+                    key={testimonial.id}
+                    className={styles.testimonialCard}
+                  >
+
+                    <div className={styles.testimonialTop}>
+
+                      {testimonial.rating && (
+                        <div className={styles.stars}>
+
+                          {[1, 2, 3, 4, 5].map(star => (
+
+                            <svg
+                              key={star}
+                              width="15"
+                              height="15"
+                              viewBox="0 0 24 24"
+                              fill={
+                                star <= testimonial.rating
+                                  ? '#4ade80'
+                                  : 'none'
+                              }
+                              stroke={
+                                star <= testimonial.rating
+                                  ? '#4ade80'
+                                  : '#3a4055'
+                              }
+                              strokeWidth="1.8"
+                            >
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+
+                          ))}
+
+                        </div>
+                      )}
+
+                      <span className={styles.approvedBadge}>
+                        Approved
+                      </span>
+
+                    </div>
+
+
+                    <p className={styles.testimonialText}>
+                      "{testimonial.message}"
+                    </p>
+
+
+                    <div className={styles.testimonialAuthor}>
+
+                      <div className={styles.testimonialAvatar}>
+                        {testimonial.user_name?.[0]?.toUpperCase() || 'U'}
+                      </div>
+
+                      <div>
+                        <p className={styles.testimonialName}>
+                          {testimonial.user_name}
+                        </p>
+
+                        <p className={styles.testimonialRole}>
+                          Sentinel/IDS user
+                        </p>
+                      </div>
+
+                    </div>
+
+                  </article>
+
+                ))}
+
+              </div>
+            )
+          )}
+
+
+          {/* Leave feedback */}
+          {!isAdmin && (
+            <div className={styles.feedbackArea}>
+
+              {fbStatus === 'sent' ? (
+
+                <div className={styles.fbSuccess}>
+
+                  <div className={styles.fbSuccessIcon}>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <h3>
+                      Feedback submitted
+                    </h3>
+
+                    <p>
+                      Thank you. Your feedback will be
+                      reviewed before publication.
+                    </p>
+                  </div>
+
+                  <button
+                    className={styles.fbResetBtn}
+                    onClick={() => setFbStatus(null)}
+                  >
+                    Submit another
+                  </button>
+
+                </div>
+
+              ) : (
+
+                <form
+                  className={styles.feedbackForm}
+                  onSubmit={handleFeedbackSubmit}
+                  noValidate
+                >
+
+                  <div className={styles.feedbackFormHeader}>
+
+                    <div>
+                      <span className={styles.miniTag}>
+                        Share your experience
+                      </span>
+
+                      <h3>
+                        Help us improve Sentinel/IDS.
+                      </h3>
+                    </div>
+
+                  </div>
+
+
+                  <div className={styles.ratingBlock}>
+
+                    <label>
+                      Rate your experience
+                      <span className={styles.optionalTag}>
+                        (optional)
+                      </span>
+                    </label>
+
+                    <div className={styles.starRow}>
+
+                      {[1, 2, 3, 4, 5].map(star => (
+
+                        <button
+                          key={star}
+                          type="button"
+                          className={`${styles.starBtn} ${
+                            star <=
+                            (hoverRating || rating)
+                              ? styles.starActive
+                              : ''
+                          }`}
+                          onMouseEnter={() =>
+                            setHoverRating(star)
+                          }
+                          onMouseLeave={() =>
+                            setHoverRating(0)
+                          }
+                          onClick={() =>
+                            setRating(current =>
+                              current === star
+                                ? 0
+                                : star
+                            )
+                          }
+                          aria-label={`Rate ${star} star${
+                            star > 1 ? 's' : ''
+                          }`}
+                        >
+                          <svg
+                            width="21"
+                            height="21"
+                            viewBox="0 0 24 24"
+                            fill={
+                              star <=
+                              (hoverRating || rating)
+                                ? '#4ade80'
+                                : 'none'
+                            }
+                            stroke={
+                              star <=
+                              (hoverRating || rating)
+                                ? '#4ade80'
+                                : '#3a4055'
+                            }
+                            strokeWidth="1.6"
+                          >
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        </button>
+
+                      ))}
+
+                    </div>
+
+                  </div>
+
+
+                  <div className={styles.feedbackField}>
+
+                    <div className={styles.feedbackFieldHeader}>
+
+                      <label>
+                        Your message
+                      </label>
+
+                      <span>
+                        {feedback.length}/500
+                      </span>
+
+                    </div>
+
+                    <textarea
+                      value={feedback}
+                      maxLength={500}
+                      rows={4}
+                      placeholder="Share your experience with Sentinel/IDS..."
+                      onChange={e => {
+                        setFeedback(e.target.value)
+                        setFbStatus(null)
+                      }}
+                      required
+                    />
+
+                  </div>
+
+
+                  {fbStatus === 'error' && (
+                    <div className={styles.fbError}>
+                      Something went wrong.
+                      Please try again.
+                    </div>
+                  )}
+
+
+                  <button
+                    type="submit"
+                    className={styles.feedbackSubmit}
+                    disabled={
+                      fbLoading ||
+                      !feedback.trim()
+                    }
+                  >
+                    {fbLoading ? (
+                      <>
+                        <span className={styles.fbSpinner} />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        Submit feedback
+
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line
+                            x1="5"
+                            y1="12"
+                            x2="19"
+                            y2="12"
+                          />
+                          <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
+
+                </form>
+
+              )}
+
+            </div>
+          )}
+
         </div>
       </section>
 
-      {/* ═══════════ Contact — non-admin only ═══════════ */}
-      {!isAdmin && (
-        <section id="contact" className={styles.section}>
-          <div className={styles.sectionInner}>
-            <div className={styles.contactGrid}>
 
-              {/* Left — info panel */}
-              <div className={styles.contactInfo}>
-                <span className={styles.sectionTag}>// Contact</span>
-                <h2 className={styles.sectionTitle}>Share your experience</h2>
-                <p className={styles.sectionText}>
-                  Your feedback helps the team harden the platform and guides
-                  the roadmap. Approved testimonials appear above for other
-                  operators to see.
-                </p>
+      {/* ======================================================
+          SECTION 04 — CONTACT
+      ======================================================= */}
+      <section
+        id="contact"
+        className={styles.contactSection}
+      >
+        <div className={styles.sectionInner}>
 
-                <div className={styles.contactSteps}>
-                  {[
-                    { label: 'Write your feedback', desc: 'Share your honest experience operating the platform.' },
-                    { label: 'Admin reviews it',    desc: 'The team reads every submission carefully before publishing.' },
-                    { label: 'Get published',       desc: 'Once approved, your testimonial goes live for everyone to see.' },
-                  ].map((s, i) => (
-                    <div key={i} className={styles.contactStep}>
-                      <div className={styles.contactStepNum}>{String(i + 1).padStart(2, '0')}</div>
-                      <div>
-                        <p className={styles.contactStepLabel}>{s.label}</p>
-                        <p className={styles.contactStepDesc}>{s.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className={styles.contactGrid}>
 
-              {/* Right — form */}
-              <div className={styles.contactFormWrap}>
-                {fbStatus === 'sent' ? (
-                  <div className={styles.fbSuccess}>
-                    <div className={styles.fbSuccessIcon}>
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </div>
-                    <h3 className={styles.fbSuccessTitle}>Feedback submitted</h3>
-                    <p className={styles.fbSuccessText}>Thank you for sharing your thoughts. You'll receive an email once it's been reviewed.</p>
-                    <button className={styles.fbSuccessBtn} onClick={() => setFbStatus(null)}>Submit another</button>
+            <div className={styles.contactInfo}>
+
+              <span className={styles.sectionTag}>
+                // Contact
+              </span>
+
+              <h2 className={styles.contactTitle}>
+                Get in touch with
+                <span> Sentinel/IDS.</span>
+              </h2>
+
+              <p className={styles.contactText}>
+                Have a question about the platform,
+                the project, or our approach to Linux
+                security? We would be happy to hear
+                from you.
+              </p>
+
+
+              <div className={styles.contactDetails}>
+
+                <div className={styles.contactDetail}>
+
+                  <div className={styles.contactDetailIcon}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect
+                        x="3"
+                        y="5"
+                        width="18"
+                        height="14"
+                        rx="2"
+                      />
+
+                      <polyline points="3 7 12 13 21 7" />
+                    </svg>
                   </div>
-                ) : (
-                  <form onSubmit={handleFeedbackSubmit} className={styles.fbForm} noValidate>
-                    <p className={styles.fbFormTitle}>
-                      <span className={styles.fbFormTitleDot} />
-                      Leave a testimonial
-                    </p>
 
-                    {/* Star rating */}
-                    <div className={styles.ratingWrap}>
-                      <label className={styles.fbLabel}>Rate your experience</label>
-                      <div className={styles.starRow}>
-                        {[1,2,3,4,5].map(s => (
-                          <button key={s} type="button"
-                            className={`${styles.starBtn} ${s <= (hoverRating || rating) ? styles.starActive : ''}`}
-                            onMouseEnter={() => setHoverRating(s)}
-                            onMouseLeave={() => setHoverRating(0)}
-                            onClick={() => setRating(r => r === s ? 0 : s)}
-                            aria-label={`Rate ${s} star${s > 1 ? 's' : ''}`}
-                          >
-                            <svg width="22" height="22" viewBox="0 0 24 24"
-                              fill={s <= (hoverRating || rating) ? '#4ade80' : 'none'}
-                              stroke={s <= (hoverRating || rating) ? '#4ade80' : '#3a4055'}
-                              strokeWidth="1.6" strokeLinejoin="round">
-                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                            </svg>
-                          </button>
-                        ))}
-                        {(hoverRating || rating) > 0 && (
-                          <span className={styles.ratingLabel}>
-                            {['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent'][hoverRating || rating]}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                  <div>
+                    <span>
+                      Email
+                    </span>
 
-                    {/* Textarea */}
-                    <div className={styles.fbField}>
-                      <div className={styles.fbFieldHeader}>
-                        <label className={styles.fbLabel}>Your message</label>
-                        <span className={`${styles.charCount} ${feedback.length > 450 ? styles.charCountWarn : ''}`}>
-                          {feedback.length}/500
-                        </span>
-                      </div>
-                      <div className={styles.fbTextareaWrap}>
-                        <textarea
-                          className={styles.fbTextarea}
-                          rows={5}
-                          maxLength={500}
-                          placeholder="Share your experience — what you found valuable, what could be improved…"
-                          value={feedback}
-                          onChange={e => { setFeedback(e.target.value); setFbStatus(null) }}
-                          required
-                        />
-                      </div>
-                    </div>
+                    <a
+                      href={`mailto:${CONTACT_EMAIL}`}
+                    >
+                      {CONTACT_EMAIL}
+                    </a>
+                  </div>
 
-                    {fbStatus === 'error' && (
-                      <div className={styles.fbError}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        Something went wrong. Please try again.
-                      </div>
-                    )}
+                </div>
 
-                    <div className={styles.fbSubmitRow}>
-                      <p className={styles.fbPrivacyNote}>Your name will appear with your testimonial if published.</p>
-                      <button type="submit" className={styles.fbBtn} disabled={fbLoading || !feedback.trim()}>
-                        {fbLoading
-                          ? <><span className={styles.fbSpinner} />Sending…</>
-                          : <>
-                              Submit
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                            </>
-                        }
-                      </button>
-                    </div>
-                  </form>
-                )}
+
+                <div className={styles.contactDetail}>
+
+                  <div className={styles.contactDetailIcon}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2v20" />
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H7" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <span>
+                      Project
+                    </span>
+
+                    <strong>
+                      Sentinel/IDS
+                    </strong>
+                  </div>
+
+                </div>
+
+
+                <div className={styles.contactDetail}>
+
+                  <div className={styles.contactDetailIcon}>
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M12 2a10 10 0 1 0 10 10" />
+                      <path d="M12 6v6l4 2" />
+                    </svg>
+                  </div>
+
+                  <div>
+                    <span>
+                      Focus
+                    </span>
+
+                    <strong>
+                      Linux Security & AI
+                    </strong>
+                  </div>
+
+                </div>
+
               </div>
 
             </div>
-          </div>
-        </section>
-      )}
 
-      <footer className={styles.footer}>
-        <div className={styles.footerInner}>
-          <div className={styles.footerLeft}>
-            <span className={styles.footerDot} />
-            <span>All sensors online · TLS 1.3</span>
+
+            <div className={styles.contactFormWrap}>
+
+              <form
+                className={styles.contactForm}
+                onSubmit={handleContactSubmit}
+              >
+
+                <div className={styles.contactFormHeader}>
+
+                  <span className={styles.formStatusDot} />
+
+                  <span>
+                    Send a message
+                  </span>
+
+                </div>
+
+
+                <div className={styles.formRow}>
+
+                  <div className={styles.formField}>
+
+                    <label htmlFor="contact-name">
+                      Name
+                    </label>
+
+                    <input
+                      id="contact-name"
+                      type="text"
+                      value={contactName}
+                      onChange={e =>
+                        setContactName(e.target.value)
+                      }
+                      placeholder="Your name"
+                      required
+                    />
+
+                  </div>
+
+
+                  <div className={styles.formField}>
+
+                    <label htmlFor="contact-email">
+                      Email
+                    </label>
+
+                    <input
+                      id="contact-email"
+                      type="email"
+                      value={contactEmail}
+                      onChange={e =>
+                        setContactEmail(e.target.value)
+                      }
+                      placeholder="you@example.com"
+                      required
+                    />
+
+                  </div>
+
+                </div>
+
+
+                <div className={styles.formField}>
+
+                  <label htmlFor="contact-message">
+                    Message
+                  </label>
+
+                  <textarea
+                    id="contact-message"
+                    value={contactMessage}
+                    onChange={e =>
+                      setContactMessage(e.target.value)
+                    }
+                    placeholder="How can we help you?"
+                    rows={6}
+                    required
+                  />
+
+                </div>
+
+
+                {contactStatus === 'sent' && (
+                  <div className={styles.contactSuccess}>
+                    Your email client should now have
+                    opened with the message pre-filled.
+                    Nothing arrives until you actually
+                    send it from there.
+                  </div>
+                )}
+
+
+                <button
+                  type="submit"
+                  className={styles.contactSubmit}
+                >
+                  Send message
+
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line
+                      x1="5"
+                      y1="12"
+                      x2="19"
+                      y2="12"
+                    />
+
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+
+                </button>
+
+              </form>
+
+            </div>
+
           </div>
-          <p>© 2026 Sentinel/IDS · PFE Project</p>
+
         </div>
+      </section>
+
+
+      {/* ======================================================
+          FOOTER
+      ======================================================= */}
+      <footer className={styles.footer}>
+
+        <div className={styles.footerInner}>
+
+          <div className={styles.footerBrand}>
+
+            <div className={styles.footerLogo}>
+              <span className={styles.footerLogoDot} />
+              SENTINEL/IDS
+            </div>
+
+            <p>
+              Linux security monitoring and
+              intelligent threat detection.
+            </p>
+
+          </div>
+
+
+          <div className={styles.footerLinks}>
+
+            <a href="#about">
+              About
+            </a>
+
+            <a href="#testimonials">
+              Testimonials
+            </a>
+
+            <a href="#contact">
+              Contact
+            </a>
+
+          </div>
+
+
+          <div className={styles.footerRight}>
+
+            <span className={styles.footerStatus}>
+              <span className={styles.footerStatusDot} />
+              System online
+            </span>
+
+            <span>
+              © 2026 Sentinel/IDS
+            </span>
+
+          </div>
+
+        </div>
+
       </footer>
+
     </div>
   )
 }

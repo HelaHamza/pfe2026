@@ -135,6 +135,22 @@
 
 .dash-theme, .dash-theme * { box-sizing: border-box; }
 
+/* ---- Theme toggle — partagé par toutes les pages du dashboard ---- */
+.dash-theme .theme-toggle { background: none; border: none; cursor: pointer; padding: 0; }
+.dash-theme .theme-toggle__track {
+  width: 52px; height: 28px; border-radius: 999px;
+  background: var(--surface-sunk); border: 1px solid var(--border);
+  display: flex; align-items: center; padding: 3px;
+  transition: background .25s var(--ease);
+}
+.dash-theme .theme-toggle__track[data-theme="dark"] { justify-content: flex-end; }
+.dash-theme .theme-toggle__thumb {
+  width: 21px; height: 21px; border-radius: 50%;
+  background: var(--surface); box-shadow: var(--shadow);
+  display: grid; place-items: center; font-size: 12px;
+  transition: transform .25s var(--ease);
+}
+
 /* ---- Carte — cadre unique pour les panneaux du dashboard SOC ---- */
 .dash-theme .card {
   background:    var(--surface);

@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../services/api.js'
+import { useTheme } from '../context/ThemeContext.jsx'
 import styles from './SignUpPage.module.css'
+import '../styles/tokens.css'
 
 const SPECIALTIES = [
   {
@@ -30,6 +32,7 @@ const SPECIALTIES = [
 
 export default function SignUpPage() {
   const navigate = useNavigate()
+  const { theme } = useTheme()
   const [form, setForm] = useState({
     first_name: '', last_name: '', email: '',
     password: '', phone: '', sex: '', specialty: 'ia_user',
@@ -81,7 +84,7 @@ export default function SignUpPage() {
   const strength = getStrength()
 
   if (success) return (
-    <div className={styles.page}>
+    <div className={`${styles.page} dash-theme`} data-theme={theme}>
       <aside className={styles.sidebar}>
         <SidebarContent />
       </aside>
@@ -114,7 +117,7 @@ export default function SignUpPage() {
   )
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} dash-theme`} data-theme={theme}>
       <aside className={styles.sidebar}>
         <SidebarContent />
       </aside>
@@ -284,7 +287,7 @@ function SidebarContent() {
       <div className={styles.sidebarTop}>
         <div className={styles.logoRow}>
           <div className={styles.logoMark}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#052e16" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--bg)' }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
               <path d="M9 12l2 2 4-4"/>
             </svg>

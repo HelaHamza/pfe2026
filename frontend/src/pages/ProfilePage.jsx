@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import Sidebar from '../components/Sidebar.jsx'
 import { profileService } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useTheme } from '../context/ThemeContext.jsx'
 import styles from './ProfilePage.module.css'
+import '../styles/tokens.css'
 
 // Icônes de champ — même style que Login (stroke 2), pour l'homogénéité des formulaires
 const IconUser = (
@@ -28,6 +30,7 @@ const IconMail = (
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const { theme } = useTheme()
   const [form, setForm]       = useState({ first_name: '', last_name: '', phone: '', sex: '', address: '' })
   const [avatar, setAvatar]   = useState(null)
   const [saved, setSaved]     = useState(false)
@@ -105,7 +108,7 @@ export default function ProfilePage() {
                   : 'Operator'
 
   if (loading) return (
-    <div className={styles.layout}>
+    <div className={`${styles.layout} dash-theme`} data-theme={theme}>
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.loadingState}>
@@ -117,7 +120,7 @@ export default function ProfilePage() {
   )
 
   return (
-    <div className={styles.layout}>
+    <div className={`${styles.layout} dash-theme`} data-theme={theme}>
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.header}>

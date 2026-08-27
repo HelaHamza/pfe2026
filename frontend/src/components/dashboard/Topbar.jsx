@@ -9,8 +9,6 @@
  *   onDownloadReport   — télécharger le rapport JSON
  *   lastReport         — dernier report MongoDB (pour l'indicateur date)
  *   statsReady         — true quand les stats ES sont chargées (active le bouton télécharger)
- *   theme              — 'light' | 'dark', état courant du thème
- *   onToggleTheme      — bascule le thème
  */
 
 function timeAgo(iso) {
@@ -30,8 +28,6 @@ export default function TopBar({
   onDownloadReport,
   lastReport,
   statsReady,
-  theme,
-  onToggleTheme,
 }) {
   return (
     <>
@@ -60,27 +56,6 @@ export default function TopBar({
 
         {/* ── Actions ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-
-          {/* Thème clair/sombre */}
-          <button
-            onClick={onToggleTheme}
-            title={`Basculer en thème ${theme === 'light' ? 'sombre' : 'clair'}`}
-            aria-label={`Basculer en thème ${theme === 'light' ? 'sombre' : 'clair'}`}
-            style={{
-              display:      "flex",
-              alignItems:   "center",
-              justifyContent: "center",
-              width: 32, height: 32,
-              background:   "var(--surface)",
-              border:       "1px solid var(--border)",
-              borderRadius: 8,
-              fontSize:     14,
-              cursor:       "pointer",
-              color:        "var(--text-soft)",
-            }}
-          >
-            {theme === 'light' ? '☀' : '☾'}
-          </button>
 
           {/* Indicateur "Dernière analyse : il y a X min" */}
           {lastReport?.finished_at ? (

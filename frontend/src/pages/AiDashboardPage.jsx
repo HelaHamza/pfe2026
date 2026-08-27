@@ -2,7 +2,7 @@ import {
   useFrozenModel, useOverview, useRetraining,
   useTriage, useEvalComparison,
 } from '../hooks/useAiDashboardData'
-import { useTheme, ThemeToggle } from '../hooks/useTheme'
+import { useTheme } from '../context/ThemeContext'
 import Sidebar from '../components/Sidebar'
 import DomainCard from '../components/ai-dashboard/DomainCard'
 import FrozenModelSection from '../components/ai-dashboard/FrozenModelSection'
@@ -14,7 +14,7 @@ import '../styles/tokens.css'
 import '../styles/ai-dashboard.css'
 
 export default function AiDashboardPage() {
-  const { theme, toggle } = useTheme('light')
+  const { theme } = useTheme()
 
   const frozen         = useFrozenModel()
   const overview       = useOverview()
@@ -33,7 +33,6 @@ export default function AiDashboardPage() {
               Santé et efficacité du système de détection
             </p>
           </div>
-          <ThemeToggle theme={theme} onToggle={toggle} />
         </header>
 
         {/* ① Modèle en production : identité + calibration par source */}

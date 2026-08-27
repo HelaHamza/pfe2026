@@ -52,21 +52,8 @@
 }
 .ai-dash__error { color: var(--down); }
 
-/* ---- Theme toggle ---- */
-.theme-toggle { background: none; border: none; cursor: pointer; padding: 0; }
-.theme-toggle__track {
-  width: 52px; height: 28px; border-radius: 999px;
-  background: var(--surface-sunk); border: 1px solid var(--border);
-  display: flex; align-items: center; padding: 3px;
-  transition: background .25s var(--ease);
-}
-.theme-toggle__track[data-theme="dark"] { justify-content: flex-end; }
-.theme-toggle__thumb {
-  width: 21px; height: 21px; border-radius: 50%;
-  background: var(--surface); box-shadow: var(--shadow);
-  display: grid; place-items: center; font-size: 12px;
-  transition: transform .25s var(--ease);
-}
+/* Theme toggle : styles déplacés dans tokens.css (.dash-theme .theme-toggle),
+   partagés par toutes les pages du dashboard, pas seulement l'IA. */
 
 /* ---- Version selector ---- */
 .vselector {
