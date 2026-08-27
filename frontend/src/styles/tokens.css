@@ -9,10 +9,13 @@
 
 /* App mono-thème : light/dark pointent sur la même palette sombre.
    → le dashboard reste sombre quel que soit l'état du toggle (qui peut être
-     retiré, voir note). */
-:root,
-[data-theme="light"],
-[data-theme="dark"] {
+     retiré, voir note).
+   Scopé à .dash-theme (posée sur le conteneur racine de chaque page dashboard)
+   plutôt qu'à :root — sinon ces variables écrasent le :root global de
+   index.css (utilisé par d'autres pages, ex. HomePage) dès que ce fichier est
+   chargé, puisque toutes les pages sont importées en statique dans App.jsx. */
+.dash-theme,
+.dash-theme[data-theme="dark"] {
   /* Surfaces — nuit (Home : #0a0e1a) */
   --bg:            #0a0e1a;
   --surface:       #0f1524;
@@ -41,12 +44,79 @@
   --new:           #6aa8e6;   /* neutre informatif */
   --new-bg:        rgba(106,168,230,.12);
 
+  /* Sévérité — dérivé de theme/colors.js, réécrit pour lisibilité sur fond sombre */
+  --sev-critical:    #f87171;              /* rouge (≈ --down) */
+  --sev-critical-bg: rgba(248,113,113,.12);
+  --sev-high:        #fb923c;              /* orange */
+  --sev-high-bg:     rgba(251,146,60,.12);
+  --sev-medium:      #fbbf24;              /* ambre (≈ --warn) */
+  --sev-medium-bg:   rgba(251,191,36,.12);
+  --sev-low:         #4ade80;              /* vert (≈ --up/--accent) */
+  --sev-low-bg:      rgba(74,222,128,.10);
+
+  /* Détection — dérivé de theme/colors.js (detection.cnn/sigma), réécrit
+     pour lisibilité sur fond sombre */
+  --det-cnn:         #60a5fa;              /* bleu */
+  --det-cnn-bg:      rgba(96,165,250,.12);
+  --det-sigma:       #a78bfa;              /* violet */
+  --det-sigma-bg:    rgba(167,139,250,.12);
+
   --shadow:        0 1px 2px rgba(0,0,0,.4), 0 8px 30px rgba(0,0,0,.35);
   --shadow-lg:     0 2px 6px rgba(0,0,0,.5), 0 16px 48px rgba(0,0,0,.55);
 }
 
+/* Mode clair — pour l'impression/les captures. Valeurs reprises d'index.css
+   (surfaces/texte/bordure/ombre) et de theme/colors.js (severity/detection,
+   déjà pensées pour fond clair), pas de nouvelle couleur inventée.
+   --accent est assombri (vert #4ade80 → #16a34a) : le vert clair du thème
+   sombre n'a pas assez de contraste en texte sur blanc. */
+.dash-theme[data-theme="light"] {
+  --bg:            #f8fafc;
+  --surface:       #ffffff;
+  --surface-2:     #f8fafc;
+  --surface-sunk:  #f1f5f9;
+  --border:        #e2e8f0;
+  --border-strong: #cbd5e1;
+
+  --text:          #0f172a;
+  --text-soft:     #64748b;
+  --text-faint:    #94a3b8;
+
+  --accent:        #16a34a;
+  --accent-soft:   rgba(22,163,74,.10);
+  --accent-text:   #16a34a;
+
+  --up:            #16a34a;
+  --up-bg:         rgba(22,163,74,.10);
+  --down:          #dc2626;
+  --down-bg:       rgba(220,38,38,.10);
+  --warn:          #b45309;
+  --warn-bg:       rgba(217,119,6,.12);
+  --new:           #2563eb;
+  --new-bg:        rgba(37,99,235,.10);
+
+  /* Sévérité — reprend theme/colors.js `severity` tel quel */
+  --sev-critical:    #791F1F;
+  --sev-critical-bg: #FCEBEB;
+  --sev-high:        #993C1D;
+  --sev-high-bg:     #FAECE7;
+  --sev-medium:      #854F0B;
+  --sev-medium-bg:   #FAEEDA;
+  --sev-low:         #3B6D11;
+  --sev-low-bg:      #EAF3DE;
+
+  /* Détection — reprend theme/colors.js `detection.cnn/sigma` tel quel */
+  --det-cnn:         #378ADD;
+  --det-cnn-bg:      rgba(55,138,221,.12);
+  --det-sigma:       #7F77DD;
+  --det-sigma-bg:    rgba(127,119,221,.12);
+
+  --shadow:        rgba(0,0,0,.1) 0 10px 15px -3px, rgba(0,0,0,.05) 0 4px 6px -2px;
+  --shadow-lg:     rgba(0,0,0,.12) 0 20px 25px -5px, rgba(0,0,0,.08) 0 8px 10px -6px;
+}
+
 /* Tokens non thématisés */
-:root {
+.dash-theme {
   /* Inter pour le corps/titres (comme Home), JetBrains Mono pour chiffres,
      hints et tokens techniques. Le serif Fraunces est retiré. */
   --font-display: 'Inter', 'Segoe UI', system-ui, sans-serif;
@@ -63,4 +133,25 @@
   --ease: cubic-bezier(.22,.61,.36,1);
 }
 
-* { box-sizing: border-box; }
+.dash-theme, .dash-theme * { box-sizing: border-box; }
+
+/* ---- Carte — cadre unique pour les panneaux du dashboard SOC ---- */
+.dash-theme .card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding:       var(--sp-5);
+  margin-bottom: var(--sp-4);
+  box-shadow:    var(--shadow);
+}
+.dash-theme .card__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--sp-3); margin-bottom: var(--sp-4);
+}
+.dash-theme .card__title {
+  font-family: var(--font-display); font-weight: 600;
+  font-size: 14px; margin: 0; color: var(--text);
+}
+.dash-theme .card__hint {
+  font-size: 11px; color: var(--text-faint); font-family: var(--font-mono);
+}

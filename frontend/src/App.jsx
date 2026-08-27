@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute    from './components/ProtectedRoute.jsx'
 import LoginPage         from './pages/LoginPage.jsx'
 import SignUpPage        from './pages/SignUpPage.jsx'
@@ -17,6 +18,7 @@ import ResetPasswordPage  from './pages/ResetPasswordPage.jsx'
 
 export default function App() {
   return (
+    <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -35,5 +37,6 @@ export default function App() {
 </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ThemeProvider>
   )
 }

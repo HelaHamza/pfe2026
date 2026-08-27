@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useDashboardData }  from '../hooks/useDashboardData'
 import { useAnalysisRunner } from '../hooks/useAnalysisRunner'
 import { useReportDownload } from '../hooks/useReportDownload'
+import { useTheme }          from '../context/ThemeContext'
 
 import TopBar                from '../components/dashboard/Topbar'
 import KpiBand               from '../components/dashboard/Kpiband'
@@ -16,11 +17,13 @@ import AnalysisProgress      from '../components/dashboard/modals/AnalysisProgre
 import ErrorBanner           from '../components/dashboard/layout/ErrorBanner'
 import EmptyDashboardState   from '../components/dashboard/layout/EmptySOCDashboardState'
 import Sidebar from '../components/Sidebar'
-import { neutral } from '../theme/colors'
+
+import '../styles/tokens.css'
 
 export default function DashboardPage() {
   const [selected,  setSelected]  = useState(null)
   const [showModal, setShowModal] = useState(false)
+  const { theme, toggle: toggleTheme } = useTheme('light')
 
   const data = useDashboardData()
   const {
@@ -64,14 +67,15 @@ export default function DashboardPage() {
   })()
 
   return (
-  <div style={{
+  <div className="dash-theme" data-theme={theme} style={{
     minHeight: '100vh',
-    background: neutral.bg,
-    fontFamily: "'Inter','Segoe UI',system-ui,sans-serif",
-    color: neutral.text,
+    background: 'var(--bg)',
+    fontFamily: 'var(--font-body)',
+    color: 'var(--text)',
     display: 'flex',
+    alignItems: 'stretch',
   }}>
-    <Sidebar />
+    <Sidebar theme={theme} />
 
     <div style={{ flex: 1, minWidth: 0, overflowX: 'hidden' }}>
 
@@ -95,6 +99,8 @@ export default function DashboardPage() {
         onDownloadReport={downloadReport}
         lastReport={lastReport}
         statsReady={!!stats}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       <ErrorBanner message={error} />
@@ -112,7 +118,7 @@ export default function DashboardPage() {
           <>
             <KpiBand stats={stats} />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--sp-3)', alignItems: 'stretch' }}>
               <SigmaSeverityBars byLevel={sigmaByLevel} />
               <LogSourceActivity
                 logsBySource={logsBySource}
@@ -121,10 +127,8 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 12, marginBottom: 12 }}>
-              <MitreTopTactics data={byTactic} />
-             {/* /* <CnnVerdictBreakdown byVerdict={cnnByVerdict} />  */}
-            </div>
+            {/* <MitreTopTactics data={byTactic} /> */}
+            {/* <CnnVerdictBreakdown byVerdict={cnnByVerdict} />  */}
 
             <SecurityTable
               results={results}
@@ -137,6 +141,6 @@ export default function DashboardPage() {
       </main>
     </div>
 
-    {selected && <DetailPanel item={selected} onClose={() => setSelected(null)} />}
+    {selected && <DetailPanel item={selected} onClose={() => setSelected(null)} theme={theme} />}
   </div>
 )}

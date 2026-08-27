@@ -1,4 +1,3 @@
-import { severity, neutral } from "../../theme/colors";
 
 const SOURCE_COLOR = {
   syslog: "#185FA5",
@@ -9,6 +8,38 @@ const SOURCE_LABEL = { syslog: "syslog", auth: "auth", auditd: "auditd" };
 
 function fmt(n) {
   return (n ?? 0).toLocaleString("fr-FR");
+}
+
+// Anneau de progression — remplace l'ancien pourcentage plat pour "Taux
+// d'anomalie global", une proportion (contrairement aux totaux du bandeau KPI).
+function RingGauge({ pct, active, label }) {
+  const size = 56, stroke = 6, r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, pct));
+  const offset  = c * (1 - clamped / 100);
+  const color   = active ? "var(--accent)" : "var(--text-faint)";
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none"
+                stroke="var(--surface-sunk)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r} fill="none"
+          stroke={color} strokeWidth={stroke}
+          strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dashoffset .4s var(--ease)" }}
+        />
+      </svg>
+      <span style={{
+        position: "absolute", inset: 0, display: "flex",
+        alignItems: "center", justifyContent: "center",
+        fontSize: 10, fontWeight: 700, color: "var(--text)",
+        fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-mono)",
+      }}>
+        {label}
+      </span>
+    </div>
+  );
 }
 
 export default function LogSourceActivity({ logsBySource, anomaliesBySource, stats }) {
@@ -30,14 +61,12 @@ export default function LogSourceActivity({ logsBySource, anomaliesBySource, sta
   // ── Cas : aucune donnée du tout ─────────────────────────────────────────
   if (sources.length === 0) {
     return (
-      <div style={{
-        background: neutral.bg, border: `1px solid ${neutral.border}`,
-        borderRadius: 8, padding: "16px 18px", minHeight: 180,
-      }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text, marginBottom: 14 }}>
+      <div className="card" style={{ minHeight: 180, display: "flex", flexDirection: "column" }}>
+        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 14 }}>
           Logs &amp; anomalies AE par type
         </h3>
-        <div style={{ textAlign: "center", padding: "32px 0", color: neutral.textFaint, fontSize: 12 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center",
+                      textAlign: "center", color: "var(--text-faint)", fontSize: 12 }}>
           Aucune donnée disponible
           <br />
           <span style={{ fontSize: 10 }}>Lancez une analyse pour voir les statistiques par source</span>
@@ -63,27 +92,21 @@ export default function LogSourceActivity({ logsBySource, anomaliesBySource, sta
   const rateMode = hasPerSource && totalAnomalies > 0;
 
   return (
-    <div style={{
-      background: neutral.bg, border: `1px solid ${neutral.border}`,
-      borderRadius: 8, padding: "16px 18px",
-    }}>
+    <div className="card" style={{ display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "baseline", marginBottom: 14,
-      }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text }}>
+      <div className="card__head">
+        <h3 className="card__title">
           Logs &amp; anomalies AE par type
         </h3>
-        <span style={{ fontSize: 11, color: neutral.textFaint }}>
+        <span className="card__hint">
           {fmt(totalLogs)} log{totalLogs > 1 ? "s" : ""} · {fmt(totalAnomalies)} anomalie{totalAnomalies > 1 ? "s" : ""}
         </span>
       </div>
 
       {/* Liste des sources */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: 12 }}>
         {rows.map(({ src, logs, anomalies, rate }) => {
-          const color = SOURCE_COLOR[src] || neutral.textMuted;
+          const color = SOURCE_COLOR[src] || "var(--text-soft)";
           const label = SOURCE_LABEL[src] || src;
           const pct = rateMode ? (rate / maxRate) * 100 : (logs / maxLogs) * 100;
 
@@ -98,16 +121,16 @@ export default function LogSourceActivity({ logsBySource, anomaliesBySource, sta
                   {label}
                 </span>
                 <span style={{ fontSize: 11, fontVariantNumeric: "tabular-nums" }}>
-                  <strong style={{ color: neutral.text }}>{fmt(logs)}</strong>
-                  <span style={{ color: neutral.textFaint }}> logs</span>
+                  <strong style={{ color: "var(--text)" }}>{fmt(logs)}</strong>
+                  <span style={{ color: "var(--text-faint)" }}> logs</span>
                   {hasPerSource && (
                     <>
-                      <span style={{ color: neutral.textFaint }}> · </span>
-                      <strong style={{ color: anomalies > 0 ? severity.HIGH.bgStrong : neutral.textFaint }}>
+                      <span style={{ color: "var(--text-faint)" }}> · </span>
+                      <strong style={{ color: anomalies > 0 ? "var(--sev-high)" : "var(--text-faint)" }}>
                         {fmt(anomalies)}
                       </strong>
-                      <span style={{ color: neutral.textFaint }}> anom · </span>
-                      <strong style={{ color: rate > 0 ? color : neutral.textFaint }}>
+                      <span style={{ color: "var(--text-faint)" }}> anom · </span>
+                      <strong style={{ color: rate > 0 ? color : "var(--text-faint)" }}>
                         {rate.toFixed(2)}%
                       </strong>
                     </>
@@ -117,7 +140,7 @@ export default function LogSourceActivity({ logsBySource, anomaliesBySource, sta
 
               {/* Ligne 2 : barre */}
               <div style={{
-                height: 6, background: neutral.bgAlt,
+                height: 6, background: "var(--surface-sunk)",
                 borderRadius: 3, overflow: "hidden", position: "relative",
               }}>
                 <div style={{
@@ -134,26 +157,28 @@ export default function LogSourceActivity({ logsBySource, anomaliesBySource, sta
       {/* Message : aucune anomalie AE confirmée sur ce run */}
       {hasPerSource && totalAnomalies === 0 && (
         <div style={{
-          marginTop: 12, fontSize: 11, color: neutral.textMuted,
-          background: neutral.bgAlt, borderRadius: 6, padding: "8px 10px",
+          marginTop: 12, fontSize: 11, color: "var(--text-soft)",
+          background: "var(--surface-sunk)", borderRadius: 6, padding: "8px 10px",
           textAlign: "center",
         }}>
           Aucune anomalie AE confirmée (TP) sur ce run — % à 0 par source.
         </div>
       )}
 
-      {/* Footer : taux d'anomalie global */}
+      {/* Footer : taux d'anomalie global — proportion → anneau, pas un total */}
       {totalLogs > 0 && (
         <div style={{
-          marginTop: 14, paddingTop: 12,
-          borderTop: `1px solid ${neutral.borderSoft}`,
-          display: "flex", justifyContent: "space-between",
-          fontSize: 11, color: neutral.textMuted,
+          marginTop: 14, paddingTop: 14,
+          borderTop: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          fontSize: 11, color: "var(--text-soft)",
         }}>
           <span>Taux d'anomalie global</span>
-          <strong style={{ color: neutral.text, fontVariantNumeric: "tabular-nums" }}>
-            {globalRate.toFixed(2)}%
-          </strong>
+          <RingGauge
+            pct={globalRate}
+            active={totalAnomalies > 0}
+            label={`${globalRate.toFixed(2)}%`}
+          />
         </div>
       )}
     </div>

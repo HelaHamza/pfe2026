@@ -9,6 +9,8 @@
  *   onDownloadReport   — télécharger le rapport JSON
  *   lastReport         — dernier report MongoDB (pour l'indicateur date)
  *   statsReady         — true quand les stats ES sont chargées (active le bouton télécharger)
+ *   theme              — 'light' | 'dark', état courant du thème
+ *   onToggleTheme      — bascule le thème
  */
 
 function timeAgo(iso) {
@@ -28,6 +30,8 @@ export default function TopBar({
   onDownloadReport,
   lastReport,
   statsReady,
+  theme,
+  onToggleTheme,
 }) {
   return (
     <>
@@ -36,8 +40,8 @@ export default function TopBar({
         alignItems:     "center",
         justifyContent: "space-between",
         padding:        "12px 24px",
-        borderBottom:   "1px solid #e2e8f0",
-        background:     "#fff",
+        borderBottom:   "1px solid var(--border-strong)",
+        background:     "var(--surface)",
         position:       "sticky",
         top:            0,
         zIndex:         100,
@@ -45,19 +49,38 @@ export default function TopBar({
 
         {/* ── Onglets ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", gap: 24 }}>
-          <span style={{
-            fontSize: 14, fontWeight: 600, color: "#1d4ed8",
-            borderBottom: "2px solid #1d4ed8", paddingBottom: 4,
+          {/* <span style={{
+            fontSize: 14, fontWeight: 600, color: "var(--accent)",
+            borderBottom: "2px solid var(--accent)", paddingBottom: 4,
           }}>
             Dashboard
-          </span>
-          <span style={{ fontSize: 14, color: "#64748b", cursor: "pointer" }}>
-            Events
-          </span>
+          </span> */}
+          
         </div>
 
         {/* ── Actions ─────────────────────────────────────────────────────── */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+
+          {/* Thème clair/sombre */}
+          <button
+            onClick={onToggleTheme}
+            title={`Basculer en thème ${theme === 'light' ? 'sombre' : 'clair'}`}
+            aria-label={`Basculer en thème ${theme === 'light' ? 'sombre' : 'clair'}`}
+            style={{
+              display:      "flex",
+              alignItems:   "center",
+              justifyContent: "center",
+              width: 32, height: 32,
+              background:   "var(--surface)",
+              border:       "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize:     14,
+              cursor:       "pointer",
+              color:        "var(--text-soft)",
+            }}
+          >
+            {theme === 'light' ? '☀' : '☾'}
+          </button>
 
           {/* Indicateur "Dernière analyse : il y a X min" */}
           {lastReport?.finished_at ? (
@@ -68,26 +91,26 @@ export default function TopBar({
                 display:    "flex",
                 alignItems: "center",
                 gap:        6,
-                background: "#f8fafc",
-                border:     "1px solid #e2e8f0",
+                background: "var(--surface-2)",
+                border:     "1px solid var(--border)",
                 borderRadius: 8,
                 padding:    "6px 12px",
                 fontSize:   12,
-                color:      "#475569",
+                color:      "var(--text-soft)",
                 cursor:     "pointer",
                 whiteSpace: "nowrap",
               }}
             >
               <span style={{
                 width: 7, height: 7, borderRadius: "50%",
-                background: "#059669", display: "inline-block", flexShrink: 0,
+                background: "var(--accent)", display: "inline-block", flexShrink: 0,
               }} />
               Dernière analyse : <strong style={{ marginLeft: 4 }}>{timeAgo(lastReport.finished_at)}</strong>
             </button>
           ) : (
             <span style={{
-              fontSize: 12, color: "#94a3b8",
-              background: "#f8fafc", border: "1px solid #e2e8f0",
+              fontSize: 12, color: "var(--text-faint)",
+              background: "var(--surface-2)", border: "1px solid var(--border)",
               borderRadius: 8, padding: "6px 12px", whiteSpace: "nowrap",
             }}>
               Aucune analyse enregistrée
@@ -102,12 +125,12 @@ export default function TopBar({
               display:    "flex",
               alignItems: "center",
               gap:        5,
-              background: "#fff",
-              border:     "1px solid #e2e8f0",
+              background: "var(--surface)",
+              border:     "1px solid var(--border)",
               borderRadius: 8,
               padding:    "7px 14px",
               fontSize:   13,
-              color:      "#475569",
+              color:      "var(--text-soft)",
               cursor:     loading ? "wait" : "pointer",
               opacity:    loading ? 0.6 : 1,
             }}
@@ -128,12 +151,12 @@ export default function TopBar({
               display:    "flex",
               alignItems: "center",
               gap:        5,
-              background: "#fff",
-              border:     "1px solid #e2e8f0",
+              background: "var(--surface)",
+              border:     "1px solid var(--border)",
               borderRadius: 8,
               padding:    "7px 14px",
               fontSize:   13,
-              color:      statsReady ? "#475569" : "#cbd5e1",
+              color:      statsReady ? "var(--text-soft)" : "var(--text-faint)",
               cursor:     statsReady ? "pointer" : "not-allowed",
             }}
           >
@@ -147,13 +170,13 @@ export default function TopBar({
               display:    "flex",
               alignItems: "center",
               gap:        5,
-              background: "#1d4ed8",
+              background: "var(--accent)",
               border:     "none",
               borderRadius: 8,
               padding:    "8px 16px",
               fontSize:   13,
               fontWeight: 500,
-              color:      "#fff",
+              color:      "var(--bg)",
               cursor:     "pointer",
             }}
           >

@@ -11,16 +11,19 @@
 .sidebar {
   width: 230px;
   flex-shrink: 0;
-  background: #0d1322;
-  border-right: 1px solid rgba(74, 222, 128, 0.08);
+  align-self: stretch;
+  min-height: 100vh;
+  background: var(--surface-2);
+  border-right: 1px solid var(--accent-soft);
   box-sizing: border-box;
 }
 
-/* Contenu : un écran de haut, collé en haut pendant le scroll. */
+/* Contenu : occupe toute la hauteur réelle de .sidebar (= hauteur du
+   contenu du dashboard). Le profil (margin-top:auto sur .bottom) se pousse
+   donc jusqu'au bas réel de la page, pas juste au bas d'un écran. */
 .inner {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
@@ -39,7 +42,7 @@
 .logoMark {
   width: 32px;
   height: 32px;
-  background: #4ade80;
+  background: var(--accent);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -48,20 +51,19 @@
 }
 
 .brandName {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #4ade80;
+  color: var(--accent);
 }
 
-/* Nav */
+/* Nav — reste en haut, sous le brand */
 .nav {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
 }
 
 .navItem {
@@ -71,21 +73,21 @@
   gap: 10px;
   padding: 9px 12px;
   border-radius: 8px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  color: #8a93a8;
+  color: var(--text-faint);
   transition: background 0.12s, color 0.12s;
   text-decoration: none;
 }
 
 .navItem:hover {
-  background: rgba(74, 222, 128, 0.08);
-  color: #4ade80;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .navItemActive {
-  background: rgba(74, 222, 128, 0.10);
-  color: #4ade80 !important;
+  background: var(--accent-soft);
+  color: var(--accent) !important;
 }
 
 /* Liseré vert à gauche — même langage que les titres de section du dashboard */
@@ -97,11 +99,11 @@
   bottom: 8px;
   width: 3px;
   border-radius: 2px;
-  background: #4ade80;
+  background: var(--accent);
 }
 
 .navItemActive .navIcon svg {
-  stroke: #4ade80;
+  stroke: var(--accent);
 }
 
 .navIcon {
@@ -110,9 +112,10 @@
   flex-shrink: 0;
 }
 
-/* Bottom */
+/* Bottom — poussé en pied de colonne, séparé de la nav */
 .bottom {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: auto;
+  border-top: 1px solid var(--border);
   padding-top: 1rem;
   display: flex;
   flex-direction: column;
@@ -125,22 +128,22 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 10px;
 }
 
 .avatar {
   width: 30px;
   height: 30px;
-  background: rgba(74, 222, 128, 0.12);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.76rem;
   font-weight: 600;
   flex-shrink: 0;
@@ -153,19 +156,19 @@
 }
 
 .userEmail {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   font-weight: 500;
-  color: #e8eaf0;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .userRole {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
-  color: #4ade80;
+  color: var(--accent);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -177,8 +180,8 @@
   padding: 8px 12px;
   width: 100%;
   font-size: 0.82rem;
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #fca5a5;
+  font-family: var(--font-body);
+  color: var(--down);
   background: none;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -187,18 +190,18 @@
 }
 
 .logoutBtn:hover {
-  background: rgba(248, 113, 113, 0.08);
-  border-color: rgba(248, 113, 113, 0.25);
-  color: #f87171;
+  background: var(--down-bg);
+  border-color: var(--down);
+  color: var(--down);
 }
 
 .navSection {
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #5a6478;
+  color: var(--text-faint);
   padding: 0.75rem 12px 0.25rem;
   margin-top: 0.25rem;
 }

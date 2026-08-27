@@ -6,31 +6,31 @@ import ReactMarkdown from "react-markdown";
 // (mapper full=False → expert=null). Aucun second fetch nécessaire :
 // on lit directement la row cliquée.
 const SEV_META = {
-  CRITICAL: { text:"#dc2626", bg:"#fef2f2", border:"#fecaca" },
-  HIGH:     { text:"#ea580c", bg:"#fff7ed", border:"#fed7aa" },
-  MEDIUM:   { text:"#ca8a04", bg:"#fefce8", border:"#fef08a" },
-  LOW:      { text:"#16a34a", bg:"#f0fdf4", border:"#bbf7d0" },
+  CRITICAL: { text:"var(--sev-critical)", bg:"var(--sev-critical-bg)" },
+  HIGH:     { text:"var(--sev-high)",     bg:"var(--sev-high-bg)" },
+  MEDIUM:   { text:"var(--sev-medium)",   bg:"var(--sev-medium-bg)" },
+  LOW:      { text:"var(--sev-low)",      bg:"var(--sev-low-bg)" },
 };
-const SRC_COLOR = { cnn:"#3b82f6", sigma:"#8b5cf6" };
+const SRC_COLOR = { cnn:"var(--det-cnn)", sigma:"var(--det-sigma)" };
 
 function SevBadge({ level }) {
   const k = (level||"").toUpperCase();
-  const t = SEV_META[k]||{ text:"#64748b", bg:"#f1f5f9", border:"#e2e8f0" };
+  const t = SEV_META[k]||{ text:"var(--text-faint)", bg:"var(--surface-sunk)" };
   return (
     <span style={{ padding:"2px 8px", borderRadius:4, fontSize:10, fontWeight:800,
       letterSpacing:"0.07em", textTransform:"uppercase", whiteSpace:"nowrap",
-      color:t.text, background:t.bg, border:`1px solid ${t.border}` }}>
+      color:t.text, background:t.bg, border:`1px solid ${t.text}` }}>
       {level||"—"}
     </span>
   );
 }
 
 function SrcBadge({ source }) {
-  const c = SRC_COLOR[source]||"#64748b";
+  const c = SRC_COLOR[source]||"var(--text-faint)";
   const label = { cnn:"CNN-AE", sigma:"Σ Sigma" }[source]||source;
   return (
     <span style={{ padding:"2px 8px", borderRadius:4, fontSize:10, fontWeight:700,
-      color:c, background:c+"18", border:`1px solid ${c}30`, whiteSpace:"nowrap" }}>
+      color:c, background:"var(--surface-sunk)", border:`1px solid ${c}`, whiteSpace:"nowrap" }}>
       {label}
     </span>
   );
@@ -40,13 +40,13 @@ function KV({ k, v }) {
   return (
     <div style={{ display:"flex", justifyContent:"space-between",
       marginBottom:7, fontSize:12 }}>
-      <span style={{ color:"#64748b" }}>{k}</span>
-      <span style={{ fontWeight:700, fontFamily:"monospace", color:"#1e293b" }}>{v}</span>
+      <span style={{ color:"var(--text-soft)" }}>{k}</span>
+      <span style={{ fontWeight:700, fontFamily:"var(--font-mono)", color:"var(--text)" }}>{v}</span>
     </div>
   );
 }
 
-export default function DetailPanel({ item, onClose }) {
+export default function DetailPanel({ item, onClose, theme }) {
   // La row contient déjà tout (expert=null en SOC) → pas d'état async.
   const detail = item;
 
@@ -75,23 +75,26 @@ export default function DetailPanel({ item, onClose }) {
       {/* ── BOÎTE centrée — stopPropagation pour ne pas fermer au clic dedans ── */}
       <div
         onClick={(e)=>e.stopPropagation()}
+        className="dash-theme"
+        data-theme={theme}
         style={{
-          background:"#fff", borderRadius:14,
+          background:"var(--surface)", borderRadius:14,
           width:"100%", maxWidth:640, maxHeight:"85vh",
           overflowY:"auto",
-          boxShadow:"0 24px 64px rgba(0,0,0,0.32)",
+          boxShadow:"var(--shadow-lg)",
+          border:"1px solid var(--border-strong)",
         }}
       >
         {/* Header sticky */}
-        <div style={{ padding:"14px 18px", borderBottom:"1px solid #f1f5f9",
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid var(--border)",
           display:"flex", justifyContent:"space-between", alignItems:"center",
-          position:"sticky", top:0, background:"#fff", zIndex:1 }}>
-          <span style={{ fontWeight:800, fontSize:14, color:"#0f172a" }}>
+          position:"sticky", top:0, background:"var(--surface)", zIndex:1 }}>
+          <span style={{ fontWeight:800, fontSize:14, color:"var(--text)" }}>
             Détail événement
           </span>
-          <button onClick={onClose} style={{ background:"#f1f5f9", border:"none",
+          <button onClick={onClose} style={{ background:"var(--surface-2)", border:"none",
             cursor:"pointer", width:28, height:28, borderRadius:8, fontSize:18,
-            color:"#64748b", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            color:"var(--text-soft)", display:"flex", alignItems:"center", justifyContent:"center" }}>
             ×
           </button>
         </div>
@@ -102,17 +105,17 @@ export default function DetailPanel({ item, onClose }) {
             <SrcBadge source={detail?.type} />
           </div>
 
-          <div style={{ fontWeight:700, fontSize:15, color:"#0f172a", marginBottom:4 }}>
+          <div style={{ fontWeight:700, fontSize:15, color:"var(--text)", marginBottom:4 }}>
             {detail?.title||detail?.log_source||"—"}
           </div>
-          <div style={{ fontSize:11, color:"#94a3b8", fontFamily:"monospace", marginBottom:16 }}>
+          <div style={{ fontSize:11, color:"var(--text-faint)", fontFamily:"var(--font-mono)", marginBottom:16 }}>
             {detail?.event_time
               ? new Date(detail.event_time).toLocaleString("fr-FR")
               : "—"}
             {detail?.event_time_estimated ? "  · heure estimée (run)" : ""}
           </div>
 
-          <div style={{ background:"#f8fafc", borderRadius:10, padding:14, marginBottom:16 }}>
+          <div style={{ background:"var(--surface-2)", borderRadius:10, padding:14, marginBottom:16 }}>
             {[
               detail?.verdict          && ["Verdict",    detail.verdict],
               detail?.hits    != null  && ["Volume",     detail.hits],
@@ -126,13 +129,13 @@ export default function DetailPanel({ item, onClose }) {
 
           {detail?.explanation && (
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:10, fontWeight:800, color:"#94a3b8",
+              <div style={{ fontSize:10, fontWeight:800, color:"var(--text-faint)",
                 textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>
                 Analyse LLM
               </div>
-              <div style={{ fontSize:12.5, color:"#1e293b", lineHeight:1.7,
-                background:"#eef2ff", borderRadius:10, padding:"14px 16px",
-                border:"1px solid #e0e7ff" }}>
+              <div style={{ fontSize:12.5, color:"var(--text)", lineHeight:1.7,
+                background:"var(--accent-soft)", borderRadius:10, padding:"14px 16px",
+                border:"1px solid var(--border)" }}>
                 {typeof detail.explanation==="string"
                   ? <ReactMarkdown>{detail.explanation}</ReactMarkdown>
                   : <pre style={{whiteSpace:"pre-wrap"}}>{JSON.stringify(detail.explanation,null,2)}</pre>}
@@ -144,14 +147,14 @@ export default function DetailPanel({ item, onClose }) {
               En SOC expert=null → ce bloc reste masqué, comportement voulu. */}
           {detail?.expert?.details?.length>0 && (
             <div>
-              <div style={{ fontSize:10, fontWeight:800, color:"#94a3b8",
+              <div style={{ fontSize:10, fontWeight:800, color:"var(--text-faint)",
                 textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:8 }}>
                 Logs déclencheurs
               </div>
               {detail.expert.details.slice(0,5).map((d,i)=>(
-                <div key={i} style={{ fontFamily:"monospace", fontSize:11, color:"#334155",
-                  background:"#f8fafc", borderRadius:7, padding:"7px 10px",
-                  marginBottom:5, border:"1px solid #e2e8f0", wordBreak:"break-all" }}>
+                <div key={i} style={{ fontFamily:"var(--font-mono)", fontSize:11, color:"var(--text-soft)",
+                  background:"var(--surface-2)", borderRadius:7, padding:"7px 10px",
+                  marginBottom:5, border:"1px solid var(--border)", wordBreak:"break-all" }}>
                   {typeof d==="string"?d:JSON.stringify(d)}
                 </div>
               ))}

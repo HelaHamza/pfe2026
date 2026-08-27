@@ -23,7 +23,7 @@ export default function AiDashboardPage() {
   const retraining     = useRetraining()
 
   return (
-    <div className="ai-dash" data-theme={theme}>
+    <div className="ai-dash dash-theme" data-theme={theme}>
       <Sidebar />
       <main className="ai-dash__main">
         <header className="ai-dash__header">

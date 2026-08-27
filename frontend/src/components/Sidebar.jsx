@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import styles from './Sidebar.module.css'
+import '../styles/tokens.css'
 
 // Icônes réutilisées
 const ICON_HOME = <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
@@ -37,7 +38,7 @@ const NAV_ADMIN = [
     icon: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ theme }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const role     = user?.role
@@ -56,14 +57,14 @@ export default function Sidebar() {
   return (
     // .sidebar : colonne pleine hauteur (fond jusqu'en bas sur toutes les pages)
     // .inner   : contenu collé en haut (sticky) quand la page défile
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} dash-theme`} data-theme={theme}>
       <div className={styles.inner}>
         <div className={styles.brand}>
           <div className={styles.logoMark}>
             <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-              <path d="M10 2L2 7v6l8 5 8-5V7L10 2Z" stroke="#1a1a2e" strokeWidth="1.6" strokeLinejoin="round"/>
-              <path d="M2 7l8 5 8-5" stroke="#1a1a2e" strokeWidth="1.6"/>
-              <path d="M10 12v5" stroke="#1a1a2e" strokeWidth="1.6"/>
+              <path d="M10 2L2 7v6l8 5 8-5V7L10 2Z" style={{ stroke: 'var(--bg)' }} strokeWidth="1.6" strokeLinejoin="round"/>
+              <path d="M2 7l8 5 8-5" style={{ stroke: 'var(--bg)' }} strokeWidth="1.6"/>
+              <path d="M10 12v5" style={{ stroke: 'var(--bg)' }} strokeWidth="1.6"/>
             </svg>
           </div>
           <span className={styles.brandName}>PFE 2026</span>

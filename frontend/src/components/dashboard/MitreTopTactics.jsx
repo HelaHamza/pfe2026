@@ -1,4 +1,4 @@
-import { mitre as mitreColors, neutral } from "../../theme/colors";
+import { mitre as mitreColors } from "../../theme/colors";
 
 // Techniques ATT&CK produites par tes règles Sigma → nom lisible (FR).
 // Le code reste affiché en secondaire pour la rigueur.
@@ -41,30 +41,24 @@ export default function MitreTopTactics({ data, limit = 8 }) {
   const max = items.length ? items[0].count : 1;
 
   return (
-    <div style={{
-      background: neutral.bg,
-      border: `1px solid ${neutral.border}`,
-      borderRadius: 8,
-      padding: "16px 18px",
-      minHeight: 220,
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text }}>
+    <div className="card" style={{ minHeight: 220 }}>
+      <div className="card__head" style={{ marginBottom: 4 }}>
+        <h3 className="card__title">
           MITRE ATT&amp;CK · top techniques
         </h3>
         {items.length > 0 && (
-          <span style={{ fontSize: 11, color: neutral.textFaint }}>
+          <span className="card__hint">
             top {items.length}
           </span>
         )}
       </div>
-      <p style={{ margin: "0 0 14px", fontSize: 11, color: neutral.textMuted }}>
+      <p style={{ margin: "0 0 var(--sp-4)", fontSize: 11, color: "var(--text-soft)" }}>
         Techniques détectées, classées par nombre d'alertes
       </p>
 
       {items.length === 0 ? (
         <div style={{
-          fontSize: 12, color: neutral.textFaint,
+          fontSize: 12, color: "var(--text-faint)",
           textAlign: "center", padding: "30px 0",
         }}>
           Aucune technique détectée sur ce run
@@ -76,7 +70,7 @@ export default function MitreTopTactics({ data, limit = 8 }) {
             return (
               <div key={d.code} style={{
                 display: "flex", alignItems: "center", gap: 10,
-                fontSize: 12, color: neutral.text,
+                fontSize: 12, color: "var(--text)",
               }}>
                 <span style={{
                   width: 8, height: 8, borderRadius: 2, flexShrink: 0,
@@ -92,7 +86,7 @@ export default function MitreTopTactics({ data, limit = 8 }) {
                     {d.name || d.code}
                   </div>
                   <div style={{
-                    fontSize: 10, color: neutral.textFaint,
+                    fontSize: 10, color: "var(--text-faint)",
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}>
                     {d.code}{d.tactic ? ` · ${d.tactic}` : ""}
@@ -100,7 +94,7 @@ export default function MitreTopTactics({ data, limit = 8 }) {
                 </div>
 
                 <div style={{
-                  width: 70, height: 4, background: neutral.bgMuted, flexShrink: 0,
+                  width: 70, height: 4, background: "var(--surface-sunk)", flexShrink: 0,
                   borderRadius: 2, overflow: "hidden",
                 }}>
                   <div style={{
@@ -109,7 +103,7 @@ export default function MitreTopTactics({ data, limit = 8 }) {
                   }} />
                 </div>
                 <span style={{
-                  fontWeight: 600, color: neutral.textMuted,
+                  fontWeight: 600, color: "var(--text-soft)",
                   fontVariantNumeric: "tabular-nums",
                   width: 28, textAlign: "right",
                 }}>

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { severity, detection, neutral } from "../../theme/colors";
 
 // Contrat actuel : une row = une branche. `type` ∈ { "cnn", "sigma" }.
 const SRC_LABEL = {
@@ -7,15 +6,27 @@ const SRC_LABEL = {
   sigma: "Σ Sigma",
 };
 
+const SEV_VAR = {
+  CRITICAL: { solid: "var(--sev-critical)", bg: "var(--sev-critical-bg)" },
+  HIGH:     { solid: "var(--sev-high)",     bg: "var(--sev-high-bg)" },
+  MEDIUM:   { solid: "var(--sev-medium)",   bg: "var(--sev-medium-bg)" },
+  LOW:      { solid: "var(--sev-low)",      bg: "var(--sev-low-bg)" },
+};
+
+const SRC_VAR = {
+  cnn:   { solid: "var(--det-cnn)",   bg: "var(--det-cnn-bg)" },
+  sigma: { solid: "var(--det-sigma)", bg: "var(--det-sigma-bg)" },
+};
+
 function SevBadge({ level }) {
   const k = (level || "").toUpperCase();
-  const t = severity[k] || { text: neutral.textMuted, bg: neutral.bgMuted, border: neutral.border };
+  const t = SEV_VAR[k] || { solid: "var(--text-faint)", bg: "var(--surface-sunk)" };
   return (
     <span style={{
       padding: "2px 8px", borderRadius: 4,
       fontSize: 10, fontWeight: 700,
       letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
-      color: t.text, background: t.bg, border: `1px solid ${t.border}`,
+      color: t.solid, background: t.bg, border: `1px solid ${t.solid}`,
     }}>
       {level || "—"}
     </span>
@@ -23,13 +34,13 @@ function SevBadge({ level }) {
 }
 
 function SrcBadge({ source }) {
-  const c     = detection[source] || neutral.textMuted;
+  const t     = SRC_VAR[source] || { solid: "var(--text-faint)", bg: "var(--surface-sunk)" };
   const label = SRC_LABEL[source] || source;
   return (
     <span style={{
       padding: "2px 8px", borderRadius: 4,
       fontSize: 10, fontWeight: 600,
-      color: c, background: c + "18", border: `1px solid ${c}30`,
+      color: t.solid, background: t.bg, border: `1px solid ${t.solid}`,
       whiteSpace: "nowrap",
     }}>
       {label}
@@ -37,7 +48,7 @@ function SrcBadge({ source }) {
   );
 }
 
-const COL = "100px 1fr 160px 100px 90px 70px";
+const COL = "100px 1fr 100px 90px 70px";
 const PAGE_SIZE = 10;
 
 function FilterPill({ value, label, color, current, setF }) {
@@ -48,8 +59,8 @@ function FilterPill({ value, label, color, current, setF }) {
       style={{
         padding: "4px 12px", borderRadius: 16, fontSize: 11,
         border: "none", cursor: "pointer", fontWeight: 600,
-        background: active ? color : neutral.bgMuted,
-        color:      active ? "#fff" : neutral.textMuted,
+        background: active ? color : "var(--surface-sunk)",
+        color:      active ? "var(--bg)" : "var(--text-soft)",
         transition: "background 0.15s",
       }}
     >
@@ -90,15 +101,12 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
   const handleSearch = (v) => { setSearch(v); setPage(1); };
 
   return (
-    <div style={{ paddingTop: 20 }}>
-      <div style={{
-        display: "flex", alignItems: "baseline", justifyContent: "space-between",
-        marginBottom: 12,
-      }}>
-        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: neutral.text }}>
+    <div className="card">
+      <div className="card__head" style={{ marginBottom: 12 }}>
+        <h2 className="card__title">
           Alertes de sécurité
         </h2>
-        <span style={{ fontSize: 11, color: neutral.textFaint }}>
+        <span className="card__hint">
           {filtered.length} résultat{filtered.length > 1 ? "s" : ""}
         </span>
       </div>
@@ -111,7 +119,7 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
         <div style={{ position: "relative", marginRight: 4 }}>
           <span style={{
             position: "absolute", left: 9, top: "50%",
-            transform: "translateY(-50%)", fontSize: 11, color: neutral.textFaint,
+            transform: "translateY(-50%)", fontSize: 11, color: "var(--text-faint)",
             pointerEvents: "none",
           }}>⌕</span>
           <input
@@ -119,32 +127,32 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Rechercher..."
             style={{
-              border: `1px solid ${neutral.border}`, borderRadius: 16,
+              border: "1px solid var(--border)", borderRadius: 16,
               padding: "5px 14px 5px 26px", fontSize: 11,
-              color: neutral.text, outline: "none",
-              background: neutral.bgAlt, width: 180,
+              color: "var(--text)", outline: "none",
+              background: "var(--surface-sunk)", width: 180,
             }}
           />
         </div>
 
         {[
-          ["",         "#185FA5",                 "Toutes"],
-          ["CRITICAL", severity.CRITICAL.bgStrong, "Critical"],
-          ["HIGH",     severity.HIGH.bgStrong,     "High"],
-          ["MEDIUM",   severity.MEDIUM.bgStrong,   "Medium"],
-          ["LOW",      severity.LOW.bgStrong,      "Low"],
+          ["",         "var(--accent)",       "Toutes"],
+          ["CRITICAL", "var(--sev-critical)", "Critical"],
+          ["HIGH",     "var(--sev-high)",     "High"],
+          ["MEDIUM",   "var(--sev-medium)",   "Medium"],
+          ["LOW",      "var(--sev-low)",      "Low"],
         ].map(([v, c, l]) => (
           <FilterPill key={`sev-${v}`} value={v} label={l} color={c} current={sevF} setF={handleSevF} />
         ))}
 
         <div style={{
-          width: 1, height: 18, background: neutral.border, margin: "0 4px",
+          width: 1, height: 18, background: "var(--border-strong)", margin: "0 4px",
         }} />
 
         {[
-          ["",      "#185FA5",                    "Toutes sources"],
-          ["cnn",   detection.cnn   || "#3b82f6", "CNN-AE"],
-          ["sigma", detection.sigma || "#8b5cf6", "Sigma"],
+          ["",      "var(--accent)",    "Toutes sources"],
+          ["cnn",   "var(--det-cnn)",   "CNN-AE"],
+          ["sigma", "var(--det-sigma)", "Sigma"],
         ].map(([v, c, l]) => (
           <FilterPill key={`src-${v}`} value={v} label={l} color={c} current={srcF} setF={handleSrcF} />
         ))}
@@ -152,18 +160,18 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
 
       {/* ── Tableau ── */}
       <div style={{
-        border: `1px solid ${neutral.border}`, borderRadius: 8, overflow: "hidden",
+        border: "1px solid var(--border-strong)", borderRadius: "var(--r-md)", overflow: "hidden",
       }}>
         {/* Header */}
         <div style={{
           display: "grid", gridTemplateColumns: COL,
-          padding: "8px 14px", background: neutral.bgAlt,
-          borderBottom: `1px solid ${neutral.border}`,
+          padding: "8px 14px", background: "var(--surface-2)",
+          borderBottom: "1px solid var(--border-strong)",
           fontSize: 10, fontWeight: 600,
           textTransform: "uppercase", letterSpacing: "0.06em",
-          color: neutral.textMuted,
+          color: "var(--text-soft)",
         }}>
-          {["Time", "Titre / Règle", "Tactique", "Sévérité", "Source", "Volume"].map((h) => (
+          {["Time", "Titre / Règle", "Sévérité", "Source", "Volume"].map((h) => (
             <span key={h}>{h}</span>
           ))}
         </div>
@@ -172,24 +180,24 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
         {paginated.length === 0 ? (
           <div style={{
             padding: "32px 14px", textAlign: "center",
-            color: neutral.textFaint, fontSize: 13, lineHeight: 1.6,
+            color: "var(--text-faint)", fontSize: 13, lineHeight: 1.6,
           }}>
             {rawEmpty && emptyHint ? emptyHint : "Aucun événement"}
           </div>
         ) : (
           paginated.map((r, i) => {
-            const sev   = severity[r._severity];
+            const sev   = SEV_VAR[r._severity];
             const isOpen = selected?.id === r.id;
             const isCritical = r._severity === "CRITICAL";
 
             const volume = r.hits != null ? r.hits : "—";
 
-            const leftBorder = sev ? sev.bgStrong : neutral.border;
+            const leftBorder = sev ? sev.solid : "var(--border)";
             const rowBg = isOpen
-              ? "#eff6ff"
+              ? "var(--accent-soft)"
               : isCritical
-                ? severity.CRITICAL.bg
-                : (i % 2 === 0 ? neutral.bg : neutral.bgAlt);
+                ? "var(--sev-critical-bg)"
+                : (i % 2 === 0 ? "var(--surface)" : "var(--surface-2)");
 
             return (
               <div
@@ -198,41 +206,34 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
                 style={{
                   display: "grid", gridTemplateColumns: COL,
                   alignItems: "center", padding: "9px 14px 9px 11px",
-                  borderBottom: `1px solid ${neutral.borderSoft}`,
+                  borderBottom: "1px solid var(--border)",
                   borderLeft: `3px solid ${leftBorder}`,
                   cursor: "pointer", background: rowBg,
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.background = "#eff6ff"; }}
+                onMouseEnter={(e) => { if (!isOpen) e.currentTarget.style.background = "var(--accent-soft)"; }}
                 onMouseLeave={(e) => { if (!isOpen) e.currentTarget.style.background = rowBg; }}
               >
                 <span style={{
-                  fontSize: 11, color: neutral.textMuted,
-                  fontFamily: "ui-monospace, monospace",
+                  fontSize: 11, color: "var(--text-soft)",
+                  fontFamily: "var(--font-mono)",
                 }}>
                   {r.event_time?.replace("T", " ").slice(11, 19) ?? "—"}
                   {r.event_time_estimated ? " *" : ""}
                 </span>
                 <span style={{
                   fontSize: 12, fontWeight: isCritical ? 600 : 500,
-                  color: neutral.text,
+                  color: "var(--text)",
                   overflow: "hidden", textOverflow: "ellipsis",
                   whiteSpace: "nowrap", paddingRight: 12,
                 }}>
                   {r.title || r.log_source || "—"}
                 </span>
-                <span style={{
-                  fontSize: 11, color: neutral.textMuted,
-                  overflow: "hidden", textOverflow: "ellipsis",
-                  whiteSpace: "nowrap", paddingRight: 8,
-                }}>
-                  {r.tactic || "—"}
-                </span>
                 <SevBadge level={r._severity} />
                 <SrcBadge source={r.type} />
                 <span style={{
-                  fontSize: 11, fontFamily: "ui-monospace, monospace",
-                  color: isCritical ? severity.CRITICAL.text : neutral.textMuted,
+                  fontSize: 11, fontFamily: "var(--font-mono)",
+                  color: isCritical ? "var(--sev-critical)" : "var(--text-soft)",
                   fontWeight: isCritical ? 600 : 400,
                   textAlign: "right",
                 }}>
@@ -245,20 +246,16 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
 
         {/* ── Pagination ── */}
         <div style={{
-          padding: "10px 14px", background: neutral.bgAlt,
-          borderTop: `1px solid ${neutral.borderSoft}`,
+          padding: "10px 14px", background: "var(--surface-2)",
+          borderTop: "1px solid var(--border)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
-          <span style={{ fontSize: 10, color: neutral.textFaint }}>
-            <code style={{ color: detection.sigma || "#8b5cf6" }}>sigma-alerts</code>
-            {" · "}
-            <code style={{ color: detection.cnn || "#3b82f6" }}>cnn-episodes</code>
-          </span>
+          
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, color: neutral.textMuted, marginRight: 4 }}>
+            <span style={{ fontSize: 11, color: "var(--text-soft)", marginRight: 4 }}>
               Page {safePage} / {totalPages}
-              <span style={{ color: neutral.textFaint, marginLeft: 4 }}>
+              <span style={{ color: "var(--text-faint)", marginLeft: 4 }}>
                 ({filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} sur {filtered.length})
               </span>
             </span>
@@ -266,9 +263,9 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={safePage === 1}
               style={{
-                padding: "3px 10px", borderRadius: 6, border: `1px solid ${neutral.border}`,
-                background: safePage === 1 ? neutral.bgAlt : neutral.bg,
-                color: safePage === 1 ? neutral.textGhost : neutral.text,
+                padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)",
+                background: safePage === 1 ? "var(--surface-2)" : "var(--surface)",
+                color: safePage === 1 ? "var(--text-faint)" : "var(--text)",
                 cursor: safePage === 1 ? "default" : "pointer",
                 fontSize: 12, fontWeight: 600,
               }}
@@ -288,9 +285,9 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
                   onClick={() => setPage(p)}
                   style={{
                     padding: "3px 8px", borderRadius: 6,
-                    border: `1px solid ${active ? "#185FA5" : neutral.border}`,
-                    background: active ? "#185FA5" : neutral.bg,
-                    color:      active ? "#fff"    : neutral.text,
+                    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                    background: active ? "var(--accent)" : "var(--surface)",
+                    color:      active ? "var(--bg)"      : "var(--text)",
                     cursor: "pointer", fontSize: 11, fontWeight: 600,
                     minWidth: 28,
                   }}
@@ -303,9 +300,9 @@ export default function SecurityTable({ results, onSelect, selected, emptyHint }
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages}
               style={{
-                padding: "3px 10px", borderRadius: 6, border: `1px solid ${neutral.border}`,
-                background: safePage === totalPages ? neutral.bgAlt : neutral.bg,
-                color: safePage === totalPages ? neutral.textGhost : neutral.text,
+                padding: "3px 10px", borderRadius: 6, border: "1px solid var(--border)",
+                background: safePage === totalPages ? "var(--surface-2)" : "var(--surface)",
+                color: safePage === totalPages ? "var(--text-faint)" : "var(--text)",
                 cursor: safePage === totalPages ? "default" : "pointer",
                 fontSize: 12, fontWeight: 600,
               }}
