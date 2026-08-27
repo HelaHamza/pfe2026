@@ -42,68 +42,69 @@ export default function Sidebar() {
   const navigate = useNavigate()
   const role     = user?.role
   const specialty = user?.specialty
-  console.log('ROLE =', JSON.stringify(role), 'USER =', user)
   const isAdmin  = role === 'admin'
   const initials = user?.email?.[0]?.toUpperCase() ?? 'A'
 
   // Sélection du menu du haut selon le rôle
-  // ⚠️ navigation par role
   const topNav =
      isAdmin                     ? NAV_ADMIN_TOP :
      specialty === 'ia_user'     ? NAV_IA :
      NAV_SOC   // par défaut (soc_user) : dashboard SOC
 
-
   function handleLogout() { logout(); navigate('/login', { replace: true }) }
 
   return (
+    // .sidebar : colonne pleine hauteur (fond jusqu'en bas sur toutes les pages)
+    // .inner   : contenu collé en haut (sticky) quand la page défile
     <aside className={styles.sidebar}>
-      <div className={styles.brand}>
-        <div className={styles.logoMark}>
-          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-            <path d="M10 2L2 7v6l8 5 8-5V7L10 2Z" stroke="#1a1a2e" strokeWidth="1.6" strokeLinejoin="round"/>
-            <path d="M2 7l8 5 8-5" stroke="#1a1a2e" strokeWidth="1.6"/>
-            <path d="M10 12v5" stroke="#1a1a2e" strokeWidth="1.6"/>
-          </svg>
-        </div>
-        <span className={styles.brandName}>PFE 2026</span>
-      </div>
-
-      <nav className={styles.nav}>
-        {topNav.map(({ to, label, icon }) => (
-          <NavLink key={to} to={to}
-            className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
-            <span className={styles.navIcon}>{icon}</span>{label}
-          </NavLink>
-        ))}
-
-        {isAdmin && (
-          <>
-            <p className={styles.navSection}>Admin</p>
-            {NAV_ADMIN.map(({ to, label, icon }) => (
-              <NavLink key={to} to={to}
-                className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
-                <span className={styles.navIcon}>{icon}</span>{label}
-              </NavLink>
-            ))}
-          </>
-        )}
-      </nav>
-
-      <div className={styles.bottom}>
-        <div className={styles.userRow}>
-          <div className={styles.avatar}>{initials}</div>
-          <div className={styles.userInfo}>
-            <span className={styles.userEmail}>{user?.email}</span>
-            <span className={styles.userRole}>{user?.role}</span>
+      <div className={styles.inner}>
+        <div className={styles.brand}>
+          <div className={styles.logoMark}>
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2L2 7v6l8 5 8-5V7L10 2Z" stroke="#1a1a2e" strokeWidth="1.6" strokeLinejoin="round"/>
+              <path d="M2 7l8 5 8-5" stroke="#1a1a2e" strokeWidth="1.6"/>
+              <path d="M10 12v5" stroke="#1a1a2e" strokeWidth="1.6"/>
+            </svg>
           </div>
+          <span className={styles.brandName}>PFE 2026</span>
         </div>
-        <button className={styles.logoutBtn} onClick={handleLogout}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-          Log out
-        </button>
+
+        <nav className={styles.nav}>
+          {topNav.map(({ to, label, icon }) => (
+            <NavLink key={to} to={to}
+              className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
+              <span className={styles.navIcon}>{icon}</span>{label}
+            </NavLink>
+          ))}
+
+          {isAdmin && (
+            <>
+              <p className={styles.navSection}>Admin</p>
+              {NAV_ADMIN.map(({ to, label, icon }) => (
+                <NavLink key={to} to={to}
+                  className={({ isActive }) => `${styles.navItem} ${isActive ? styles.navItemActive : ''}`}>
+                  <span className={styles.navIcon}>{icon}</span>{label}
+                </NavLink>
+              ))}
+            </>
+          )}
+        </nav>
+
+        <div className={styles.bottom}>
+          <div className={styles.userRow}>
+            <div className={styles.avatar}>{initials}</div>
+            <div className={styles.userInfo}>
+              <span className={styles.userEmail}>{user?.email}</span>
+              <span className={styles.userRole}>{user?.role}</span>
+            </div>
+          </div>
+          <button className={styles.logoutBtn} onClick={handleLogout}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Log out
+          </button>
+        </div>
       </div>
     </aside>
   )

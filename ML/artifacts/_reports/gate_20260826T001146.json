@@ -1,0 +1,113 @@
+{
+  "verdict": "REJECT",
+  "created_at": "2026-08-26T00:11:46.733569+00:00",
+  "candidat": "/home/hala-hamza/pfe-2026/ML/artifacts/_candidate",
+  "courant": "/home/hala-hamza/pfe-2026/ML/artifacts/2026-07-01",
+  "echecs_bloquants": [
+    "taux_alerte",
+    "distribution_scores"
+  ],
+  "avertissements": [],
+  "note": "",
+  "tests": [
+    {
+      "nom": "integrite_artefacts",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "jeu d'artefacts coherent",
+      "metriques": {
+        "n_problemes": 0,
+        "problemes": []
+      }
+    },
+    {
+      "nom": "golden_set",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "recall episodique 4/4 (100%)",
+      "metriques": {
+        "recall": 1.0,
+        "n_incidents": 4,
+        "detecte": {
+          "auth_ssh_bruteforce": true,
+          "auth_user_creation": true,
+          "auditd_base64_exec": true,
+          "auditd_arg_heavy_exec": true
+        },
+        "baseline_courant": {
+          "auth_ssh_bruteforce": true,
+          "auth_user_creation": true,
+          "auditd_base64_exec": true,
+          "auditd_arg_heavy_exec": true
+        },
+        "regressions": []
+      }
+    },
+    {
+      "nom": "taux_alerte",
+      "statut": "FAIL",
+      "bloquant": true,
+      "detail": "candidat=137 ep. vs courant=40 ep. | ratio 3.42 (bande [0.5, 2.0])",
+      "metriques": {
+        "episodes_candidat": 137,
+        "episodes_courant": 40,
+        "ratio": 3.425
+      }
+    },
+    {
+      "nom": "distribution_scores",
+      "statut": "FAIL",
+      "bloquant": true,
+      "detail": "D_max=0.316 sur 'auth' (seuil 0.3)",
+      "metriques": {
+        "D_max": 0.3158,
+        "source_pire_cas": "auth",
+        "par_source": {
+          "auditd": {
+            "D": 0.1643,
+            "p_sous_echantillon": 3.55797286170155e-24,
+            "n_candidat": 74552,
+            "n_courant": 74552
+          },
+          "auth": {
+            "D": 0.3158,
+            "p_sous_echantillon": 1.21599162189181e-90,
+            "n_candidat": 2486,
+            "n_courant": 2486
+          },
+          "syslog": {
+            "D": 0.096,
+            "p_sous_echantillon": 4.99357648295358e-08,
+            "n_candidat": 71813,
+            "n_courant": 71813
+          }
+        }
+      }
+    },
+    {
+      "nom": "seuils_pot",
+      "statut": "PASS",
+      "bloquant": true,
+      "detail": "auth: 8.428 (x0.76) | syslog: 9.554 (x1.20) | auditd: 10.118 (x1.17)",
+      "metriques": {
+        "seuils": {
+          "auth": {
+            "candidat": 8.428417,
+            "courant": 11.108547,
+            "ratio": 0.759
+          },
+          "syslog": {
+            "candidat": 9.554078,
+            "courant": 7.937678,
+            "ratio": 1.204
+          },
+          "auditd": {
+            "candidat": 10.117945,
+            "courant": 8.669547,
+            "ratio": 1.167
+          }
+        }
+      }
+    }
+  ]
+}

@@ -7,6 +7,11 @@ Avant : `save_report(run_id, started_at, **blocks)` — la structure du rapport
 n'était écrite NULLE PART, elle vivait implicitement dans l'appelant. Toute
 faute de frappe dans un nom de bloc produisait un rapport silencieusement
 amputé, et le dashboard affichait 0.
+
+MODE EXPLICATION SEULE : le LLM ne filtre plus, il explique et priorise. Le
+verdict est constant (true_positive). Les compteurs de filtrage (`cnn_to_review`,
+`noise_reduction_pct`) sont CONSERVÉS à 0 pour ne pas casser le contrat du
+dashboard, mais ils n'ont plus de dynamique.
 """
 from datetime import datetime
 
@@ -23,21 +28,24 @@ class TacticCount(BaseModel):
 class ReportStats(BaseModel):
     """Compteurs affichés en tête du dashboard SOC."""
     cnn_episodes: int = 0
-    cnn_kept: int = Field(default=0, description="Épisodes true_positive → SOC.")
+    cnn_kept: int = Field(
+        default=0,
+        description="Épisodes conservés → SOC. Le LLM ne filtrant plus, "
+                    "cnn_kept == cnn_episodes.")
     cnn_to_review: int = Field(
         default=0,
-        description="Épisodes uncertain / fail-open → dashboard Expert AI. "
-                    "JAMAIS écartés silencieusement.")
+        description="Hérité de l'ancienne cascade (file de revue Expert AI). "
+                    "Toujours 0 en mode explication seule — conservé pour la "
+                    "compatibilité du contrat dashboard.")
     sigma_alerts: int = 0
     cnn_critical: int = 0
     sigma_critical: int = 0
     logs_total: int = 0
     noise_reduction_pct: float = Field(
         default=0.0,
-        description="100 × false_positive / total_épisodes. "
-                    "DÉNOMINATEUR = TOUS les épisodes. Les `uncertain` ne "
-                    "comptent PAS comme réduction : ils restent du travail "
-                    "analyste, simplement déporté vers l'Expert AI.")
+        description="Hérité de l'ancienne cascade filtrante. Toujours 0.0 : le "
+                    "LLM n'écarte plus aucune alerte. Conservé pour la "
+                    "compatibilité du contrat dashboard.")
 
 
 class Report(BaseModel):
@@ -55,9 +63,10 @@ class Report(BaseModel):
 
     stats: ReportStats = Field(default_factory=ReportStats)
     cnn_by_severity: dict[str, int] = Field(default_factory=dict)
+    # Verdict constant en mode explication seule → {"true_positive": N}.
     cnn_by_verdict: dict[str, int] = Field(default_factory=dict)
     sigma_by_level: dict[str, int] = Field(default_factory=dict)
     logs_by_source: dict[str, int] = Field(default_factory=dict)
-    # Anomalies AE (true_positive) ventilées par source de log. Somme = cnn_kept.
+    # Anomalies AE ventilées par source de log. Somme = cnn_episodes.
     anomalies_by_source: dict[str, int] = Field(default_factory=dict)
     by_tactic: list[TacticCount] = Field(default_factory=list)

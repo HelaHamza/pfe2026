@@ -1,0 +1,22 @@
+2026-08-25 23:50:58  INFO    ==================================================================
+2026-08-25 23:50:58  INFO      CYCLE DE REENTRAINEMENT -- branche CNN
+2026-08-25 23:50:58  INFO    ==================================================================
+2026-08-25 23:50:58  INFO    [0/7] Preflight
+2026-08-25 23:50:58  INFO    RAM disponible : 4435 Mo (minimum requis 1500 Mo)
+2026-08-25 23:50:58  INFO    Espace disque libre : 12642 Mo (minimum requis 2000 Mo)
+2026-08-25 23:50:58  INFO    Elasticsearch joignable (version 8.13.0)
+2026-08-25 23:50:58  INFO    [1/7] Fenetre glissante : 2026-06-18T22:50:58Z -> 2026-08-18T22:50:58Z (2 mois, embargo 7 jours)
+2026-08-25 23:50:58  INFO          L'embargo laisse a la couche 3 le temps de confirmer les incidents recents avant qu'ils n'entrent dans le corpus.
+2026-08-25 23:50:58  INFO    [2/7] Incidents confirmes (boucle de retroaction Sigma/LLM)
+2026-08-25 23:51:00  INFO    [3/7] Extraction ES en flux -> dataset_snapshot.parquet
+2026-08-25 23:51:56  INFO    [4/7] Controle de volume
+2026-08-25 23:51:56  INFO      total=701,587 | auditd=496,713, auth=4,874, syslog=200,000
+2026-08-25 23:51:56  INFO    [5/7] Entrainement du candidat (sous-processus isole)
+2026-08-25 23:51:56  INFO    Lancement du sous-processus d'entrainement (CNN_ARTIFACT_DIR=/home/hala-hamza/pfe-2026/ML/artifacts/_candidate)
+2026-08-26 01:11:32  INFO    Entrainement termine en 79.6 min
+2026-08-26 01:11:32  INFO    [6/7] Gate de validation
+2026-08-26 01:11:46  INFO      rapport -> /home/hala-hamza/pfe-2026/ML/artifacts/_reports/gate_20260826T001146.json
+2026-08-26 01:11:46  ERROR   [7/7] CANDIDAT REFUSE -> /home/hala-hamza/pfe-2026/ML/artifacts/_rejected/2026-08-26
+2026-08-26 01:11:46  ERROR     echecs bloquants : ['taux_alerte', 'distribution_scores']
+2026-08-26 01:11:46  INFO      La production reste sur '2026-07-01'. Aucun service degrade.
+2026-08-26 01:11:46  INFO      Duree du cycle : 80.8 min

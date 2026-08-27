@@ -1,0 +1,1 @@
+{"episode_id": "EP-78c628e751", "severity": "high", "confidence": 0.85, "title": "Modification de capacités d'un binaire (setcap) par root", "mitre": [{"technique_id": "T1548.001", "tactic": "Privilege Escalation", "name": "Setuid and Setgid"}]}

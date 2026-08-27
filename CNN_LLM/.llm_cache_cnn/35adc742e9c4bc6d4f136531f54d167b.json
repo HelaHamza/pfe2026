@@ -1,0 +1,1 @@
+{"episode_id": "EP-20d939777d", "severity": "high", "confidence": 0.8, "title": "Exécution d'un binaire personnalisé sentinel_shm_1f par root avec chmod et free", "mitre": [{"technique_id": "T1222.002", "tactic": "Privilege Escalation", "name": "File and Directory Permissions Modification: Linux and Mac"}]}

@@ -48,11 +48,15 @@ def _run_step(cmd: list[str], cwd: str, label: str) -> None:
 class CNNAdapter:
     """Inférence CNN de production + triage LLM/RAG."""
 
+    # Clés conservées du résumé de triage (cnn_triage_report.json), alignées sur
+    # ce que triage_cnn._write_report écrit RÉELLEMENT en mode explication seule.
+    # Avant : `n_episodes_reaggregated` était réclamé mais jamais produit (donc
+    # jamais conservé), et `severities` — bien produit — était oublié. Corrigé.
     _TRIAGE_KEEP = (
-    "model", "provider", "temperature", "rag_backend", "n_kb_chunks",
-    "n_episodes_reaggregated", "n_episodes_in", "n_alerts_in", "verdicts",
-    "n_fail_open", "n_episodes_to_analyst", "noise_reduction_pct",
-    "elapsed_s", "grounding", "mode")            # <-- ajout
+        "model", "provider", "temperature", "rag_backend", "n_kb_chunks",
+        "n_episodes_in", "n_alerts_in", "verdicts", "severities",
+        "n_fail_open", "n_episodes_to_analyst", "noise_reduction_pct",
+        "elapsed_s", "grounding", "mode")
 
     @staticmethod
     def _read_next_cursor() -> str:
@@ -107,10 +111,10 @@ class CNNAdapter:
 
         next_cursor = cls._read_next_cursor()
 
-        _run_step([sys.executable, "triage_cnn.py"],                 # fichier qui triage les alertes
+        _run_step([sys.executable, "triage_cnn.py"],                 # fichier qui explique les alertes (LLM + RAG)
                   CFG.CNN_LLM_DIR, "triage_cnn.py (LLM + RAG)")
 
-        episodes = cls._load_triaged()                               # charge les épisodes triés depuis cnn_triage.jsonl
+        episodes = cls._load_triaged()                               # charge les épisodes expliqués depuis cnn_triage.jsonl
         log.info("%d épisodes triagés (curseur candidat : %s)",
                  len(episodes), next_cursor)
         return episodes, next_cursor

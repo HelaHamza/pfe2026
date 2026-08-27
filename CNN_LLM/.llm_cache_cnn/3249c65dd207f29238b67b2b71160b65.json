@@ -1,0 +1,1 @@
+{"episode_id": "EP-c76c0bad2d", "severity": "high", "confidence": 0.86, "title": "Exécution d'un binaire obfusqué via npm et connexion suspecte", "mitre": [{"technique_id": "T1027", "tactic": "Defense Evasion", "name": "Obfuscated Files or Information"}]}

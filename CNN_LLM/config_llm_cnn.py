@@ -1,15 +1,16 @@
 """
 config_llm_cnn.py
 =================
-Configuration de la couche de triage (branche CNN).
+Configuration de la couche d'EXPLICATION (branche CNN).
 
-NB version RAG-only : ce fichier est partage avec le pipeline complet. Les
-constantes de la section "Politique de triage (garde-fous SOC)" plus bas
-(NEVER_DISMISS_*, MIN_RATIONALE_CHARS, VERDICTS, FAIL_OPEN_VERDICT, ...) NE
-SERVENT QU'AUX GARDE-FOUS DE SORTIE (_validate). Elles sont INERTES dans la
-version RAG-only (triage_llm_rag.py ne les lit pas), mais on les CONSERVE :
-episode_context_cnn.policy_flags() les importe encore, et on les reactivera a
-l'etape "garde-fous". Ne pas les supprimer.
+Le CNN decide ce qui est une alerte ; le LLM ne classe plus, il EXPLIQUE et
+PRIORISE. Le verdict n'est donc plus une sortie du modele : il est fixe ici
+(ALERT_VERDICT).
+
+La couche LLM est PURE : la severite d'un episode est celle que le modele
+decide, sans aucun plancher ni garde-fou deterministe a cet etage. La detection
+des primitives sensibles (creation de compte, persistance cron, modification de
+l'audit...) releve de la couche Sigma, pas de la couche d'explication.
 """
 
 from __future__ import annotations
@@ -76,7 +77,6 @@ DOSSIER_MAX_LINES = 25 # plafond dur de la timeline
 # Groq a annonce le 17/06/2026 la depreciation de llama-3.3-70b-versatile et
 # llama-3.1-8b-instant. Migration : openai/gpt-oss-120b (raisonnement) ou
 # openai/gpt-oss-20b (rapide). Liste vivante : GET .../openai/v1/models
-LLM_PROVIDER   = "groq"
 LLM_MODEL      = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
 LLM_MODEL_FALLBACK = os.getenv("LLM_MODEL_FALLBACK", "openai/gpt-oss-20b")
 
@@ -101,8 +101,6 @@ LLM_BACKOFF_S       = 2.0
 LLM_REASONING_EFFORT = "medium"   # gpt-oss uniquement ; ignore ailleurs
 
 # Cache disque : hash(prompt) -> reponse. Rejouer = 0 appel, MEME sortie.
-# NB : le prompt RAG-only differe du prompt complet -> hash different, aucune
-# contamination de cache entre les deux variantes.
 LLM_CACHE_DIR = os.path.join(TRIAGE_OUT_DIR, ".llm_cache_cnn")
 LLM_CACHE_ENABLED = True
 
@@ -114,8 +112,7 @@ RAG_ALPHA = 0.6           # score = ALPHA*semantique + (1-ALPHA)*lexical
 # Budget caracteres de la KB injectee dans le prompt. Avec RAG_TOP_K=6 chunks
 # retenus (+ la reference forcee), le bloc rendu fait typiquement ~5-6k car. et
 # tient sous ce budget. Si un run le depasse, render() TRONQUE les derniers
-# chunks (par `continue`) -- il ne plante pas. Ne PAS augmenter a la legere :
-# un budget plus large gonfle les tokens et rapproche du plafond Groq (413).
+# chunks (par `continue`) -- il ne plante pas.
 RAG_MAX_CHARS = 6000
 
 # --- Backend d'encodage -----------------------------------------------------
@@ -124,15 +121,13 @@ RAG_MAX_CHARS = 6000
 # 'lexical'               : recouvrement de tokens, zero dependance.
 # 'auto'                  : sentence-transformers si dispo, sinon tfidf.
 #
-# MESURE DU 16/07/2026 -- pourquoi tfidf est le defaut et non 'auto' :
-# le passage aux embeddings a DEGRADE les deux vrais positifs du jeu de test.
-#     EP-0151688dd2 (.update)    TP critical 0.86  ->  uncertain 0.42
-#     EP-7940ba7c5c (.rk_beacon) TP critical 0.92  ->  uncertain 0.50
-# Cause : sur un petit corpus, 'cups-browsed' (FP) et 'crontab' (TP) sont
+# MESURE DU 16/07/2026 (historique, avant repositionnement du LLM) -- pourquoi
+# tfidf est le defaut et non 'auto' : le passage aux embeddings a DEGRADE la
+# priorisation de deux episodes d'attaque du jeu de test (severite critical
+# rabaissee). Cause : sur un petit corpus, 'cups-browsed' et 'crontab' sont
 # voisins dans l'espace semantique -- tous deux "processus systeme Linux". Le
-# cosinus les confond ; le match exact sur process_name les separe.
-# Resultat negatif documente : les embeddings ne sont pas un progres par
-# defaut, ils dependent de la structure du corpus.
+# cosinus les confond ; le match exact sur process_name les separe. Resultat
+# negatif documente : les embeddings ne sont pas un progres par defaut.
 RAG_BACKEND = os.getenv("RAG_BACKEND", "tfidf").strip().lower()
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 EMBED_ENABLED = RAG_BACKEND in ("sentence-transformers", "auto")
@@ -141,54 +136,16 @@ if RAG_BACKEND not in ("tfidf", "sentence-transformers", "lexical", "auto"):
     raise SystemExit(f"RAG_BACKEND='{RAG_BACKEND}' inconnu.")
 
 # =====================================================================
-# ↓↓↓  MODE EXPLICATION SEULE (repositionnement du LLM)             ↓↓↓
+#  MODE EXPLICATION SEULE : le verdict est FIXE, pas produit par le LLM.
 # =====================================================================
-# Le CNN DECIDE ce qui est une alerte ; le LLM n'exerce plus aucun triage, il
-# EXPLIQUE. Toute alerte levee par le CNN est conservee et presentee : le
-# verdict du dossier n'est donc plus produit par le LLM, il est FIXE ici.
-#
-# Choix de 'true_positive' : c'est la valeur que le dashboard SOC affiche
-# comme alerte. En la fixant, chaque episode remonte a l'analyste, rien n'est
-# jamais clos, et AUCUN changement backend / front n'est necessaire (contrat
-# de sortie identique). Le tri utile cote analyste devient la SEVERITE, pas le
-# verdict. Consequence attendue : le bucket 'uncertain' du dashboard IA reste
-# structurellement en place mais vide.
+# Le CNN DECIDE ce qui est une alerte ; le LLM EXPLIQUE. Toute alerte levee est
+# conservee et presentee. 'true_positive' est la valeur que le dashboard SOC
+# affiche comme alerte : en la fixant, chaque episode remonte a l'analyste,
+# rien n'est clos, et le contrat de sortie reste identique. Le tri utile cote
+# analyste devient la SEVERITE, pas le verdict.
 ALERT_VERDICT = "true_positive"
 
-# =====================================================================
-# ↓↓↓  A PARTIR D'ICI : garde-fous de SORTIE. INERTES en RAG-only.  ↓↓↓
-#      Conserves car episode_context_cnn.policy_flags() les importe,
-#      et l'etape "garde-fous" les reactivera.
-# =====================================================================
-
-# --- Politique de triage (garde-fous SOC) -----------------------------------
-# Pre-filtre deterministe : desactive par defaut (une allowlist dure est
-# contournable par masquerading, T1036). Laisser False = le LLM voit tout.
-AUTO_CLOSE_ENABLED = False
-
-# Primitives qui ne peuvent JAMAIS etre auto-classees false_positive.
-# POLITIQUE SOC, pas verite terrain (un analyste ne clot jamais une creation
-# de compte sans regarder).
-NEVER_DISMISS_PROCESSES = {
-    "useradd", "userdel", "usermod", "groupadd", "passwd", "chpasswd",
-    "visudo", "chattr", "auditctl", "insmod", "modprobe",
-}
-NEVER_DISMISS_EVENT_TYPES = {
-    "changed-audit-configuration", "changed-password",
-}
-NEVER_DISMISS_FAIL_BURST = 5     # n alertes 'is_fail' dominant dans un episode
-
-# Verdicts autorises (schema ferme).
-VERDICTS = ("true_positive", "false_positive", "uncertain")
+# Echelle de severite (seul signal de tri en mode explication). C'est la
+# severite DECIDEE PAR LE LLM ; triage_cnn._clamp_severity garantit seulement
+# qu'elle reste dans cette echelle (aucun plancher deterministe).
 SEVERITIES = ("info", "low", "medium", "high", "critical")
-
-# Echec LLM (timeout, JSON invalide, quota) : on NE JETTE JAMAIS l'alerte.
-# Fail-open = l'episode reste 'uncertain' et remonte a l'analyste.
-FAIL_OPEN_VERDICT = "uncertain"
-
-# --- exigence d'actionnabilite (garde-fou 8 de _validate) -------------------
-MIN_RATIONALE_CHARS = 80
-FALLBACK_RECOMMENDATION = (
-    "Le modele n'a pas produit d'action exploitable : investigation manuelle "
-    "requise (verifier processus, utilisateur et fenetre temporelle de l'episode)."
-)

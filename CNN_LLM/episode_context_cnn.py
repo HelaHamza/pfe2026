@@ -1,22 +1,25 @@
 """
-episode_context_cnn.py  (version RAG-only)
-==========================================
+episode_context_cnn.py
+=======================
 Transforme cnn_alerts.csv (evenements) en DOSSIERS D'EPISODE prets pour le LLM.
 
 Deux raisons de travailler a l'episode et pas a l'evenement :
   1. Cout / charge : 281 alertes -> ~36 episodes = 36 appels LLM au lieu de 281.
   2. Correctness : la malveillance est une propriete de la SEQUENCE, pas de la
      ligne. `chmod` seul est banal ; `chmod +x .update` -> `crontab` est une
-     kill chain. Un LLM qui ne voit qu'une ligne ne peut PAS trancher.
+     kill chain. Un LLM qui ne voit qu'une ligne ne peut PAS l'expliquer.
 
 Echantillonnage : on n'envoie jamais les 62 lignes d'un episode. On prend les
 top-N par mse (les plus anormales) + les premieres/dernieres (le contexte
-temporel : ce qui declenche et ce qui conclut), dedupliquees et retriees.
+temporel : ce qui declenche et ce qui conclut), dedupliquees et retriees dans
+l'ORDRE chronologique -> c'est la timeline que render() injecte dans le dossier.
 
-NB version RAG-only : ce fichier ne contient QUE ce dont le RAG a besoin
-(la classe Episode et build_episodes). policy_flags() -- un garde-fou de
-SORTIE -- est volontairement absent : l'orchestrateur RAG (triage_llm_rag.py)
-ne l'appelle pas. Il reviendra a l'etape "garde-fous".
+Ce module fournit a l'orchestrateur d'explication (triage_cnn.py) la classe
+Episode + build_episodes() : le DOSSIER que le LLM lit. Il n'exerce AUCUN
+controle sur la sortie du LLM et n'impose AUCUN plancher de severite -- la
+couche d'explication est pure. (La detection des primitives sensibles --
+creation de compte, persistance cron... -- releve de la couche Sigma, pas de
+cet etage.)
 """
 
 from __future__ import annotations
@@ -104,6 +107,9 @@ class Episode:
 
     # ---- timeline echantillonnee ------------------------------------------
     def _sample(self) -> pd.DataFrame:
+        """Sous-ensemble d'evenements REPRESENTATIF, en ordre chronologique :
+        les plus anormaux (top-N mse) + les bornes temporelles (premiers /
+        derniers). Plafonne a DOSSIER_MAX_LINES."""
         r = self.rows.sort_values("_ts")
         if len(r) <= CL.DOSSIER_MAX_LINES:
             return r
@@ -113,9 +119,44 @@ class Episode:
         out = r.loc[sorted(idx, key=lambda i: r.index.get_loc(i))]
         return out.head(CL.DOSSIER_MAX_LINES)
 
+    def _timeline(self) -> str:
+        """Rend la timeline echantillonnee : une ligne par evenement retenu,
+        dans l'ORDRE chronologique. C'est ce qui permet au LLM d'EXPLIQUER un
+        enchainement (chmod -> binaire cache -> crontab) que les vues agregees
+        ci-dessus, elles, ne montrent pas -- elles ne comptent que des
+        occurrences. Tolerant aux valeurs manquantes (via _s / garde
+        numerique) : un champ absent ne fait jamais planter le dossier."""
+        r = self._sample()
+        lignes: list[str] = []
+        for _, row in r.iterrows():
+            ts = row.get("_ts")
+            hh = "--:--:--"
+            if ts is not None and not pd.isna(ts) and hasattr(ts, "strftime"):
+                hh = ts.strftime("%H:%M:%S")
+            proc = _s(row.get("process_name"))
+            user = _s(row.get("user_name"))
+            evt = _s(row.get("event_type"), "")
+            feat = _s(row.get("top_feat"), "")
+            try:
+                mse = f"{float(row.get('mse')):.1f}"
+            except (TypeError, ValueError):
+                mse = "-"
+            cols = [hh, f"{proc:14s}", f"{user:9s}"]
+            if evt:
+                cols.append(f"{evt:20s}")
+            if feat:
+                cols.append(f"[{feat}]")
+            cols.append(f"mse={mse}")
+            lignes.append("    " + " ".join(cols))
+        return "\n".join(lignes) if lignes else "    (aucun evenement)"
+
     def render(self) -> str:
-        """Dossier textuel compact. Aucun jugement, uniquement des FAITS :
-        le LLM doit conclure a partir des donnees + KB, pas d'un pre-verdict."""
+        """Dossier textuel compact. Aucun jugement, uniquement des FAITS : le
+        LLM doit conclure a partir des donnees + KB, pas d'un pre-verdict.
+
+        La timeline echantillonnee est incluse a la fin : c'est LE point qui
+        compte en RAG-only. Sans l'ordre des evenements, le LLM ne verrait que
+        des comptes agreges et ne pourrait pas expliquer une SEQUENCE."""
         fmt = lambda d, n=6: ", ".join(f"{k} x{v}" for k, v in list(d.items())[:n])  # noqa: E731
         L = [
             f"EPISODE {self.episode_id}",
@@ -129,18 +170,12 @@ class Episode:
             f"  utilisateurs    : {fmt(self.users) or '(aucun)'}",
             f"  IP sources      : {fmt(self.source_ips) or '(aucune)'}",
             f"  processus       : {fmt(self.processes, 8)}",
-            f"  types d'evt     : {fmt(self.event_types, 8)}",
-            # ================== ZONE RECONSTRUITE (a verifier) ==================
-            # Verbatim recupere jusqu'a cette ligne. La suite (ligne features
-            # dom. + return) est reconstruite pour coller au format des exemples
-            # few-shot. SEULE INCONNUE : est-ce que render() ajoute ensuite une
-            # timeline echantillonnee via self._sample() ? Si oui, la restaurer
-            # ici (c'est LE point qui compte en RAG-only : render() = le dossier
-            # que le LLM lit). Si non, _sample() est dormante.
+            f"  types d'evt     : {fmt(self.event_types, 8) or '(aucun)'}",
             f"  features dom.   : {fmt(self.dominant_features)}",
+            "  timeline (echantillon, ordre chronologique) :",
+            self._timeline(),
         ]
         return "\n".join(L)
-        # ==================== FIN ZONE RECONSTRUITE =========================
 
 
 # ---------------------------------------------------------------------------

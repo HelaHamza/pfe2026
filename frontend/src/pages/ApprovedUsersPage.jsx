@@ -3,7 +3,11 @@ import Sidebar from '../components/Sidebar.jsx'
 import { adminService } from '../services/api.js'
 import styles from './UsersPage.module.css'
 
-const SPECIALTY_LABEL = { ia_user: 'IA User', soc_user: 'SOC User', admin: 'Admin' }
+const SPECIALTY_INFO = {
+  ia_user:  { label: 'IA User',  color: '#6aa8e6', bg: 'rgba(106,168,230,0.1)',  border: 'rgba(106,168,230,0.3)' },
+  soc_user: { label: 'SOC User', color: '#4ade80', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.3)' },
+  admin:    { label: 'Admin',    color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.3)' },
+}
 
 export default function ApprovedUsersPage() {
   const [users, setUsers]     = useState([])
@@ -60,29 +64,36 @@ export default function ApprovedUsersPage() {
               <span>Sex</span>
               <span>Address</span>
             </div>
-            {filtered.map(u => (
-              <div key={u.email} className={styles.tableRow}>
-                <div className={styles.userCell}>
-                  <div className={styles.avatar}>
-                    {(u.first_name?.[0] || u.email[0]).toUpperCase()}
+            {filtered.map(u => {
+              const sp = SPECIALTY_INFO[u.specialty]
+              return (
+                <div key={u.email} className={styles.tableRow}>
+                  <div className={styles.userCell}>
+                    <div className={styles.avatar}>
+                      {(u.first_name?.[0] || u.email[0]).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className={styles.userName}>
+                        {u.first_name || u.last_name
+                          ? `${u.first_name} ${u.last_name}`.trim()
+                          : '—'}
+                      </p>
+                      <p className={styles.userEmail}>{u.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className={styles.userName}>
-                      {u.first_name || u.last_name
-                        ? `${u.first_name} ${u.last_name}`.trim()
-                        : '—'}
-                    </p>
-                    <p className={styles.userEmail}>{u.email}</p>
-                  </div>
+                  <span
+                    className={styles.specialtyBadge}
+                    style={sp ? { color: sp.color, background: sp.bg, borderColor: sp.border } : { color: '#8a93a8', background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }}
+                  >
+                    <span className={styles.specialtyDot} style={{ background: sp?.color || '#8a93a8' }} />
+                    {sp?.label || u.specialty || '—'}
+                  </span>
+                  <span className={styles.cell}>{u.phone || '—'}</span>
+                  <span className={styles.cell} style={{textTransform:'capitalize'}}>{u.sex || '—'}</span>
+                  <span className={styles.cell}>{u.address || '—'}</span>
                 </div>
-                <span className={styles.specialtyBadge}>
-                  {SPECIALTY_LABEL[u.specialty] || u.specialty || '—'}
-                </span>
-                <span className={styles.cell}>{u.phone || '—'}</span>
-                <span className={styles.cell} style={{textTransform:'capitalize'}}>{u.sex || '—'}</span>
-                <span className={styles.cell}>{u.address || '—'}</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </main>

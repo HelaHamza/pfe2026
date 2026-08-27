@@ -1,7 +1,5 @@
-import TriageFunnel from './TriageFunnel'
-
 function Kpi({ label, value, sub, tone = 'neutral' }) {
-  const color = { good: 'var(--up)', warn: 'var(--warn)', neutral: 'var(--text-faint)' }[tone]
+  const color = { good: 'var(--up)', warn: 'var(--warn)', neutral: 'var(--text)' }[tone]
   return (
     <div className="kpi">
       <div className="kpi__label">{label}</div>
@@ -11,43 +9,47 @@ function Kpi({ label, value, sub, tone = 'neutral' }) {
   )
 }
 
-/* Entonnoir du pipeline complet CNN → LLM sur les alertes du dernier run.
-   Le CNN LÈVE les alertes brutes ; le LLM les TRIE (sans danger / à vérifier).
-   overview = comptes de l'entonnoir ; triage = temps de traitement LLM. */
+/* Couverture de la couche d'explication LLM (mode explication seule).
+   Le CNN LÈVE les anomalies (toutes conservées) ; le LLM tente d'EXPLIQUER
+   chacune. Trois comptes + le coût :
+     • total    = anomalies levées par le modèle       (prioritization.total_episodes)
+     • expliquées = total − fail-open                  (calculé)
+     • non expliquées = pannes LLM, conservées par sécurité (prioritization.n_fail_open)
+     • temps    = durée de traitement LLM              (triage.elapsed_s)
+   Invariant : expliquées + non expliquées = total. */
 export default function AnalysisSection({ overview, triage }) {
-  const { funnel } = overview
+  const prio = overview.prioritization || {}
+  const total = prio.total_episodes ?? 0
+  const failOpen = prio.n_fail_open ?? 0
+  const explained = Math.max(total - failOpen, 0)
   const secs = triage?.triage?.elapsed_s != null
     ? `${Math.round(triage.triage.elapsed_s)} s` : null
 
   return (
-    <>
-      {/* <TriageFunnel funnel={funnel} /> */}
-
-      <div className="summary__grid">
-        <Kpi
-          label="Alertes levées par le CNN"
-          value={funnel.total_episodes}
-          sub="anomalies brutes, avant vérification LLM"
-        />
-        <Kpi
-          label="Classées sans danger par le LLM"
-          value={funnel.false_positive}
-          sub={`${funnel.noise_reduction_pct}\u00a0% du bruit CNN éliminé`}
-          tone="good"
-        />
-        <Kpi
-          label="Déférées à un analyste par le LLM"
-          value={funnel.uncertain}
-          sub="cas jugés incertains, revue humaine"
-          tone={funnel.uncertain > 0 ? 'warn' : 'neutral'}
-        />
-        <Kpi
-          label="Temps de traitement LLM"
-          value={secs || '—'}
-          sub={`${funnel.total_episodes} alertes triées automatiquement`}
-          tone="neutral"
-        />
-      </div>
-    </>
+    <div className="summary__grid">
+      <Kpi
+        label="Anomalies levées par le modèle"
+        value={total}
+        sub="détectées par le CNN, toutes conservées"
+      />
+      <Kpi
+        label="Anomalies expliquées"
+        value={explained}
+        sub="analysées et priorisées par le LLM"
+        tone="good"
+      />
+      <Kpi
+        label="Anomalies non expliquées"
+        value={failOpen}
+        sub={`${prio.fail_open_pct ?? 0}\u00a0% — panne LLM (fail-open), conservées par sécurité`}
+        tone={failOpen > 0 ? 'warn' : 'good'}
+      />
+      <Kpi
+        label="Temps de traitement LLM"
+        value={secs || '—'}
+        sub={`pour ${total} anomalies`}
+        tone="neutral"
+      />
+    </div>
   )
 }

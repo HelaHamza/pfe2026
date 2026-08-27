@@ -1,20 +1,15 @@
 import logging
 
 from adapters.cnn_report_adapter import CnnReportAdapter
+from adapters.cnn_eval_adapter import CnnEvalAdapter
 from models.ai_dashboard_model import (AIOverviewResponse, EvalComparisonResponse,
-                                        FrozenModelResponse, RunTrendPoint,
-                                        TriageFunnel, TriageQuality,
-                                        TriageResponse)
-from models.detection_models import ResultRow, ResultsResponse
-from models.enums import Verdict
+                                        FrozenModelResponse, PrioritizationSummary,
+                                        RunTrendPoint, TriageQuality, TriageResponse)
 from models.retrain_run_model import RetrainingResponse
 from repositories.report_repository import ReportRepository
 from repositories.retrain_repository import RetrainRepository
 
 log = logging.getLogger(__name__)
-
-# uncertain (+ fail-open) : ni confirmé ni écarté → revue experte.
-REVIEW_VERDICTS = (Verdict.uncertain.value,)
 
 
 class StatsControllerAI:
@@ -30,19 +25,19 @@ class StatsControllerAI:
             accepted_gate=RetrainRepository.last_accepted(),
             report=ReportRepository.get_last_report())
 
-    # ══ ③ Efficacité live ══════════════════════════════════════════════
+    # ══ ③ Priorisation live (mode explication seule) ═══════════════════
     @staticmethod
-    def _funnel_from_breakdown(vb: dict[str, int]) -> TriageFunnel:
-        tp  = vb.get(Verdict.true_positive.value, 0)
-        fp  = vb.get(Verdict.false_positive.value, 0)
-        unc = vb.get(Verdict.uncertain.value, 0)
-        total = sum(vb.values())
-        return TriageFunnel(
+    def _prioritization(sev: dict[str, int], n_fail_open: int) -> PrioritizationSummary:
+        """Le LLM ne filtre plus : le signal utile est la répartition de
+        sévérité (priorisation) et le fail-open (fiabilité), pas un entonnoir."""
+        total = sum(sev.values())
+        n_ch = sev.get("critical", 0) + sev.get("high", 0)
+        return PrioritizationSummary(
             total_episodes=total,
-            true_positive=tp, false_positive=fp, uncertain=unc,
-            remaining_after_llm=tp + unc,
-            noise_reduction_pct=round(100 * fp / total, 1) if total else 0.0,
-            fail_open_pct=round(100 * unc / total, 1) if total else 0.0,
+            by_severity=sev,
+            n_critical_high=n_ch,
+            n_fail_open=n_fail_open,
+            fail_open_pct=round(100 * n_fail_open / total, 1) if total else 0.0,
         )
 
     @staticmethod
@@ -52,33 +47,35 @@ class StatsControllerAI:
             return AIOverviewResponse(
                 has_data=False,
                 errors=["Aucun run publié — lance une analyse pour alimenter "
-                        "l'entonnoir."])
+                        "le dashboard."])
 
         run_id = report["analysis_id"]
-        vb = ReportRepository.cnn_verdict_breakdown(run_id)
-        funnel = StatsControllerAI._funnel_from_breakdown(vb)
         sev = ReportRepository.cnn_severity_breakdown(run_id)
+        # n_fail_open vient du résumé de triage attaché au report (D). Absent
+        # si le triage n'a pas été ingéré → 0, la priorisation reste affichable.
+        n_fail_open = int((report.get("triage") or {}).get("n_fail_open") or 0)
+        prio = StatsControllerAI._prioritization(sev, n_fail_open)
 
-        # Tendance : on LIT le breakdown figé dans chaque report (cnn_by_verdict)
-        # au lieu de ré-agréger par run (N+1 requêtes, divergence possible sur
-        # un run partiel). Le report est la vérité publiée.
+        # Tendance : on LIT le breakdown figé dans chaque report (cnn_by_severity
+        # + triage.n_fail_open) au lieu de ré-agréger par run (N+1 requêtes,
+        # divergence possible sur un run partiel). Le report est la vérité publiée.
         trend = []
         for r in ReportRepository.list_recent_reports(limit=trend_limit):
-            rf = StatsControllerAI._funnel_from_breakdown(
-                r.get("cnn_by_verdict", {}))
+            r_sev = r.get("cnn_by_severity", {}) or {}
+            r_total = sum(r_sev.values())
+            r_fo = int((r.get("triage") or {}).get("n_fail_open") or 0)
             trend.append(RunTrendPoint(
                 run_id=r["analysis_id"], finished_at=r.get("finished_at"),
-                total_episodes=rf.total_episodes,
-                remaining_after_llm=rf.remaining_after_llm,
-                noise_reduction_pct=rf.noise_reduction_pct,
-                fail_open_pct=rf.fail_open_pct))
+                total_episodes=r_total,
+                n_critical_high=r_sev.get("critical", 0) + r_sev.get("high", 0),
+                fail_open_pct=round(100 * r_fo / r_total, 1) if r_total else 0.0))
         trend.reverse()   # chronologique : tracé gauche → droite
 
         return AIOverviewResponse(
             has_data=True, status=report.get("status"), run_id=run_id,
             last_finished_at=report.get("finished_at"),
             model_version=report.get("model_version"),
-            funnel=funnel, cnn_by_severity=sev, trend=trend)
+            prioritization=prio, cnn_by_severity=sev, trend=trend)
 
     # ══ ② Ré-entraînement ══════════════════════════════════════════════
     @staticmethod
@@ -106,44 +103,18 @@ class StatsControllerAI:
         return TriageResponse(has_data=True, run_id=run_id,
                               triage=TriageQuality.model_validate(t))
 
-    # ══ ④ Capacité de détection (CNN vs CNN→LLM) ═══════════════════════
+    # ══ ④ Capacité de détection du modèle en production (CNN seul) ═════
+    # Lecture DIRECTE de eval_summary.json sur disque (via CnnEvalAdapter) :
+    # l'éval est une propriété du MODÈLE, pas d'un run. Aucune ingestion Mongo,
+    # aucun run_id. La carte se remplit dès que le fichier existe. En mode
+    # explication seule, on n'affiche QUE les métriques du CNN (le LLM n'écarte
+    # plus rien) : la comparaison avec la cascade n'a plus lieu d'être.
     @staticmethod
     def eval_comparison() -> EvalComparisonResponse:
-        report = ReportRepository.get_last_report()
-        if not report:
-            return EvalComparisonResponse(has_data=False,
-                                          reason="Aucun run publié.")
-        run_id = report["analysis_id"]
-        ec = report.get("eval_comparison")
-        if not ec:
+        raw = CnnEvalAdapter.load()
+        if not raw:
             return EvalComparisonResponse(
-                has_data=False, run_id=run_id,
-                reason="Éval CNN-vs-cascade non ingérée — régénère "
-                       "eval_summary.json.")
-        return EvalComparisonResponse.from_raw(run_id, ec)
-
-    # ══ Revue experte (épisodes uncertain) ═════════════════════════════
-    @staticmethod
-    def pending_review(level: str | None = None, limit: int = 500,
-                       skip: int = 0) -> ResultsResponse:
-        report = ReportRepository.get_last_report()
-        if not report:
-            return ResultsResponse(total=0, count=0, skip=skip, limit=limit)
-
-        run_id = report["analysis_id"]
-        total = ReportRepository.count_results(
-            run_id, level=level, source="cnn", cnn_verdicts=REVIEW_VERDICTS)
-        docs = ReportRepository.get_results(
-            run_id, level=level, source="cnn", limit=skip + limit,
-            cnn_verdicts=REVIEW_VERDICTS)
-
-        rows = []
-        for d in docs:
-            try:
-                rows.append(ResultRow.from_cnn(d, full=True))
-            except Exception as e:
-                log.error("Épisode %s non mappable : %s", d.get("_id"), e)
-
-        page = rows[skip:skip + limit]
-        return ResultsResponse(run_id=run_id, total=total, count=len(page),
-                               skip=skip, limit=limit, results=page)
+                has_data=False,
+                reason="eval_summary.json introuvable — lance le protocole "
+                       "d'évaluation (inject.py) ou vérifie CNN_EVAL_SUMMARY.")
+        return EvalComparisonResponse.from_raw(raw)

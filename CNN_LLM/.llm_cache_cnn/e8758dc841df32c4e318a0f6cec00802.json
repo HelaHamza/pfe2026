@@ -1,0 +1,1 @@
+{"episode_id": "EP-97a830cfd5", "severity": "high", "confidence": 0.85, "title": "Bruteforce SSH depuis localhost et IP externe", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
    ProfilePage.module.css — Sentinel/IDS dark theme
-   Operator profile management
+   Operator profile management. Icônes de champ alignées sur Login.
    ═══════════════════════════════════════════════════════════ */
 
 .layout {
@@ -16,10 +16,11 @@
   padding: 2.5rem 2.5rem 4rem;
   overflow-y: auto;
   max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
   position: relative;
 }
 
-/* Subtle grid texture in background */
 .main::before {
   content: '';
   position: absolute;
@@ -36,9 +37,7 @@
 .main > * { position: relative; z-index: 1; }
 
 /* ─────────────── Header ─────────────── */
-.header {
-  margin-bottom: 2rem;
-}
+.header { margin-bottom: 2rem; }
 
 .breadcrumb {
   display: inline-flex;
@@ -78,11 +77,7 @@
   margin: 0 0 0.4rem;
 }
 
-.sub {
-  font-size: 0.9rem;
-  color: #8a93a8;
-  margin: 0;
-}
+.sub { font-size: 0.9rem; color: #8a93a8; margin: 0; }
 
 /* ─────────────── Form ─────────────── */
 .form {
@@ -134,15 +129,9 @@
   transition: box-shadow 0.2s;
 }
 
-.avatarWrap:hover {
-  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.12);
-}
+.avatarWrap:hover { box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.12); }
 
-.avatarImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.avatarImg { width: 100%; height: 100%; object-fit: cover; }
 
 .avatarPlaceholder {
   width: 100%;
@@ -176,12 +165,7 @@
 
 .avatarWrap:hover .avatarOverlay { opacity: 1; }
 
-.avatarMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  position: relative;
-}
+.avatarMeta { display: flex; flex-direction: column; gap: 0.6rem; position: relative; }
 
 .avatarName {
   font-size: 1.15rem;
@@ -191,12 +175,7 @@
   margin: 0;
 }
 
-.avatarBadges {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+.avatarBadges { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .roleBadge {
   display: inline-flex;
@@ -279,19 +258,10 @@
 }
 
 /* Row */
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
 /* Field */
-.fieldWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
+.fieldWrap { display: flex; flex-direction: column; gap: 0.4rem; }
 .fieldFull { grid-column: 1 / -1; }
 
 .label {
@@ -315,6 +285,20 @@
   align-items: center;
 }
 
+/* Champ + icône à gauche (aligné sur Login) */
+.inputWrap { position: relative; }
+
+.inputIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5a6478;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
 .input,
 .select {
   width: 100%;
@@ -330,6 +314,9 @@
   box-sizing: border-box;
 }
 
+/* Place pour l'icône */
+.input { padding-left: 36px; }
+
 .input::placeholder { color: #4a5165; }
 
 .input:hover,
@@ -342,6 +329,9 @@
   box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.1);
 }
 
+/* Icône passe en vert quand le champ est actif */
+.inputWrap:focus-within .inputIcon { color: #4ade80; }
+
 .select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6478' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -350,14 +340,9 @@
   padding-right: 34px;
 }
 
-.select option {
-  background: #0f1525;
-  color: #e8eaf0;
-}
+.select option { background: #0f1525; color: #e8eaf0; }
 
-.inputError {
-  border-color: rgba(248, 113, 113, 0.5) !important;
-}
+.inputError { border-color: rgba(248, 113, 113, 0.5) !important; }
 
 .errorMsg {
   font-family: 'JetBrains Mono', ui-monospace, monospace;

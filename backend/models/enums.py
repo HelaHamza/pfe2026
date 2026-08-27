@@ -4,7 +4,15 @@ models/enums.py
 Vocabulaire fermé du domaine. Utilisé à la fois par la couche Modèle
 (validation) et par la couche Vue (paramètres de requête → 422 automatique
 au lieu d'un 200 avec liste vide sur une faute de frappe).
+
+MODE EXPLICATION SEULE : le LLM ne classe plus. Le CNN décide ce qui est une
+alerte, le LLM l'explique et la priorise. Le verdict est donc CONSTANT (fixé
+à true_positive par la couche de triage). Les anciennes valeurs de verdict
+false_positive / uncertain — produites quand le LLM filtrait — n'ont plus de
+source et ont été retirées.
 """
+
+
 from enum import Enum
 
 
@@ -15,15 +23,19 @@ class DetectionSource(str, Enum):
 
 
 class Verdict(str, Enum):
-    """Verdict du triage LLM (branche CNN uniquement).
+    """Verdict de la branche CNN.
 
-    - true_positive  → dashboard SOC
-    - false_positive → bruit écarté (compte dans noise_reduction_pct)
-    - uncertain      → dashboard Expert AI (JAMAIS silencieusement écarté)
+    En mode explication seule, il n'existe qu'UNE valeur : true_positive. Toute
+    alerte levée par le CNN est conservée et expliquée par le LLM ; aucune n'est
+    close ni écartée. Le champ `verdict` reste présent en base (le dashboard SOC
+    filtre dessus, `cnn_by_verdict` l'affiche), mais il est invariant.
+
+    Les valeurs false_positive et uncertain de l'ancienne cascade filtrante ont
+    été supprimées : plus rien ne les produit. Après cette suppression, penser à
+    `grep -rn "Verdict.false_positive\\|Verdict.uncertain" backend/` pour
+    éliminer d'éventuelles références résiduelles hors des fichiers déjà revus.
     """
     true_positive = "true_positive"
-    false_positive = "false_positive"
-    uncertain = "uncertain"
 
 
 class Severity(str, Enum):
@@ -73,6 +85,8 @@ def norm_severity(value, default: Severity = Severity.low) -> Severity:
 
 
 def norm_verdict(value) -> Verdict | None:
+    """Conservé pour compatibilité. En mode explication seule, seule la valeur
+    true_positive est reconnue ; toute autre entrée renvoie None."""
     try:
         return Verdict(str(value or "").strip().lower())
     except ValueError:

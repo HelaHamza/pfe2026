@@ -1,74 +1,55 @@
-import { severity, neutral } from "../../theme/colors";
-
 const ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW"];
+const SEV = {
+  CRITICAL: { solid: "var(--sev-critical)", track: "var(--sev-critical-bg)" },
+  HIGH:     { solid: "var(--sev-high)",     track: "var(--sev-high-bg)" },
+  MEDIUM:   { solid: "var(--sev-medium)",   track: "var(--sev-medium-bg)" },
+  LOW:      { solid: "var(--sev-low)",      track: "var(--sev-low-bg)" },
+};
 
 export default function SigmaSeverityBars({ byLevel }) {
-  // byLevel peut être { critical: 24, high: 32, ... } ou { CRITICAL: 24, ... }
   const counts = ORDER.map((k) => ({
-    key:   k,
-    count: (byLevel?.[k] ?? byLevel?.[k.toLowerCase()] ?? 0),
+    key: k, count: byLevel?.[k] ?? byLevel?.[k.toLowerCase()] ?? 0,
   }));
   const total = counts.reduce((s, c) => s + c.count, 0);
-  const max   = Math.max(...counts.map(c => c.count), 1);
+  const max   = Math.max(...counts.map((c) => c.count), 1);
 
   return (
-    <div style={{
-      background: neutral.bg,
-      border: `1px solid ${neutral.border}`,
-      borderRadius: 8,
-      padding: "16px 18px",
-      minHeight: 180,
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 14 }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, color: neutral.text }}>
-          Sigma — répartition par sévérité
-        </h3>
-        <span style={{ fontSize: 11, color: neutral.textFaint }}>
+    <section className="card">
+      <div className="card__head">
+        <h3 className="card__title">Sigma — répartition par sévérité</h3>
+        <span className="card__hint">
           {total.toLocaleString("fr-FR")} alerte{total > 1 ? "s" : ""}
         </span>
       </div>
 
       {total === 0 ? (
-        <div style={{
-          fontSize: 12, color: neutral.textFaint,
-          textAlign: "center", padding: "40px 0",
-        }}>
+        <div style={{ textAlign: "center", padding: "40px 0",
+                      color: "var(--text-faint)", fontSize: 12 }}>
           Aucune alerte Sigma sur ce run
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {counts.map(({ key, count }) => {
-            const c = severity[key];
-            const pct = (count / max) * 100;
-            return (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{
-                  fontSize: 11, fontWeight: 600,
-                  color: c.text, width: 64,
-                  textTransform: "uppercase", letterSpacing: "0.04em",
-                }}>
-                  {key}
-                </span>
-                <div style={{ flex: 1, height: 8, background: c.bg, position: "relative" }}>
-                  <div style={{
-                    width: `${pct}%`, height: "100%",
-                    background: c.bgStrong,
-                    transition: "width 0.4s ease",
-                  }} />
-                </div>
-                <span style={{
-                  fontSize: 12, fontWeight: 600,
-                  color: count === 0 ? neutral.textFaint : neutral.text,
-                  width: 32, textAlign: "right",
-                  fontVariantNumeric: "tabular-nums",
-                }}>
-                  {count}
-                </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+          {counts.map(({ key, count }) => (
+            <div key={key} style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)" }}>
+              <span style={{ width: 64, fontSize: 11, fontWeight: 600,
+                             color: SEV[key].solid, textTransform: "uppercase",
+                             letterSpacing: ".04em", fontFamily: "var(--font-mono)" }}>
+                {key}
+              </span>
+              <div style={{ flex: 1, height: 8, background: SEV[key].track,
+                            borderRadius: "var(--r-sm)", overflow: "hidden" }}>
+                <div style={{ width: `${(count / max) * 100}%`, height: "100%",
+                              background: SEV[key].solid, transition: "width .4s var(--ease)" }} />
               </div>
-            );
-          })}
+              <span style={{ width: 32, textAlign: "right", fontSize: 12, fontWeight: 600,
+                             color: count === 0 ? "var(--text-faint)" : "var(--text)",
+                             fontVariantNumeric: "tabular-nums", fontFamily: "var(--font-mono)" }}>
+                {count}
+              </span>
+            </div>
+          ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

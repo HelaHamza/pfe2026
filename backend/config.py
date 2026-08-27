@@ -111,7 +111,6 @@ QUARANTINE_JSON  = os.path.join(ML_DIR, "retraining", "quarantine.json")
 #    evaluation/evaluate_cnn_vs_llm.py). Model-scoped : à RÉGÉNÉRER après
 #    chaque promotion de modèle, sinon l'auto-ingest attache des chiffres périmés.
 EVAL_DIR         = _path("EVAL_DIR", f"{REPO_ROOT}/evaluation")
-EVAL_SUMMARY_JSON = os.path.join(EVAL_DIR, "eval_summary.json")
 CNN_EVAL_REPORT_JSON = os.path.join(ML_DIR, "cnn_evaluation_report.json")
 
 
@@ -121,6 +120,9 @@ SIGMA_RULES      = _path("SIGMA_RULES",      f"{REPO_ROOT}/sigma/rules")
 SIGMA_INDEX      = os.getenv("SIGMA_INDEX", "filebeat-logs-*,auditbeat-*")
 SIGMA_BIN        = os.getenv("SIGMA_BIN",
                              os.path.join(os.path.dirname(sys.executable), "sigma"))
+
+
+CNN_EVAL_SUMMARY = os.path.join(EVAL_DIR, "eval_summary.json")
 
 LLM_SIGMA_DIR = _path("LLM_SIGMA_DIR", f"{REPO_ROOT}/llm_sigma")
 

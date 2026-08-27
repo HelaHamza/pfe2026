@@ -109,3 +109,7 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+
+/* Les titres du dashboard suivent son thème sombre, pas l'OS */
+.ai-dash { --text-h: var(--text); }

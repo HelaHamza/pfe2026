@@ -63,11 +63,11 @@ export default function KpiBand({ stats }) {
           value={ae}
           hint={ae > 0 ? "Confirmées par le LLM (vrais positifs)" : "Aucune anomalie confirmée"}
         />
-        <StatCard
+        {/* <StatCard
           label="À réviser (Expert IA)"
           value={toReview}
           hint={toReview > 0 ? "Cas incertains → dashboard Expert IA" : "Rien à réviser"}
-        />
+        /> */}
       </div>
 
       {/* Légende du pipeline — rend la bande auto-explicative pour le jury */}

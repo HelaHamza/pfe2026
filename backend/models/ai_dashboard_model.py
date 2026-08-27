@@ -4,11 +4,19 @@ models/ai_dashboard_model.py
 Contrat de sortie du dashboard Expert IA (distinct du contrat SOC).
 Décrit la SANTÉ et l'EFFICACITÉ du système, jamais des menaces à traiter.
 
-  * A (LIVE)  — dernier run, collections reports + cnn. Entonnoir, réduction
-                de bruit, fail-open, tendance inter-runs.
+MODE EXPLICATION SEULE — ce que le LLM fait désormais :
+  * il ne FILTRE plus ; toute alerte du CNN est conservée et expliquée ;
+  * son signal utile est la PRIORISATION (répartition de sévérité) et sa
+    FIABILITÉ (taux de fail-open = épisodes non explicables, conservés par
+    sécurité).
+
+  * A (LIVE)  — dernier run : priorisation du run + tendance inter-runs.
   * D (TRIAGE)— métadonnées run-level du triage LLM, sous-objet `triage`.
-  * E (EVAL)  — comparaison CNN seul vs cascade CNN→LLM, sous-objet
-                `eval_comparison`.
+  * E (EVAL)  — capacité de détection du MODÈLE EN PRODUCTION (CNN seul).
+                En explication seule, le LLM n'écarte plus rien : le détecteur,
+                c'est le CNN. On n'expose donc QUE ses métriques (précision au
+                niveau alerte, rappel au niveau attaque), issues du protocole
+                d'évaluation par injection (eval_summary.json).
 
 Forme stable partout (zéros plutôt que dict vide) et statut visible.
 CONTRAT PUR : aucune route, aucun import de contrôleur. Les modèles sont
@@ -25,27 +33,32 @@ from models.enums import ReportStatus
 log = logging.getLogger(__name__)
 
 
-# ── ③ Efficacité live ───────────────────────────────────────────────────────
-class TriageFunnel(BaseModel):
-    """Entonnoir CNN → LLM.
-      • total_episodes      = alertes LEVÉES par le CNN (dénominateur) ;
-      • remaining_after_llm = ce qui SURVIT au filtrage (tp + uncertain) ;
-      • false_positive      = écarté comme bruit."""
+# ── ③ Priorisation live (remplace l'ancien entonnoir de filtrage) ───────────
+class PrioritizationSummary(BaseModel):
+    """Priorisation du dernier run.
+
+    Le LLM ne filtre plus : `total_episodes` = toutes les alertes levées par le
+    CNN, toutes conservées. Le signal d'action n'est donc plus un taux de
+    réduction de bruit mais :
+      • by_severity      → ce que l'analyste traite en premier ;
+      • n_critical_high  → volume prioritaire (critical + high) ;
+      • n_fail_open      → épisodes que le LLM n'a pas pu expliquer (panne
+                           d'API), conservés par sécurité. Indicateur de
+                           FIABILITÉ de la couche.
+    """
     total_episodes: int = 0
-    true_positive: int = 0
-    false_positive: int = 0
-    uncertain: int = 0
-    remaining_after_llm: int = 0
-    noise_reduction_pct: float = 0.0   # 100 · fp / total
-    fail_open_pct: float = 0.0         # 100 · uncertain / total
+    by_severity: dict[str, int] = Field(default_factory=dict)
+    n_critical_high: int = 0
+    n_fail_open: int = 0
+    fail_open_pct: float = 0.0        # 100 · n_fail_open / total_episodes
 
 
 class RunTrendPoint(BaseModel):
+    """Point de tendance inter-runs : volume et priorisation, pas filtrage."""
     run_id: str
     finished_at: datetime | None = None
     total_episodes: int = 0
-    remaining_after_llm: int = 0
-    noise_reduction_pct: float = 0.0
+    n_critical_high: int = 0
     fail_open_pct: float = 0.0
 
 
@@ -60,7 +73,8 @@ class AIOverviewResponse(BaseModel):
     last_finished_at: datetime | None = None
     model_version: str | None = None
 
-    funnel: TriageFunnel = Field(default_factory=TriageFunnel)
+    prioritization: PrioritizationSummary = Field(
+        default_factory=PrioritizationSummary)
     cnn_by_severity: dict[str, int] = Field(default_factory=dict)
     trend: list[RunTrendPoint] = Field(default_factory=list)
 
@@ -171,21 +185,27 @@ class FrozenModelResponse(BaseModel):
 # ── ⑤ Qualité triage ────────────────────────────────────────────────────────
 class TriageQuality(BaseModel):
     """Miroir de cnn_triage_report.json. extra="allow" : un futur champ du
-    triage est conservé sans toucher ce contrat."""
+    triage est conservé sans toucher ce contrat.
+
+    En mode explication seule, `noise_reduction_pct` vaut 0 et `verdicts` vaut
+    {"true_positive": N} : ces champs restent affichés tels quels (miroir
+    honnête du rapport), la valeur informative étant `n_fail_open`, `elapsed_s`,
+    `severities` et le bloc `grounding`."""
     model_config = ConfigDict(extra="allow")
     model: str | None = None
     provider: str | None = None
     temperature: float | None = None
     rag_backend: str | None = None
     n_kb_chunks: int | None = None
-    n_episodes_reaggregated: int | None = None
     n_episodes_in: int | None = None
     n_alerts_in: int | None = None
     verdicts: dict[str, int] = Field(default_factory=dict)
+    severities: dict[str, int] = Field(default_factory=dict)
     n_fail_open: int | None = None
     n_episodes_to_analyst: int | None = None
     noise_reduction_pct: float | None = None
     elapsed_s: float | None = None
+    mode: str | None = None
 
 
 class TriageResponse(BaseModel):
@@ -195,81 +215,55 @@ class TriageResponse(BaseModel):
     triage: TriageQuality | None = None
 
 
-# ── ④ Capacité de détection : CNN seul vs CNN→LLM ───────────────────────────
-class EvalAlertMetrics(BaseModel):
-    """Niveau ALERTE. Défauts : un sous-doc partiel ne fait jamais échouer le
-    read."""
-    precision: float = 0.0
+# ── ④ Capacité de détection du MODÈLE EN PRODUCTION (CNN seul) ───────────────
+# Mode explication seule : le LLM n'écarte plus rien, le détecteur est le CNN.
+# On n'expose QUE ses métriques. Source : eval_summary.json (protocole
+# d'évaluation par injection). Précision au niveau ALERTE, rappel au niveau
+# ATTAQUE (robuste à la troncature) — deux granularités présentées séparément,
+# jamais fondues dans un F1 qui les mélangerait.
+class ModelDetectionMetrics(BaseModel):
+    precision: float = 0.0        # niveau alerte : tp / (tp + fp)
+    recall: float = 0.0           # niveau attaque : attaques détectées / injectées
     n_alerts: int = 0
     tp: int = 0
     fp: int = 0
-    fp_removed: int | None = None
-
-
-class EvalAttackMetrics(BaseModel):
-    """Niveau ATTAQUE (rappel sur les anomalies injectées)."""
-    cnn_recall: float = 0.0
-    cascade_recall: float = 0.0
-    attacks_detected_cnn: int = 0
-    attacks_detected_cascade: int = 0
-
-
-class EvalComparison(BaseModel):
-    mode: str = "?"
-    n_episodes: int = 0
     n_attacks: int = 0
-    threshold: float | None = None
-    triage_coverage: float = 0.0
-    cnn: EvalAlertMetrics
-    cascade: EvalAlertMetrics
-    attack: EvalAttackMetrics
-
-    precision_delta: float   # cascade − cnn (>0 = le LLM gagne en précision)
-    recall_delta: float      # cascade − cnn (<0 = le LLM perd du rappel)
-    alerts_removed: int
-    tp_removed: int          # coût
-    fp_removed: int          # bénéfice
-    attacks_lost: int        # downgrade en false_positive = vrai FN
+    attacks_detected: int = 0
+    attacks_missed: int = 0
+    mode: str = "?"
 
 
 class EvalComparisonResponse(BaseModel):
     has_data: bool
-    run_id: str | None = None
     reason: str | None = None
-    comparison: EvalComparison | None = None
+    metrics: ModelDetectionMetrics | None = None
 
     @classmethod
-    def from_raw(cls, run_id: str, raw: dict) -> "EvalComparisonResponse":
+    def from_raw(cls, raw: dict) -> "EvalComparisonResponse":
         al = (raw or {}).get("alert_level") or {}
         at = (raw or {}).get("attack_level") or {}
-        if not al.get("cnn") or not al.get("cascade") or not at:
-            missing = [name for name, val in (
-                ("alert_level.cnn", al.get("cnn")),
-                ("alert_level.cascade", al.get("cascade")),
-                ("attack_level", at)) if not val]
-            log.warning("eval_comparison run %s ignorée : clés absentes/vides "
-                        "%s — vérifier eval_summary.json", run_id, missing)
-            return cls(has_data=False, run_id=run_id,
-                       reason=f"eval_summary.json ingéré mais mal formé : "
-                              f"clés absentes {missing}.")
+        cnn = al.get("cnn")
+        if not cnn or not at:
+            missing = [n for n, v in (("alert_level.cnn", cnn),
+                                      ("attack_level", at)) if not v]
+            log.warning("eval_summary mal formé : clés absentes %s — "
+                        "vérifier eval_summary.json", missing)
+            return cls(has_data=False,
+                       reason=f"eval_summary.json mal formé : clés absentes {missing}.")
 
-        cnn = EvalAlertMetrics(**al["cnn"])
-        cascade = EvalAlertMetrics(**al["cascade"])
-        attack = EvalAttackMetrics(**at)
+        precision = float(cnn.get("precision") or 0.0)
+        recall = float(at.get("cnn_recall") or 0.0)
+        n_attacks = int(raw.get("n_attacks") or 0)
+        detected = int(at.get("attacks_detected_cnn") or 0)
 
-        comp = EvalComparison(
-            mode=raw.get("mode", "?"),
-            n_episodes=raw.get("n_episodes", 0),
-            n_attacks=raw.get("n_attacks", 0),
-            threshold=raw.get("threshold"),
-            triage_coverage=raw.get("triage_coverage", 0.0),
-            cnn=cnn, cascade=cascade, attack=attack,
-            precision_delta=round(cascade.precision - cnn.precision, 3),
-            recall_delta=round(attack.cascade_recall - attack.cnn_recall, 3),
-            alerts_removed=cnn.n_alerts - cascade.n_alerts,
-            tp_removed=cnn.tp - cascade.tp,
-            fp_removed=cnn.fp - cascade.fp,
-            attacks_lost=(attack.attacks_detected_cnn
-                          - attack.attacks_detected_cascade),
-        )
-        return cls(has_data=True, run_id=run_id, comparison=comp)
+        return cls(has_data=True, metrics=ModelDetectionMetrics(
+            precision=round(precision, 3),
+            recall=round(recall, 3),
+            n_alerts=int(cnn.get("n_alerts") or 0),
+            tp=int(cnn.get("tp") or 0),
+            fp=int(cnn.get("fp") or 0),
+            n_attacks=n_attacks,
+            attacks_detected=detected,
+            attacks_missed=max(n_attacks - detected, 0),
+            mode=str(raw.get("mode") or "?"),
+        ))

@@ -151,6 +151,9 @@ MITRE_TABLE: dict[str, tuple[str, str]] = {
     "T1005": ("Collection", "Data from Local System"),
     "T1074": ("Collection", "Data Staged"),
     "T1074.001": ("Collection", "Data Staged: Local Data Staging"),
+    "T1140": ("Defense Evasion", "Deobfuscate/Decode Files or Information"),
+    "T1562.012": ("Defense Evasion",
+                  "Impair Defenses: Disable or Modify Linux Audit System"),
 }
 
 

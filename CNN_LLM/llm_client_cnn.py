@@ -18,7 +18,26 @@ Note modele : Groq a annonce le 17/06/2026 la depreciation de
 llama-3.3-70b-versatile / llama-3.1-8b-instant au profit de openai/gpt-oss-120b
 et openai/gpt-oss-20b. Utiliser `python llm_client_cnn.py --models` pour lister
 les modeles reellement actifs sur le compte avant la soutenance.
+
+-- Revue (correctifs integres) ----------------------------------------------
+
+[CACHE] complete_json ecrivait la reponse sous une cle calculee a partir des
+    messages COURANTS. Or la boucle de reparation JSON fait grandir `messages`.
+    Consequence : un episode repare sur le modele PRINCIPAL etait mis en cache
+    sous une cle que le run suivant ne recalcule jamais (il repart des messages
+    d'origine) -> cache MISS -> re-appel API. La promesse "rejouer = 0 appel"
+    ne tenait donc pas pour les episodes reparés. Corrige : la reponse est
+    TOUJOURS ecrite sous la cle canonique (messages d'origine + modele demande),
+    quel que soit le modele ayant repondu et qu'il y ait eu reparation ou non.
+
+[REPLI] Le basculement sur le modele de repli se declenchait sur la sous-chaine
+    "model", presente dans des erreurs sans rapport (ex. "context length"). On
+    basculait alors du principal (celui des chiffres du memoire) vers le repli
+    sans que ca se voie. Corrige : on ne bascule que sur "decommission" /
+    "not found", les vrais cas d'indisponibilite du modele.
 """
+
+
 from __future__ import annotations
 
 import hashlib
@@ -232,30 +251,35 @@ def _call_ollama(model: str, messages: list[dict]) -> str:
 
 def complete_json(messages: list[dict], model: str | None = None) -> dict:
     """Appel + parsing JSON, avec cache, retry et repli de modele.
-    Leve LLMError si tout echoue -> l'appelant applique le fail-open."""
+    Leve LLMError si tout echoue -> l'appelant applique le fail-open.
+
+    CACHE : la reponse est toujours ecrite sous la cle CANONIQUE (messages
+    d'origine + modele demande). C'est la seule cle que le prochain run
+    recalculera, donc la seule qui garantit "rejouer = 0 appel" -- y compris
+    pour les episodes passes par la reparation JSON ou par le modele de repli.
+    """
     model = model or CL.LLM_MODEL
-    key = _cache_key(model, messages)
+    key = _cache_key(model, messages)        # cle canonique : NE PAS la recalculer plus bas
     cached = _cache_get(key)
     if cached is not None:
         return json.loads(cached)
 
     last_err: Exception | None = None
+    work = messages                          # copie de travail : la reparation la fait grandir,
+                                             # mais la cle de cache, elle, reste stable.
     for model_try in (model, CL.LLM_MODEL_FALLBACK):
         if not model_try:
             continue
         for attempt in range(CL.LLM_MAX_RETRIES):
             try:
-                txt = _call(model_try, messages)
+                txt = _call(model_try, work)
                 data = json.loads(_strip_fences(txt))
-                _cache_put(_cache_key(model_try, messages),
-                           json.dumps(data, ensure_ascii=False))
-                if model_try != model:
-                    _cache_put(key, json.dumps(data, ensure_ascii=False))
+                _cache_put(key, json.dumps(data, ensure_ascii=False))
                 return data
             except json.JSONDecodeError as e:
                 last_err = e
                 # Reparation : on renvoie sa propre sortie invalide au modele.
-                messages = messages + [
+                work = work + [
                     {"role": "assistant", "content": txt[:2000]},
                     {"role": "user", "content":
                      "Ta reponse n'est pas un JSON valide. Renvoie UNIQUEMENT "
@@ -264,7 +288,7 @@ def complete_json(messages: list[dict], model: str | None = None) -> dict:
             except Exception as e:                       # noqa: BLE001
                 last_err = e
                 msg = str(e).lower()
-                if "decommission" in msg or "not found" in msg or "model" in msg:
+                if "decommission" in msg or "not found" in msg:
                     break                                # -> modele de repli
                 time.sleep(CL.LLM_BACKOFF_S * (2 ** attempt))
     raise LLMError(f"echec LLM ({model}) : {last_err}")

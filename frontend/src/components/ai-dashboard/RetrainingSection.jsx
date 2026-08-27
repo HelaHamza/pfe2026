@@ -1,7 +1,7 @@
-function Kpi({ label, value, sub, tone = 'neutral' }) {
-  const color = { good: 'var(--up)', warn: 'var(--warn)', bad: 'var(--down)', neutral: 'var(--text-faint)' }[tone]
+function Kpi({ label, value, sub, tone = 'neutral', emphasis = false }) {
+  const color = { good: 'var(--up)', warn: 'var(--warn)', bad: 'var(--down)', neutral: 'var(--text)' }[tone]
   return (
-    <div className="kpi">
+    <div className="kpi" data-emphasis={emphasis ? tone : undefined}>
       <div className="kpi__label">{label}</div>
       <div className="kpi__value"><span style={{ color }}>{value}</span></div>
       {sub && <div className="kpi__sub">{sub}</div>}
@@ -9,17 +9,17 @@ function Kpi({ label, value, sub, tone = 'neutral' }) {
   )
 }
 
-// Explique le ratio accepté / évalué en une phrase, adaptée au cas.
+// Explique le ratio promu / évalué en une phrase, adaptée au cas.
 function acceptanceSub(a) {
   const total = a?.n_total ?? 0
   const accepted = a?.n_accepted ?? 0
   if (total === 0) return 'aucun cycle de ré-entraînement lancé'
-  const rate = Math.round((100 * accepted) / total)
   const candidats = `${total} candidat${total > 1 ? 's' : ''} évalué${total > 1 ? 's' : ''}`
   if (accepted === 0) {
-    return `${candidats}, aucun validé — le gate a bloqué toute régression`
+    return `${candidats}, aucun promu — le gate a bloqué toute régression`
   }
-  return `${candidats}, ${accepted} validé${accepted > 1 ? 's' : ''} (${rate} % accepté)`
+  const rate = Math.round((100 * accepted) / total)
+  return `${candidats}, ${accepted} promu${accepted > 1 ? 's' : ''} (${rate} % accepté)`
 }
 
 export default function RetrainingSection({ data }) {
@@ -42,37 +42,41 @@ export default function RetrainingSection({ data }) {
   return (
     <>
       <div className="summary__grid">
+        {/* Verdict qualité = LE signal du jury → seule carte mise en avant */}
         <Kpi
-          label="Nouvelle version du modèle"
+          label="Verdict du contrôle qualité"
           value={accepted ? 'Validée' : 'Refusée'}
           sub={accepted
-            ? 'promue en production'
-            : 'bloquée par le contrôle qualité — l\u2019ancienne version, plus fiable, reste en place'}
+            ? 'nouvelle version promue en production'
+            : 'nouvelle version bloquée — l\u2019ancienne, plus fiable, reste en place'}
           tone={accepted ? 'good' : 'bad'}
+          emphasis
         />
         <Kpi
-          label="Détection : candidat vs production"
+          label="Attaques de référence retrouvées par le candidat"
           value={nCandidate != null ? `${nCandidate} / ${nTotalAtt}` : '—'}
           sub={nBaseline != null
             ? (regressed
-                ? `régression : la version en production détecte ${nBaseline} / ${nTotalAtt}`
-                : `version en production : ${nBaseline} / ${nTotalAtt}`)
-            : 'sur les attaques de référence (golden set)'}
+                ? `${nCandidate} des ${nTotalAtt} attaques du golden set — la version en production les retrouve toutes (${nBaseline}/${nTotalAtt})`
+                : `${nCandidate} des ${nTotalAtt} attaques du golden set retrouvées`)
+            : `sur ${nTotalAtt ?? '—'} attaques de référence (golden set)`}
           tone={regressed ? 'warn' : 'good'}
         />
         <Kpi
-          label="Versions mises en production"
+          label="Candidats promus en production"
           value={`${nAccepted} sur ${nTotal}`}
           sub={acceptanceSub(acceptance)}
           tone="neutral"
         />
       </div>
 
-      {/* Lecture du ratio : ce que signifie chaque nombre, en clair. */}
+      {/* Lecture des nombres, en clair. */}
       {nTotal > 0 && (
         <p className="retrain__legend">
-          <strong>{nTotal}</strong> = version{nTotal > 1 ? 's' : ''} candidate{nTotal > 1 ? 's' : ''} testée{nTotal > 1 ? 's' : ''} par le contrôle qualité ·{' '}
-          <strong>{nAccepted}</strong> = version{nAccepted > 1 ? 's' : ''} ayant réussi les tests et mise{nAccepted > 1 ? 's' : ''} en production.
+          <strong>{nTotalAtt ?? '—'}</strong> = attaques connues du golden set ·{' '}
+          <strong>{nCandidate ?? '—'}</strong> = celles que le nouveau modèle a su retrouver ·{' '}
+          <strong>{nTotal}</strong> = version{nTotal > 1 ? 's' : ''} candidate{nTotal > 1 ? 's' : ''} évaluée{nTotal > 1 ? 's' : ''} par le contrôle qualité ·{' '}
+          <strong>{nAccepted}</strong> = celle{nAccepted > 1 ? 's' : ''} réellement promue{nAccepted > 1 ? 's' : ''} en production.
         </p>
       )}
 

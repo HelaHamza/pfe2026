@@ -1,0 +1,1 @@
+{"episode_id": "EP-f7c1bfd1a8", "severity": "high", "confidence": 0.86, "title": "Création et suppression rapide d'un compte local avec modifications de groupe", "mitre": [{"technique_id": "T1136.001", "tactic": "Persistence", "name": "Create Account: Local Account"}, {"technique_id": "T1098", "tactic": "Persistence", "name": "Account Manipulation"}]}

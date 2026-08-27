@@ -4,6 +4,28 @@ import { profileService } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import styles from './ProfilePage.module.css'
 
+// Icônes de champ — même style que Login (stroke 2), pour l'homogénéité des formulaires
+const IconUser = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+  </svg>
+)
+const IconPhone = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+  </svg>
+)
+const IconPin = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
+  </svg>
+)
+const IconMail = (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </svg>
+)
+
 export default function ProfilePage() {
   const { user } = useAuth()
   const [form, setForm]       = useState({ first_name: '', last_name: '', phone: '', sex: '', address: '' })
@@ -57,7 +79,6 @@ export default function ProfilePage() {
     const err = validate()
     if (Object.keys(err).length) { setErrors(err); return }
 
-    // Only send fields that are filled
     const payload = {}
     Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v })
     if (avatar) payload.avatar = avatar
@@ -73,14 +94,12 @@ export default function ProfilePage() {
     }
   }
 
-  // Compute initials for avatar fallback
   const initials = (() => {
     const f = form.first_name?.[0] || ''
     const l = form.last_name?.[0]  || ''
     return (f + l).toUpperCase() || (user?.email?.[0] || '?').toUpperCase()
   })()
 
-  // Role/specialty badge label
   const roleLabel = user?.specialty === 'soc_user' ? 'SOC Operator'
                   : user?.specialty === 'ia_user'  ? 'IA Analyst'
                   : 'Operator'
@@ -116,7 +135,14 @@ export default function ProfilePage() {
 
           {/* ─── Avatar / Identity card ─── */}
           <div className={styles.avatarSection}>
-            <div className={styles.avatarWrap} onClick={() => fileRef.current.click()}>
+            <div
+              className={styles.avatarWrap}
+              role="button"
+              tabIndex={0}
+              aria-label="Change profile photo"
+              onClick={() => fileRef.current.click()}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileRef.current.click() } }}
+            >
               {avatar
                 ? <img src={avatar} alt="Profile" className={styles.avatarImg} />
                 : <div className={styles.avatarPlaceholder}>
@@ -162,7 +188,7 @@ export default function ProfilePage() {
 
             {/* Email — read only */}
             <div className={styles.fieldWrap}>
-              <label className={styles.label}>
+              <label htmlFor="email" className={styles.label}>
                 <span>Email</span>
                 <span className={styles.labelHint}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{verticalAlign:'-1px', marginRight:'3px'}}>
@@ -171,26 +197,30 @@ export default function ProfilePage() {
                   read-only
                 </span>
               </label>
-              <input
-                type="email"
-                value={user?.email || ''}
-                readOnly
-                className={`${styles.input} ${styles.inputReadonly}`}
-              />
+              <div className={styles.inputWrap}>
+                <span className={styles.inputIcon}>{IconMail}</span>
+                <input
+                  id="email"
+                  type="email"
+                  value={user?.email || ''}
+                  readOnly
+                  className={`${styles.input} ${styles.inputReadonly}`}
+                />
+              </div>
             </div>
 
             <div className={styles.row}>
-              <Field label="First name"   name="first_name" value={form.first_name} onChange={handleChange} placeholder="Yassine" />
-              <Field label="Last name"    name="last_name"  value={form.last_name}  onChange={handleChange} placeholder="Benali" />
+              <Field label="First name" name="first_name" value={form.first_name} onChange={handleChange} placeholder="Yassine" icon={IconUser} />
+              <Field label="Last name"  name="last_name"  value={form.last_name}  onChange={handleChange} placeholder="Benali"  icon={IconUser} />
             </div>
 
             <div className={styles.row}>
-              <Field label="Phone" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} placeholder="+213 xxx xxx xxx" type="tel" />
+              <Field label="Phone" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} placeholder="+216 xx xxx xxx" type="tel" icon={IconPhone} />
               <div className={styles.fieldWrap}>
-                <label className={styles.label}>
+                <label htmlFor="sex" className={styles.label}>
                   <span>Sex</span>
                 </label>
-                <select name="sex" value={form.sex} onChange={handleChange} className={styles.select}>
+                <select id="sex" name="sex" value={form.sex} onChange={handleChange} className={styles.select}>
                   <option value="">Select…</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
@@ -199,7 +229,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <Field label="Address" name="address" value={form.address} onChange={handleChange} placeholder="Street, city, country" fullWidth />
+            <Field label="Address" name="address" value={form.address} onChange={handleChange} placeholder="Street, city, country" icon={IconPin} fullWidth />
           </div>
 
           {/* ─── Actions bar ─── */}
@@ -224,20 +254,24 @@ export default function ProfilePage() {
   )
 }
 
-function Field({ label, name, value, onChange, error, placeholder, type = 'text', fullWidth }) {
+function Field({ label, name, value, onChange, error, placeholder, type = 'text', fullWidth, icon }) {
   return (
     <div className={`${styles.fieldWrap} ${fullWidth ? styles.fieldFull : ''}`}>
-      <label className={styles.label}>
+      <label htmlFor={name} className={styles.label}>
         <span>{label}</span>
       </label>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className={`${styles.input} ${error ? styles.inputError : ''}`}
-      />
+      <div className={styles.inputWrap}>
+        {icon && <span className={styles.inputIcon}>{icon}</span>}
+        <input
+          id={name}
+          type={type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={`${styles.input} ${error ? styles.inputError : ''}`}
+        />
+      </div>
       {error && <span className={styles.errorMsg}>{error}</span>}
     </div>
   )

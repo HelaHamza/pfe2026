@@ -1,0 +1,1 @@
+{"episode_id": "EP-97e5b75579", "severity": "medium", "confidence": 0.82, "title": "Modification de la configuration d'audit suivie d'installations de paquets via dpkg", "mitre": [{"technique_id": "T1562.012", "tactic": "Defense Evasion", "name": "Impair Defenses: Disable or Modify Linux Audit System"}]}

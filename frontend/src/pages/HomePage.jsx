@@ -6,6 +6,75 @@ import styles from './Homepage.module.css'
 
 const NAV_LINKS = ['About', 'Testimonials', 'Contact']
 
+/* ───────────────────────────────────────────────────────────
+   Aperçu du dashboard — construit en JSX/CSS, aucune image
+   externe (rien à casser le jour de la soutenance).
+
+   ▸ POUR UTILISER UNE VRAIE CAPTURE À LA PLACE :
+     1. Place l'image dans   src/assets/dashboard-soc.png
+     2. En haut de ce fichier :
+          import dashboardImg from '../assets/dashboard-soc.png'
+     3. Dans le héros, remplace  <DashboardPreview />  par :
+          <img
+            src={dashboardImg}
+            alt="Console SOC de Sentinel/IDS"
+            className={styles.previewImg}
+          />
+   ─────────────────────────────────────────────────────────── */
+const PREVIEW_ALERTS = [
+  { sev: 'high', name: 'Brute-force SSH · T1110.001',   host: 'web-01', time: '12s' },
+  { sev: 'med',  name: 'Élévation de privilèges',        host: 'db-02',  time: '1m'  },
+  { sev: 'low',  name: 'Arbre de processus anormal',     host: 'api-03', time: '3m'  },
+  { sev: 'high', name: 'Journaux d’audit purgés · T1070.006', host: 'web-01', time: '4m' },
+]
+
+function DashboardPreview() {
+  const bars = [42, 63, 51, 78, 60, 71, 88, 47]
+  return (
+    <div className={styles.previewFrame} role="img" aria-label="Aperçu de la console SOC de Sentinel">
+      <div className={styles.previewBar}>
+        <span className={styles.previewDots}><i /><i /><i /></span>
+        <span className={styles.previewTitle}>sentinel — soc console</span>
+        <span className={styles.previewLive}><span className={styles.previewLiveDot} /> live</span>
+      </div>
+
+      <div className={styles.previewBody}>
+        <div className={styles.previewStats}>
+          <div className={styles.previewStat}>
+            <span className={styles.previewStatNum}>1 284</span>
+            <span className={styles.previewStatLbl}>events / min</span>
+          </div>
+          <div className={styles.previewStat}>
+            <span className={styles.previewStatNum} data-tone="sky">7</span>
+            <span className={styles.previewStatLbl}>anomalies</span>
+          </div>
+          <div className={styles.previewStat}>
+            <span className={styles.previewStatNum} data-tone="crit">2</span>
+            <span className={styles.previewStatLbl}>critiques</span>
+          </div>
+        </div>
+
+        <div className={styles.previewChart} aria-hidden="true">
+          {bars.map((h, i) => <i key={i} style={{ height: `${h}%` }} />)}
+        </div>
+
+        <div className={styles.previewAlerts}>
+          {PREVIEW_ALERTS.map((a, i) => (
+            <div key={i} className={styles.previewAlert}>
+              <span className={styles.sevDot} data-sev={a.sev} />
+              <span className={styles.previewAlertName}>{a.name}</span>
+              <span className={styles.previewAlertHost}>{a.host}</span>
+              <span className={styles.previewAlertTime}>{a.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <span className={styles.previewBadge}>aperçu</span>
+    </div>
+  )
+}
+
 export default function HomePage() {
   const { user, logout } = useAuth()
   const navigate  = useNavigate()
@@ -55,14 +124,42 @@ export default function HomePage() {
     }
   }
 
+  function handleOpenDashboard() {
+    if (isAdmin) navigate('/admin/pending')
+    else if (ia_user) navigate('/ai-dashboard')
+    else if (soc_user) navigate('/dashboard')
+  }
+
   const initials = user?.email?.[0]?.toUpperCase() ?? 'A'
   const navLinks = isAdmin ? ['About', 'Testimonials'] : NAV_LINKS
 
-  // Pretty role label for dropdown
+  // Libellé de rôle lisible pour le dropdown
   const roleLabel = isAdmin ? 'Administrator'
                    : soc_user ? 'SOC Operator'
                    : ia_user  ? 'IA Analyst'
                    : (user?.role || 'Operator')
+
+  // Variété d'icônes maîtrisée : Sigma (vert) · ML (bleu) · Explication (neutre)
+  const features = [
+    {
+      iconClass: styles.featureIcon,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 13 11 15 15 11"/></svg>,
+      title: 'Sigma rule detection',
+      desc:  'Known attack patterns — brute force, privilege escalation, suspicious execution — matched against your logs using the open Sigma standard.'
+    },
+    {
+      iconClass: `${styles.featureIcon} ${styles.featureIconSky}`,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+      title: 'Unsupervised ML detection',
+      desc:  'Per-source autoencoders learn what normal looks like on each host and surface anomalies automatically — no labelled attack data required.'
+    },
+    {
+      iconClass: `${styles.featureIcon} ${styles.featureIconSlate}`,
+      icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>,
+      title: 'Explained alerts',
+      desc:  'Every detection ships with a plain-language explanation of why it fired, turning raw signals into context an analyst can act on.'
+    },
+  ]
 
   return (
     <div className={styles.page}>
@@ -90,8 +187,10 @@ export default function HomePage() {
 
         <div className={styles.navRight} ref={dropdownRef}>
           <button className={styles.avatarBtn} onClick={() => setDropdownOpen(v => !v)} aria-label="User menu">
-            <div className={styles.avatar}>{initials}</div>
-            <span className={styles.statusPing} aria-hidden="true" />
+            <span className={styles.avatarWrap}>
+              <span className={styles.avatar}>{initials}</span>
+              <span className={styles.statusPing} aria-hidden="true" />
+            </span>
             <svg className={`${styles.chevron} ${dropdownOpen ? styles.chevronOpen : ''}`} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -148,57 +247,56 @@ export default function HomePage() {
         <div className={styles.heroGrid} aria-hidden="true" />
         <div className={styles.heroGlow} aria-hidden="true" />
 
-        <div className={styles.heroInner}>
-          <div className={styles.heroEyebrow}>
-            <span className={styles.heroEyebrowDot} />
-            <span>Linux threat detection · PFE 2026</span>
-          </div>
-          <h1 className={styles.heroTitle}>
-            Detect, explain, and<br />
-            investigate <em>Linux-targeted</em> attacks<br />
-            in real time.
-          </h1>
-          <p className={styles.heroSub}>
-            A unified console that pairs unsupervised ML anomaly detection with
-            Sigma rule correlation — surfacing both known and unknown threats
-            across your Linux fleet, with every alert explained in plain language.
-          </p>
+        <div className={styles.heroLayout}>
+          {/* Colonne gauche — copie */}
+          <div className={styles.heroCopy}>
+            <div className={styles.heroEyebrow}>
+              <span className={styles.heroEyebrowDot} />
+              <span>Linux threat detection · PFE 2026</span>
+            </div>
+            <h1 className={styles.heroTitle}>
+              Detect, explain, and investigate <em>Linux-targeted</em> attacks in real time.
+            </h1>
+            <p className={styles.heroSub}>
+              A unified console that pairs unsupervised ML anomaly detection with
+              Sigma rule correlation — surfacing both known and unknown threats
+              across your Linux fleet, with every alert explained in plain language.
+            </p>
 
-          <div className={styles.heroCtas}>
-            <button
-              className={styles.analyseBtn}
-              onClick={() => {
-                if (isAdmin) navigate('/admin/pending')
-                else if (ia_user) navigate('/ai-dashboard')
-                else if (soc_user) navigate('/dashboard')
-              }}
-            >
-              <span>Open dashboard</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-              </svg>
-            </button>
-            <a href="#about" className={styles.secondaryBtn}>
-              Learn more
-            </a>
+            <div className={styles.heroCtas}>
+              <button className={styles.analyseBtn} onClick={handleOpenDashboard}>
+                <span>Open dashboard</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </button>
+              <a href="#about" className={styles.secondaryBtn}>
+                Learn more
+              </a>
+            </div>
+
+            {/* Stats — architecture, pas de fausses métriques live */}
+            <div className={styles.heroStats}>
+              <div className={styles.heroStat}>
+                <span className={styles.heroStatValue}>3</span>
+                <span className={styles.heroStatLabel}>Log sources unified</span>
+              </div>
+              <div className={styles.heroStatDivider} />
+              <div className={styles.heroStat}>
+                <span className={styles.heroStatValue}>2</span>
+                <span className={styles.heroStatLabel}>Detection engines</span>
+              </div>
+              <div className={styles.heroStatDivider} />
+              <div className={styles.heroStat}>
+                <span className={styles.heroStatValue} style={{ color: 'var(--accent)' }}>0</span>
+                <span className={styles.heroStatLabel}>Labels required</span>
+              </div>
+            </div>
           </div>
 
-          {/* Inline stats strip — architecture, not fabricated live metrics */}
-          <div className={styles.heroStats}>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatValue}>3</span>
-              <span className={styles.heroStatLabel}>Log sources unified</span>
-            </div>
-            <div className={styles.heroStatDivider} />
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatValue}>2</span>
-              <span className={styles.heroStatLabel}>Detection engines</span>
-            </div>
-            <div className={styles.heroStatDivider} />
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatValue} style={{color:'#4ade80'}}>0</span>
-              <span className={styles.heroStatLabel}>Labels required</span>
-            </div>
+          {/* Colonne droite — aperçu produit (remplaçable par une vraie capture) */}
+          <div className={styles.heroPreview}>
+            <DashboardPreview />
           </div>
         </div>
       </section>
@@ -222,25 +320,9 @@ export default function HomePage() {
           </p>
 
           <div className={styles.featureGrid}>
-            {[
-              {
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 13 11 15 15 11"/></svg>,
-                title: 'Sigma rule detection',
-                desc:  'Known attack patterns — brute force, privilege escalation, suspicious execution — matched against your logs using the open Sigma standard.'
-              },
-              {
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-                title: 'Unsupervised ML detection',
-                desc:  'Per-source autoencoders learn what normal looks like on each host and surface anomalies automatically — no labelled attack data required.'
-              },
-              {
-                icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>,
-                title: 'Explained alerts',
-                desc:  'Every detection ships with a plain-language explanation of why it fired, turning raw signals into context an analyst can act on.'
-              },
-            ].map((f, i) => (
+            {features.map((f, i) => (
               <div key={i} className={styles.featureCard}>
-                <div className={styles.featureIcon}>{f.icon}</div>
+                <div className={f.iconClass}>{f.icon}</div>
                 <h3 className={styles.featureTitle}>{f.title}</h3>
                 <p className={styles.featureDesc}>{f.desc}</p>
               </div>
@@ -255,7 +337,7 @@ export default function HomePage() {
           <span className={styles.sectionTag}>// Testimonials</span>
           <h2 className={styles.sectionTitle}>From operators in the field</h2>
           {testimonials.length === 0 ? (
-            <p className={styles.sectionText} style={{fontStyle:'italic', color:'#5a6478'}}>
+            <p className={styles.testimonialEmpty}>
               No testimonials yet. Be the first to share your feedback!
             </p>
           ) : (

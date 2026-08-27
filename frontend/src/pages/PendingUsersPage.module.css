@@ -1,0 +1,284 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #0a0e1a;
+  color: #e8eaf0;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+.main {
+  flex: 1;
+  padding: 2.5rem 2.5rem 4rem;
+  overflow-y: auto;
+  min-width: 0;
+  position: relative;
+}
+
+.main::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(74, 222, 128, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74, 222, 128, 0.025) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at top, black 0%, transparent 70%);
+  z-index: 0;
+}
+
+.main > * { position: relative; z-index: 1; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.85rem;
+  font-weight: 500;
+  color: #e8eaf0;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.4rem;
+}
+
+.sub {
+  font-size: 0.9rem;
+  color: #8a93a8;
+  margin: 0;
+}
+
+.countBadge {
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.08);
+  border: 0.5px solid rgba(251, 191, 36, 0.3);
+  border-radius: 20px;
+  padding: 5px 14px;
+  margin-top: 4px;
+}
+
+/* Toast */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 0.5px solid;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.04em;
+  animation: fadeUp 0.2s ease;
+}
+
+.toast_approve {
+  background: rgba(74, 222, 128, 0.08);
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.3);
+}
+
+.toast_reject,
+.toast_error {
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Table */
+.table {
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  animation: fadeUp 0.3s ease both;
+}
+
+.tableHead {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.7fr 1.2fr;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #8a93a8;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 0.7fr 1.2fr;
+  padding: 14px 20px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.05);
+  align-items: center;
+  transition: background 0.12s;
+}
+
+.tableRow:last-child { border-bottom: none; }
+.tableRow:hover { background: rgba(255, 255, 255, 0.02); }
+
+/* User cell */
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 0.5px solid rgba(251, 191, 36, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.userName {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #e8eaf0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
+  color: #5a6478;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Generic cell */
+.cell {
+  font-size: 0.825rem;
+  color: #b8c0d0;
+}
+
+/* Specialty badge */
+.specialtyBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 20px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  border: 0.5px solid;
+}
+
+.specialtyDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Action buttons */
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.approveBtn,
+.rejectBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 14px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 0.5px solid;
+  transition: all 0.15s;
+}
+
+.approveBtn {
+  background: #4ade80;
+  color: #052e16;
+  border-color: #4ade80;
+}
+
+.approveBtn:hover:not(:disabled) {
+  background: #86efac;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.15);
+}
+
+.rejectBtn {
+  background: transparent;
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.rejectBtn:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.approveBtn:disabled,
+.rejectBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #8a93a8;
+  font-size: 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 0.5px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.empty p { color: #b8c0d0; margin-bottom: 0.25rem; font-size: 0.95rem; }
+.empty span { font-size: 0.82rem; color: #5a6478; }
+
+@media (max-width: 768px) {
+  .main { padding: 1.5rem 1.25rem 3rem; }
+  .tableHead,
+  .tableRow { grid-template-columns: 2fr 1fr 1fr; }
+  .tableHead span:nth-child(n+4),
+  .tableRow > *:nth-child(n+4):not(.actions) { display: none; }
+}

@@ -1,0 +1,1 @@
+{"episode_id": "EP-ceceb87db7", "severity": "low", "confidence": 0.82, "title": "Activité système normale : DNS, NTP, périphériques et lancement d'eog", "mitre": [{"technique_id": "T1222.002", "tactic": "Defense Evasion", "name": "File and Directory Permissions Modification: Linux and Mac"}]}

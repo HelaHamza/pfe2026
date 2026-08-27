@@ -9,7 +9,6 @@ import KpiBand               from '../components/dashboard/Kpiband'
 import MitreTopTactics       from '../components/dashboard/MitreTopTactics'
 import SigmaSeverityBars     from '../components/dashboard/SigmaSeverityBars'
 import LogSourceActivity     from '../components/dashboard/LogSourceActivity'
-import CnnVerdictBreakdown   from '../components/dashboard/CnnVerdictBreakdown'
 import SecurityTable         from '../components/dashboard/Securitytable'
 import DetailPanel           from '../components/dashboard/Detailpanel'
 import LastAnalysisModal     from '../components/dashboard/modals/LastAnalysisModal'
@@ -124,7 +123,7 @@ export default function DashboardPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: 12, marginBottom: 12 }}>
               <MitreTopTactics data={byTactic} />
-              <CnnVerdictBreakdown byVerdict={cnnByVerdict} />
+             {/* /* <CnnVerdictBreakdown byVerdict={cnnByVerdict} />  */}
             </div>
 
             <SecurityTable

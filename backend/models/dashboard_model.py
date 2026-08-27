@@ -26,9 +26,10 @@ class DashboardResponse(BaseModel):
 
     stats: ReportStats = Field(default_factory=ReportStats)
     cnn_by_severity: dict[str, int] = Field(default_factory=dict)
+    # Verdict constant en mode explication seule → {"true_positive": N}.
     cnn_by_verdict: dict[str, int] = Field(default_factory=dict)
     sigma_by_level: dict[str, int] = Field(default_factory=dict)
     logs_by_source: dict[str, int] = Field(default_factory=dict)
-    # Anomalies AE (true_positive) par source → taux d'anomalie par type de log.
+    # Anomalies AE par source → taux d'anomalie par type de log.
     anomalies_by_source: dict[str, int] = Field(default_factory=dict)
     by_tactic: list[TacticCount] = Field(default_factory=list)

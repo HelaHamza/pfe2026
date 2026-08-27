@@ -1,6 +1,6 @@
 import {
   useFrozenModel, useOverview, useRetraining,
-  useTriage, useEvalComparison, usePending,
+  useTriage, useEvalComparison,
 } from '../hooks/useAiDashboardData'
 import { useTheme, ThemeToggle } from '../hooks/useTheme'
 import Sidebar from '../components/Sidebar'
@@ -9,7 +9,6 @@ import FrozenModelSection from '../components/ai-dashboard/FrozenModelSection'
 import AnalysisSection from '../components/ai-dashboard/AnalysisSection'
 import EvalComparisonSection from '../components/ai-dashboard/EvalComparisonSection'
 import RetrainingSection from '../components/ai-dashboard/RetrainingSection'
-import PendingSection from '../components/ai-dashboard/PendingSection'
 
 import '../styles/tokens.css'
 import '../styles/ai-dashboard.css'
@@ -22,7 +21,6 @@ export default function AiDashboardPage() {
   const triage         = useTriage()
   const evalComparison = useEvalComparison()
   const retraining     = useRetraining()
-  const pending        = usePending()
 
   return (
     <div className="ai-dash" data-theme={theme}>
@@ -50,10 +48,11 @@ export default function AiDashboardPage() {
           {frozen.data && <FrozenModelSection data={frozen.data} />}
         </DomainCard>
 
-        {/* ③ Efficacité live (entonnoir CNN → LLM) + qualité triage */}
+        {/* ③ Priorisation du dernier run : le LLM explique et priorise,
+            il ne filtre plus. Répartition de sévérité + fail-open. */}
         <DomainCard
           title="Analyse des alertes"
-          hint="dernière analyse"
+          hint="dernière analyse — priorisation"
           loading={overview.loading}
           error={overview.error}
           hasData={overview.data?.has_data}
@@ -64,10 +63,11 @@ export default function AiDashboardPage() {
           )}
         </DomainCard>
 
-        {/* ④ Capacité de détection : CNN seul vs CNN → LLM (attaques injectées) */}
+        {/* ④ Capacité de détection : CNN seul vs CNN → LLM (attaques injectées).
+            Panneau d'évaluation hors-bande — inchangé. */}
         <DomainCard
           title="Capacité de détection"
-          hint="CNN seul vs CNN → LLM"
+          hint="évaluation · vérité terrain"
           loading={evalComparison.loading}
           error={evalComparison.error}
           hasData={evalComparison.data?.has_data}
@@ -90,17 +90,8 @@ export default function AiDashboardPage() {
           {retraining.data && <RetrainingSection data={retraining.data} />}
         </DomainCard>
 
-        {/* Alertes en attente de vérification */}
-        <DomainCard
-          title="Alertes en attente de vérification"
-          hint="Cas incertains du dernier analyse"
-          loading={pending.loading}
-          error={pending.error}
-          hasData={(pending.data?.results?.length ?? 0) > 0}
-          reason="Aucun épisode en attente de revue."
-        >
-          {pending.data && <PendingSection data={pending.data} />}
-        </DomainCard>
+        {/* Carte « Alertes en attente de vérification » SUPPRIMÉE :
+            plus d'épisodes incertains à revoir en mode explication seule. */}
       </main>
     </div>
   )

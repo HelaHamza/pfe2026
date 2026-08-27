@@ -1,0 +1,1 @@
+{"episode_id": "EP-6338f848db", "severity": "high", "confidence": 0.86, "title": "Exécution d'un binaire inconnu suivi de chmod et rm par root", "mitre": [{"technique_id": "T1222.002", "tactic": "Defense Evasion", "name": "File and Directory Permissions Modification: Linux and Mac"}]}

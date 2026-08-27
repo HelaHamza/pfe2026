@@ -1,0 +1,1 @@
+{"episode_id": "EP-97a830cfd5", "severity": "critical", "confidence": 0.86, "title": "Multiples tentatives SSH, échecs puis connexion suspecte depuis IP externe", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}

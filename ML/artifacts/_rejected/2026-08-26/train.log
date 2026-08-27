@@ -1,0 +1,66 @@
+================================================================
+  AE CONV HYBRIDE (sequence + rarete) | Device=cpu | W=16
+================================================================
+
+[1] Chargement + features (is_fail inclus)...
+  [CACHE] Snapshot recharge (701,587 logs)
+  [FEAT-CNN] auth  : inter-arrivee mediane 9.82s | 4,874 logs
+  [FEAT-CNN] syslog: inter-arrivee mediane 0.00s | 200,000 logs
+  [FEAT-CNN] auditd: inter-arrivee mediane 0.00s | 496,713 logs
+    novelty_state : proc=622, user=78, geo=1, syscall=20, exe=328, lineage=1188
+
+[2] Split temporel (pool / calib / test)...
+
+[3] Preparation par source (vocab + scaler + fenetres)...
+  auth    : 6 scalaires + vocab=21 tokens | 2,339 fenetres train / 585 val
+  syslog  : 3 scalaires + vocab=13 tokens | 96,000 fenetres train / 24,000 val
+  auditd  : 9 scalaires + vocab=30 tokens | 238,421 fenetres train / 59,606 val
+
+[4] Entrainement (Huber scalaire + CE sequence)...
+    [auth] epoch 20/200 val=0.138256
+    [auth] epoch 40/200 val=0.063486
+    [auth] epoch 60/200 val=0.054278
+    [auth] epoch 80/200 val=0.031898
+    [auth] epoch 100/200 val=0.029403
+    [auth] epoch 120/200 val=0.028449
+    [auth] epoch 140/200 val=0.027591
+    [auth] epoch 160/200 val=0.027211
+    [auth] epoch 180/200 val=0.026708
+    [auth] epoch 200/200 val=0.026429
+    [syslog] epoch 20/200 val=0.200608
+    [syslog] epoch 40/200 val=0.192365
+    [syslog] epoch 60/200 val=0.186705
+    [syslog] epoch 80/200 val=0.184739
+    [syslog] epoch 100/200 val=0.183519
+    [syslog] epoch 120/200 val=0.182827
+    [syslog] epoch 140/200 val=0.182324
+    [syslog] epoch 160/200 val=0.181297
+    [syslog] epoch 180/200 val=0.180741
+    [syslog] epoch 200/200 val=0.180436
+    [auditd] epoch 20/150 val=0.085554
+    [auditd] epoch 40/150 val=0.080302
+    [auditd] epoch 60/150 val=0.078309
+    [auditd] epoch 80/150 val=0.076426
+    [auditd] epoch 100/150 val=0.075335
+    [auditd] epoch 120/150 val=0.074799
+    [auditd] epoch 140/150 val=0.074490
+  duree : 4733.0s
+
+[5] Normalisation |residu| + NLL sur CALIB...
+
+[6] Seuil GPD-POT par source (thresholding reutilise)...
+    auth    : thr=8.428417 (quantile_fallback) | n_calib=975
+    syslog  : thr=9.554078 (gpd_pot) | n_calib=40,000
+    auditd  : thr=10.117945 (gpd_pot) | n_calib=99,343
+
+[7] Sauvegarde artifacts CNN...
+    novelty_state -> /home/hala-hamza/pfe-2026/ML/artifacts/_candidate/cnn_novelty_state.pkl
+
+[8] Scoring du TEST (schema alerts.csv)...
+    auth    :     0 alertes / 975 (0.00%)
+    syslog  :    24 alertes / 40,000 (0.06%)
+    auditd  :   377 alertes / 99,343 (0.38%)
+
+  -> cnn_scored_test.csv
+  A/B : python evaluation.py --from-csv cnn_scored_test.csv
+================================================================

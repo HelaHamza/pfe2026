@@ -1,14 +1,30 @@
+/* =============================================================================
+   Sidebar.module.css — coquille sombre, alignée sur la finition du dashboard.
+   .sidebar : colonne pleine hauteur → le fond atteint le bas sur chaque page.
+   .inner   : contenu collé en haut (sticky) quand la page défile.
+   ============================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&display=swap');
+
+/* Colonne : s'étire sur toute la hauteur du contenu (align-items: stretch du
+   parent flex). Plus de height: 100vh ici → le fond va jusqu'en bas. */
 .sidebar {
   width: 230px;
   flex-shrink: 0;
-  background: #faf9f6;
-  border-right: 1px solid #ede8dc;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+  background: #0d1322;
+  border-right: 1px solid rgba(74, 222, 128, 0.08);
+  box-sizing: border-box;
+}
+
+/* Contenu : un écran de haut, collé en haut pendant le scroll. */
+.inner {
   position: sticky;
   top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   padding: 1.5rem 1rem;
+  box-sizing: border-box;
 }
 
 /* Brand */
@@ -23,7 +39,7 @@
 .logoMark {
   width: 32px;
   height: 32px;
-  background: #c9a96e;
+  background: #4ade80;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -32,9 +48,12 @@
 }
 
 .brandName {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1rem;
-  color: #1a1a2e;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4ade80;
 }
 
 /* Nav */
@@ -46,29 +65,43 @@
 }
 
 .navItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 9px 12px;
   border-radius: 8px;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.875rem;
-  color: #5a5a7a;
+  color: #8a93a8;
   transition: background 0.12s, color 0.12s;
   text-decoration: none;
 }
 
 .navItem:hover {
-  background: #f0ece4;
-  color: #1a1a2e;
+  background: rgba(74, 222, 128, 0.08);
+  color: #4ade80;
 }
 
 .navItemActive {
-  background: #1a1a2e;
-  color: #e8e4d9 !important;
+  background: rgba(74, 222, 128, 0.10);
+  color: #4ade80 !important;
+}
+
+/* Liseré vert à gauche — même langage que les titres de section du dashboard */
+.navItemActive::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: #4ade80;
 }
 
 .navItemActive .navIcon svg {
-  stroke: #c9a96e;
+  stroke: #4ade80;
 }
 
 .navIcon {
@@ -79,31 +112,37 @@
 
 /* Bottom */
 .bottom {
-  border-top: 1px solid #ede8dc;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
+/* Bloc user en carte — même surface que les sous-cartes du dashboard */
 .userRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 4px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
 }
 
 .avatar {
-  width: 32px;
-  height: 32px;
-  background: #1a1a2e;
-  color: #c9a96e;
+  width: 30px;
+  height: 30px;
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.76rem;
+  font-weight: 600;
   flex-shrink: 0;
 }
 
@@ -114,18 +153,21 @@
 }
 
 .userEmail {
-  font-size: 0.78rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.72rem;
   font-weight: 500;
-  color: #1a1a2e;
+  color: #e8eaf0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .userRole {
-  font-size: 0.68rem;
-  color: #8a8aaa;
-  text-transform: capitalize;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
+  color: #4ade80;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .logoutBtn {
@@ -135,26 +177,28 @@
   padding: 8px 12px;
   width: 100%;
   font-size: 0.82rem;
-  font-family: 'DM Sans', sans-serif;
-  color: #c0392b;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #fca5a5;
   background: none;
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 
 .logoutBtn:hover {
-  background: #fdf0ef;
-  border-color: rgba(192,57,43,0.15);
+  background: rgba(248, 113, 113, 0.08);
+  border-color: rgba(248, 113, 113, 0.25);
+  color: #f87171;
 }
 
 .navSection {
-  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.6rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #aaa8c0;
+  color: #5a6478;
   padding: 0.75rem 12px 0.25rem;
   margin-top: 0.25rem;
 }

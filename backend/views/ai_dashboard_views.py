@@ -1,11 +1,20 @@
-from fastapi import APIRouter, Depends, Query
+"""
+views/ai_dashboard_views.py
+===========================
+Couche VUE du dashboard Expert IA.
+
+MODE EXPLICATION SEULE : la route /pending (revue des épisodes `uncertain`) a
+été retirée — le LLM ne produit plus d'épisodes incertains, la file était
+structurellement vide. La route ③ /overview expose désormais la PRIORISATION
+du run (répartition de sévérité + fail-open), plus l'ancien entonnoir de
+filtrage.
+"""
+from fastapi import APIRouter, Depends
 
 from controllers.ai_dashboard_controller import StatsControllerAI
 from core.deps import get_current_user
 from models.ai_dashboard_model import (AIOverviewResponse, EvalComparisonResponse,
                                         FrozenModelResponse, TriageResponse)
-from models.detection_models import ResultsResponse
-from models.enums import Severity
 from models.retrain_run_model import RetrainingResponse
 
 router = APIRouter(prefix="/ai-dashboard", tags=["Expert AI"])
@@ -24,13 +33,13 @@ def retraining(current_user: dict = Depends(get_current_user)) -> RetrainingResp
 
 
 @router.get("/overview", response_model=AIOverviewResponse,
-            summary="③ Entonnoir de triage et efficacité du dernier run")
+            summary="③ Priorisation du dernier run (sévérité + fail-open)")
 def overview(current_user: dict = Depends(get_current_user)) -> AIOverviewResponse:
     return StatsControllerAI.overview()
 
 
 @router.get("/eval-comparison", response_model=EvalComparisonResponse,
-            summary="④ Capacité de détection : CNN vs CNN→LLM")
+            summary="④ Capacité de détection : CNN vs CNN→LLM (évaluation)")
 def eval_comparison(current_user: dict = Depends(get_current_user)) -> EvalComparisonResponse:
     return StatsControllerAI.eval_comparison()
 
@@ -39,15 +48,3 @@ def eval_comparison(current_user: dict = Depends(get_current_user)) -> EvalCompa
             summary="⑤ Qualité et coût du triage LLM du dernier run")
 def triage(current_user: dict = Depends(get_current_user)) -> TriageResponse:
     return StatsControllerAI.triage()
-
-
-@router.get("/pending", response_model=ResultsResponse,
-            summary="Épisodes CNN non tranchés par le triage (revue experte)")
-def pending_review(
-    limit: int = Query(500, ge=1, le=500),
-    skip: int = Query(0, ge=0),
-    level: Severity | None = Query(None),
-    current_user: dict = Depends(get_current_user),
-) -> ResultsResponse:
-    return StatsControllerAI.pending_review(
-        level=level.value if level else None, limit=limit, skip=skip)

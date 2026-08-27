@@ -1,0 +1,1 @@
+{"episode_id": "EP-c5edd4490c", "severity": "high", "confidence": 0.78, "title": "Multiples tentatives de connexion SSH avec comptes inconnus depuis localhost", "mitre": [{"technique_id": "T1110.001", "tactic": "Credential Access", "name": "Password Guessing"}]}

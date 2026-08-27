@@ -29,4 +29,5 @@ export const useOverview       = () => useDomain(aiDashboardService.overview)
 export const useRetraining     = () => useDomain(aiDashboardService.retraining)
 export const useTriage         = () => useDomain(aiDashboardService.triage)
 export const useEvalComparison = () => useDomain(aiDashboardService.evalComparison)
-export const usePending        = () => useDomain(aiDashboardService.pending)
+// usePending SUPPRIMÉ : la route /ai-dashboard/pending n'existe plus
+// (mode explication seule — aucun épisode incertain à revoir).
